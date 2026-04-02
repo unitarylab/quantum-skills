@@ -453,10 +453,10 @@ results = qae_algo.run(U, good_zero_qubits=[0], d=6)
 
 ## Related Algorithms
 
-- [Quantum Phase Estimation](../qpe) - Foundation for phase extraction
-- [Grover's Algorithm](../../cryptology/grover) - Provides Grover iteration basis
-- [Amplitude Amplification](../amplitude_amplification) - Amplitude enhancement technique
-- [HHL Algorithm](../../cryptology/hhl) - Application in linear system solving
+- [Quantum Phase Estimation] - Foundation for phase extraction
+- [Grover's Algorithm] - Provides Grover iteration basis
+- [Amplitude Amplification] - Amplitude enhancement technique
+- [HHL Algorithm] - Application in linear system solving
 
 ---
 
