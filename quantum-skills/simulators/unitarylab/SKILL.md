@@ -21,120 +21,107 @@ tags:
 
 # UnitaryLab 量子计算框架完全指南
 
-## 一、系统概览
+## I. System Overview
 
-### 1.1 UnitaryLab 整体架构
+### 1.1 System Architecture Overview
 
-**UnitaryLab** 是一个完整的量子计算模拟框架，由多个相互配合的核心模块组成：
+UnitaryLab is a comprehensive quantum computing simulation framework composed of six interconnected core modules. The table below summarizes the relationships and responsibilities of each component:
 
-```
-┌──────────────────────────────────────────────────────────┐
-│            UnitaryLab 量子计算框架                       │
-├──────────────────────────────────────────────────────────┤
-│                                                          │
-│    ┌─────────────────────────────────────────────┐     │
-│    │      GateSequence（量子门序列）              │     │
-│    │  - 构建和执行量子电路                        │     │
-│    │  - 寄存器管理                                │     │
-│    │  - 门操作调度                                │     │
-│    └─────────────────────────────────────────────┘     │
-│            ↑                          ↑                  │
-│    ┌───────────────┐        ┌────────────────┐        │
-│    │ Register      │        │ClassicalReg    │        │
-│    │(量子寄存器)   │        │(经典寄存器)    │        │
-│    └───────────────┘        └────────────────┘        │
-│                                                          │
-│    ┌──────────────┐      ┌──────────────┐             │
-│    │   State      │      │Initialization│             │
-│    │ (量子态)     │      │(态准备)      │             │
-│    └──────────────┘      └──────────────┘             │
-│                                                          │
-│    ┌──────────────────────────────────────────┐       │
-│    │ CircuitDrawer（电路可视化）                │       │
-│    │ - 量子电路图绘制                          │       │
-│    │ - 多种输出格式                            │       │
-│    └──────────────────────────────────────────┘       │
-│                                                          │
-└──────────────────────────────────────────────────────────┘
-```
+| Module | Purpose | Key Class | Role in Framework |
+|--------|---------|-----------|------------------|
+| **GateSequence** | Build and execute quantum circuits | `GateSequence` | Central orchestrator for circuit operations |
+| **Register** | Manage quantum qubits | `Register` | Abstract qubit grouping and indexing |
+| **ClassicalRegister** | Store measurement results | `ClassicalRegister` | Quantum-classical interface bridge |
+| **State** | Represent and manipulate quantum states | `State` | State vector analysis and operations |
+| **Initialization** | Prepare arbitrary quantum states | `StatePreparation` | Automated circuit synthesis for state preparation |
+| **CircuitDrawer** | Visualize quantum circuits | `CircuitDrawer` | Visual representation and export |
 
-### 1.2 核心模块功能总结
-
-| 模块 | 功能 | 核心类/函数 | 应用域 |
-|------|------|-----------|--------|
-| **GateSequence** | 量子门序列构建与执行 | GateSequence | 电路设计 |
-| **Register** | 量子比特管理 | Register | 寄存器抽象 |
-| **ClassicalRegister** | 经典测量结果存储 | ClassicalRegister | 混合算法 |
-| **State** | 量子态表示与操作 | State | 状态分析 |
-| **Initialization** | 量子态准备 | StatePreparation | 态初始化 |
-| **CircuitDrawer** | 电路可视化 | CircuitDrawer | 图形输出 |
-
-### 1.3 工作流程概览
+**Data Flow and Dependencies:**
 
 ```
-量子算法设计
+User Algorithm
     ↓
-创建 Register（量子寄存器）
-    ↓
-初始化 GateSequence（电路）
-    ↓
-选项 1: 直接构建电路                 选项 2: 用 Initialization 准备态
-├─ circuit.h(qreg[0])        或    ├─ target_state = [1/√2, 1/√2]
-├─ circuit.cx(qreg[0], qreg[1])   └─ circuit.init(target_state, qreg)
-└─ ...
-    ↓
-执行电路（模拟或实际硬件）
-    ↓
-测量结果存储到 ClassicalRegister
-    ↓
-分析结果 / 可视化电路
-    ↓
-循环优化或得出结论
+Register ←──────── GateSequence ────────→ ClassicalRegister
+    ↓                   ↓                        ↓
+   [Qubit          [Execute Circuit]      [Store Results]
+    Setup]              ↓
+                   State / Initialization
+                        ↓
+                   CircuitDrawer
+                        ↓
+                 [Visualization Output]
+```
+
+Each module provides specific functionality while maintaining a clean separation of concerns. The GateSequence acts as the central hub, coordinating interactions between quantum and classical components, while CircuitDrawer provides visualization capabilities orthogonal to the computational core.
+
+### 1.3 Typical Workflow
+
+```
+Step 1: Design quantum algorithm
+        ↓
+Step 2: Create Register(s) for qubits
+        ↓
+Step 3: Initialize GateSequence
+        ↓
+Step 4: Build circuit or prepare state
+   
+   Option A: Manual Circuit        Option B: Automatic Initialization
+   ├─ circuit.h(qreg[0])    or    ├─ target_state = [1/√2, 1/√2]
+   ├─ circuit.cx(qreg[0], qreg[1]) └─ circuit.init(target_state, qreg)
+   └─ ... more gates
+        ↓
+Step 5: Execute on simulator/hardware
+        ↓
+Step 6: Store results in ClassicalRegister
+        ↓
+Step 7: Analyze and visualize
+        ↓
+Step 8: Iterate and optimize
 ```
 
 ---
 
-## 二、核心模块详解
+## II. Core Modules in Detail
 
-### 2.1 Register（量子寄存器）
+### 2.1 Register (Quantum Register)
 
-#### 功能概述
-- **用途**：组织和管理量子比特组
-- **特性**：灵活的Python风格索引、范围验证、UUID唯一标识
+#### Overview
+- **Purpose**: Organize and manage groups of quantum qubits
+- **Features**: Flexible Python-style indexing, range validation, UUID-based unique identification
 
-#### 基础概念
+#### Core Concepts
 
-**寄存器是什么**：
-量子寄存器是对一组量子比特的逻辑分组。与经典计算中的变量名类似，寄存器为量子比特提供了有意思的名称和索引机制。
+**What is a Register?**
+A quantum register is a logical grouping of quantum qubits. Similar to variable names in classical computing, registers provide meaningful names and indexing mechanisms for quantum qubits.
 
-**索引系统**：
+**Indexing System**:
 
 ```python
 from core.register import Register
 
-qreg = Register("q", 3)  # 创建3个比特的寄存器
+qreg = Register("q", 3)  # Create 3-qubit register
 
-# 各种索引方式
-qreg[0]        # 第0个比特        → [(qreg, [0])]
-qreg[0:2]      # 第0-1个比特      → [(qreg, [0, 1])]
-qreg[[0, 2]]   # 第0和2个比特     → [(qreg, [0, 2])]
-qreg[(0, 1)]   # 第0和1个比特     → [(qreg, [0, 1])]
-qreg[-1]       # 最后一个比特     → [(qreg, [2])]
+# Various indexing methods
+qreg[0]        # Qubit 0                → [(qreg, [0])]
+qreg[0:2]      # Qubits 0-1            → [(qreg, [0, 1])]
+qreg[[0, 2]]   # Qubits 0 and 2        → [(qreg, [0, 2])]
+qreg[(0, 1)]   # Qubits 0 and 1        → [(qreg, [0, 1])]
+qreg[-1]       # Last qubit             → [(qreg, [2])]
 ```
 
-#### 核心特性
-- **灵活索引**：整数、切片、列表、元组、负索引
-- **自动范围检验**：超出范围自动抛出异常
-- **UUID唯一性**：每个Register实例都有唯一ID
-- **集合友好**：支持作为字典键和集合元素
+#### Key Features
+- **Flexible Indexing**: Support for integers, slices, lists, tuples, and negative indices
+- **Automatic Range Checking**: Out-of-range access raises exceptions automatically
+- **UUID Uniqueness**: Each Register instance has a unique identifier
+- **Collection-Friendly**: Can be used as dictionary keys and set elements
 
-#### 使用示例
+#### Usage Example
 ```python
-# 创建多个寄存器
+# Create multiple registers
 q1 = Register("q1", 2)
 q2 = Register("q2", 3)
 
-# 在电路中使用
+# Use in circuits
 from core.GateSequence import GateSequence
 circuit = GateSequence(q1, q2)
 circuit.h(q1[0])
@@ -143,42 +130,42 @@ circuit.cx(q1[0], q2[1])
 
 ---
 
-### 2.2 ClassicalRegister（经典寄存器）
+### 2.2 ClassicalRegister (Classical Register)
 
-#### 功能概述
-- **用途**：存储量子测量结果，实现量子-经典交互
-- **特性**：与Register类似的索引，支持状态追踪
+#### Overview
+- **Purpose**: Store quantum measurement results and enable quantum-classical interactions
+- **Features**: Indexing similar to Register, supports state tracking
 
-#### 核心工作过程
+#### Core Workflow
 
 ```
-初始化
-  ↓ (所有比特值 = -1，表示未测量)
-测量量子比特
-  ↓ (获得0或1的结果)
-更新经典比特值
+Initialization
+  ↓ (All bits initialized to -1, representing unmeasured state)
+Measure quantum qubits
+  ↓ (Obtain 0 or 1 results)
+Update classical bit values
   ↓
-在经典算法中使用这些值
-  ↓ (条件分支、计算等)
-返回量子操作
-  ↓ (根据经典结果)
-完成混合算法
+Use these values in classical algorithm
+  ↓ (Conditional branching, computation, etc.)
+Return to quantum operations
+  ↓ (Based on classical results)
+Complete hybrid algorithm
 ```
 
-#### 索引方式
+#### Indexing Methods
 
 ```python
 from core.Classicalregister import ClassicalRegister
 
 creg = ClassicalRegister("result", 3)
 
-# 索引方式同 Register
+# Same indexing methods as Register
 creg[0]
 creg[0:2]
 creg[[0, 1]]
 ```
 
-#### 使用示例
+#### Usage Example
 ```python
 from core.GateSequence import GateSequence
 from core.Classicalregister import ClassicalRegister
@@ -189,151 +176,151 @@ creg = ClassicalRegister("c", 2)
 
 circuit = GateSequence(qreg, creg)
 circuit.h(qreg[0])
-circuit.measure(qreg, creg)  # 测量并存储结果
+circuit.measure(qreg, creg)  # Measure and store results
 ```
 
 ---
 
-### 2.3 GateSequence（量子门序列）
+### 2.3 GateSequence (Quantum Gate Sequence)
 
-#### 功能概述
-- **用途**：构建、管理并执行量子电路
-- **特性**：高层API、自动索引转换、多种门类型
+#### Overview
+- **Purpose**: Build, manage, and execute quantum circuits
+- **Features**: High-level API, automatic index translation, multiple gate types
 
-#### 架构设计
+#### Architecture Design
 
-**寄存器管理**：
+**Register Management**:
 ```
 GateSequence
-├─ 量子寄存器列表
+├─ Quantum registers list
 │  ├─ Register "q": [q0, q1, q2]
 │  └─ Register "anc": [q3, q4]
-├─ 经典寄存器列表
+├─ Classical registers list
 │  └─ ClassicalRegister "c": [c0, c1]
-└─ 全局索引映射
+└─ Global index mapping
    [0→(q,0), 1→(q,1), 2→(q,2), 3→(anc,0), 4→(anc,1)]
 ```
 
-**门类型**：
+**Gate Types**:
 
-| 门类别 | 说明 | 示例 |
+| Gate Category | Description | Examples |
 |--------|------|------|
-| 单比特门 | 作用于单个比特 | H, X, Y, Z, S, T |
-| 参数化门 | 旋转类操作 | RX(θ), RY(θ), RZ(θ) |
-| 两比特门 | 受控或交换操作 | CNOT, CZ, SWAP |
-| 多控制门 | 多控制比特 | MCX, MCY, MCZ |
-| 测量 | 量子到经典转换 | MEASURE |
-| 自定义门 | 用户定义 | UNITARY |
+| Single-qubit gates | Operations on single qubit | H, X, Y, Z, S, T |
+| Parameterized gates | Rotation-type operations | RX(θ), RY(θ), RZ(θ) |
+| Two-qubit gates | Controlled or swap operations | CNOT, CZ, SWAP |
+| Multi-control gates | Multiple control qubits | MCX, MCY, MCZ |
+| Measurement | Quantum to classical conversion | MEASURE |
+| Custom gates | User-defined | UNITARY |
 
-#### 基础流程
+#### Basic Workflow
 
 ```python
 from core.GateSequence import GateSequence
 from core.register import Register
 
-# 第1步：创建寄存器
+# Step 1: Create register
 qreg = Register("q", 3)
 
-# 第2步：创建电路
+# Step 2: Create circuit
 circuit = GateSequence(qreg)
 
-# 第3步：构建电路
-circuit.h(qreg[0])                          # H门
-circuit.cx(qreg[0], qreg[1])                # CNOT门
-circuit.ry(qreg[2], 1.57)                   # RY(π/2)门
-circuit.measure(qreg[0])                    # 测量
+# Step 3: Build circuit
+circuit.h(qreg[0])                          # Hadamard gate
+circuit.cx(qreg[0], qreg[1])                # CNOT gate
+circuit.ry(qreg[2], 1.57)                   # RY(π/2) gate
+circuit.measure(qreg[0])                    # Measurement
 
-# 第4步：执行和获取结果
+# Step 4: Execute and get results
 result = circuit.execute(backend='torch')
 print(result)
 ```
 
 ---
 
-### 2.4 State（量子态）
+### 2.4 State (Quantum State)
 
-#### 功能概述
-- **用途**：表示和操作量子态
-- **特性**：自动归一化、复数振幅支持、PyTorch后端
+#### Overview
+- **Purpose**: Represent and manipulate quantum states
+- **Features**: Automatic normalization, complex amplitude support, PyTorch backend
 
-#### 数学基础
+#### Mathematical Foundation
 
-**状态向量表示**：
+**State Vector Representation**:
 $$|\psi\rangle = \sum_{i=0}^{2^n-1} \alpha_i |i\rangle$$
 
 其中 $\alpha_i$ 是复数振幅，满足归一化条件 $\sum_i |\alpha_i|^2 = 1$
 
-**操作类型**：
+**Operation Types**:
 
-| 操作 | 说明 | 公式 |
+| Operation | Description | Formula |
 |------|------|------|
-| 测量 | 获得概率分布 | $P(i) = \|\alpha_i\|^2$ |
-| 内积 | 两个态的重叠 | $\langle \psi \| \phi \rangle$ |
-| 张量积 | 合并两个系统 | $\|\psi_1\rangle \otimes \|\psi_2\rangle$ |
-| 期望值 | 可观测量期望 | $\langle O \rangle$ |
+| Measurement | Get probability distribution | $P(i) = \|\alpha_i\|^2$ |
+| Inner product | Overlap of two states | $\langle \psi \| \phi \rangle$ |
+| Tensor product | Combine two systems | $\|\psi_1\rangle \otimes \|\psi_2\rangle$ |
+| Expectation value | Observable expectation | $\langle O \rangle$ |
 
-#### 创建和使用
+#### Creation and Usage
 
 ```python
 from core.State import State
 import numpy as np
 
-# 创建基态
+# Create ground state
 state = State(3)  # |000⟩
 
-# 从向量创建
+# Create from vector
 data = [1/np.sqrt(2), 1/np.sqrt(2)]
-state = State(data)  # (|0⟩ + |1⟩)/√2，自动归一化
+state = State(data)  # (|0⟩ + |1⟩)/√2, auto-normalized
 
-# 查询和操作
-probs = state.probabilities()              # 概率分布
-data = state.data                          # 获取振幅数据
-inner = state.inner_product(other_state)   # 内积计算
+# Query and operate
+probs = state.probabilities()              # Probability distribution
+data = state.data                          # Get amplitude data
+inner = state.inner_product(other_state)   # Inner product calculation
 ```
 
 ---
 
-### 2.5 Initialization（量子态准备）
+### 2.5 Initialization (Quantum State Preparation)
 
-#### 功能概述
-- **用途**：自动构建量子电路以准备目标态
-- **特性**：递归分解、参数优化、自动化
+#### Overview
+- **Purpose**: Automatically build quantum circuits to prepare target states
+- **Features**: Recursive decomposition, parameter optimization, automation
 
-#### 算法原理
+#### Algorithm Principles
 
-**单比特初始化**：
+**Single-Qubit Initialization**:
 ```
-目标态: α₀|0⟩ + α₁|1⟩
-  ↓ [提取相位]
-应用全局相位补偿
-  ↓ [计算旋转角]
+Target state: α₀|0⟩ + α₁|1⟩
+  ↓ [Extract phase]
+Apply global phase compensation
+  ↓ [Compute rotation angle]
 θ = arccos(|α₀|)
-  ↓ [应用RY(2θ)]
-得到振幅正确的叠加
-  ↓ [应用相位门]
-添加相对相位
+  ↓ [Apply RY(2θ)]
+Get correct amplitude superposition
+  ↓ [Apply phase gate]
+Add relative phase
   ↓
-最终状态准确
+Final state accurate
 ```
 
-**多比特递归分解**：
+**Multi-Qubit Recursive Decomposition**:
 ```
-n比特目标态 |v⟩
-  ↓ [分割]
-前2^(n-1)个振幅 v1 | 后2^(n-1)个振幅 v2
-  ↓ [计算概率]
-p1 = ||v1||²  (比特=(n-1)为0的概率)
-p2 = ||v2||²  (比特=(n-1)为1的概率)
-  ↓ [RY旋转]
-在比特(n-1)上应用RY(θ)，其中cos(θ/2) = √p1
-  ↓ [受控递归]
-当比特=(n-1)为0: 递归准备v1/||v1||
-当比特=(n-1)为1: 递归准备v2/||v2||
+n-qubit target state |v⟩
+  ↓ [Split]
+First 2^(n-1) amplitudes v1 | Last 2^(n-1) amplitudes v2
+  ↓ [Compute probabilities]
+p1 = ||v1||²  (probability of qubit(n-1)=0)
+p2 = ||v2||²  (probability of qubit(n-1)=1)
+  ↓ [RY rotation]
+Apply RY(θ) on qubit(n-1), where cos(θ/2) = √p1
+  ↓ [Controlled recursion]
+When qubit(n-1)=0: Recursively prepare v1/||v1||
+When qubit(n-1)=1: Recursively prepare v2/||v2||
   ↓
-完成准备
+Preparation complete
 ```
 
-#### 使用示例
+#### Usage Example
 
 ```python
 from core.GateSequence import GateSequence
@@ -341,75 +328,75 @@ from core.Initialization import StatePreparation
 from core.register import Register
 import numpy as np
 
-# 目标态：(|00⟩ + |11⟩)/√2 (Bell态)
+# Target state: (|00⟩ + |11⟩)/√2 (Bell state)
 target_state = [1/np.sqrt(2), 0, 0, 1/np.sqrt(2)]
 
 qreg = Register("q", 2)
 circuit = GateSequence(qreg)
 
-# 使用初始化模块
+# Use initialization module
 StatePreparation.prepare(circuit, qreg, target_state)
 
-# 电路已经包含了准备该态所需的所有门
+# Circuit now contains all gates needed to prepare this state
 result = circuit.execute()
 ```
 
 ---
 
-### 2.6 CircuitDrawer（电路可视化）
+### 2.6 CircuitDrawer (Circuit Visualization)
 
-#### 功能概述
-- **用途**：将量子电路转换为可视化图像
-- **特性**：灵活布局、自定义样式、支持多格式输出
+#### Overview
+- **Purpose**: Convert quantum circuits to visual images
+- **Features**: Flexible layout, custom styling, multiple output formats
 
-#### 绘制流程
-
-```
-量子电路 GateSequence
-    ↓
-提取门列表并排序
-    ↓
-门层折叠（优化空间利用）
-    ├─ 标准折叠: 按时间顺序排列
-    └─ 紧凑折叠: 更高效的空间利用
-    ↓
-计算坐标信息
-    ├─ 每个门的 (x, y) 位置
-    ├─ 字体大小、线宽
-    └─ 颜色和样式
-    ↓
-使用 Matplotlib 逐层绘制
-    ├─ 背景和网格
-    ├─ 比特线和寄存器标签
-    ├─ 量子门
-    ├─ 控制点和连接线
-    └─ 参数标签
-    ↓
-导出或显示
-    ├─ PNG/SVG 文件
-    ├─ 屏幕显示
-    └─ PDF（取决于后端）
-```
-
-#### 坐标系统
+#### Drawing Process
 
 ```
-y轴（竖直向下为正）：
-  0 ← 最顶部(寄存器标签)
+Quantum circuit GateSequence
+    ↓
+Extract and sort gate list
+    ↓
+Gate layer folding (optimize space utilization)
+    ├─ Standard folding: arrange in time order
+    └─ Compact folding: more efficient space utilization
+    ↓
+Compute coordinate information
+    ├─ (x, y) position for each gate
+    ├─ Font size, line width
+    └─ Colors and styling
+    ↓
+Draw layer-by-layer with Matplotlib
+    ├─ Background and grid
+    ├─ Qubit lines and register labels
+    ├─ Quantum gates
+    ├─ Control points and connection lines
+    └─ Parameter labels
+    ↓
+Export or display
+    ├─ PNG/SVG files
+    ├─ Screen display
+    └─ PDF (depending on backend)
+```
+
+#### Coordinate System
+
+```
+y-axis (downward is positive):
+  0 ← Top (register labels)
   ↓
-  -1, -2, -3 ← 量子比特线
+  -1, -2, -3 ← Qubit lines
   ↓
-  -(n+1) ← 第二层起始
+  -(n+1) ← Second layer start
 
-x轴（水平向右为正）：
-  0 ← x偏移起点
+x-axis (rightward is positive):
+  0 ← x offset start
   →
-  gate_x ← 第一个门的x坐标
+  gate_x ← x coordinate of first gate
   →
   ...
 ```
 
-#### 样式系统
+#### Style System
 
 ```python
 style = {
@@ -417,11 +404,11 @@ style = {
     'linecolor': 'black',
     'gatetextcolor': 'black',
     'fontsize': 12,
-    'lwidth1': 1.0,           # 细线
-    'lwidth2': 2.0,           # 中线
-    'width_per_layer': 2.0,   # 每层宽度
-    'margin': 0.5,            # 边距
-    'displaytext': {          # 门名称映射
+    'lwidth1': 1.0,           # Thin lines
+    'lwidth2': 2.0,           # Medium lines
+    'width_per_layer': 2.0,   # Width per layer
+    'margin': 0.5,            # Margin
+    'displaytext': {          # Gate name mapping
         'h': 'H',
         'x': 'X',
         # ...
@@ -429,7 +416,7 @@ style = {
 }
 ```
 
-#### 使用示例
+#### Usage Example
 
 ```python
 from drawer.circuit_drawer import CircuitDrawer
@@ -441,17 +428,17 @@ circuit = GateSequence(qreg)
 circuit.h(qreg[0])
 circuit.cx(qreg[0], qreg[1])
 
-# 绘制电路
+# Draw circuit
 drawer = CircuitDrawer(circuit)
 drawer.draw('my_circuit.png', style='default')
-drawer.show()  # 显示在屏幕上
+drawer.show()  # Display on screen
 ```
 
 ---
 
-## 三、集成工作流程
+## III. Integrated Workflows
 
-### 3.1 完整量子算法示例：Bell态准备和测量
+### 3.1 Complete Quantum Algorithm Example: Bell State Preparation and Measurement
 
 ```python
 from core.register import Register
@@ -459,31 +446,31 @@ from core.Classicalregister import ClassicalRegister
 from core.GateSequence import GateSequence
 from drawer.circuit_drawer import CircuitDrawer
 
-# 步骤1: 创建寄存器
+# Step 1: Create registers
 qreg = Register("q", 2)
 creg = ClassicalRegister("result", 2)
 
-# 步骤2: 创建电路
+# Step 2: Create circuit
 circuit = GateSequence(qreg, creg)
 
-# 步骤3: 构建Bell态电路
+# Step 3: Build Bell state circuit
 circuit.h(qreg[0])                    # (|0⟩ + |1⟩)/√2 on q0
-circuit.cx(qreg[0], qreg[1])          # 控制-X: (|00⟩ + |11⟩)/√2
+circuit.cx(qreg[0], qreg[1])          # CNOT: (|00⟩ + |11⟩)/√2
 
-# 步骤4: 测量
+# Step 4: Measure
 circuit.measure(qreg, creg)
 
-# 步骤5: 执行
+# Step 5: Execute
 result = circuit.execute(shots=1000)
-print(f"测量结果分布: {result.counts}")
+print(f"Measurement distribution: {result.counts}")
 
-# 步骤6: 可视化
+# Step 6: Visualize
 drawer = CircuitDrawer(circuit)
 drawer.draw('bell_circuit.png')
 drawer.show()
 ```
 
-### 3.2 使用Initialization进行复杂态准备
+### 3.2 Complex State Preparation Using Initialization
 
 ```python
 from core.register import Register
@@ -491,7 +478,7 @@ from core.GateSequence import GateSequence
 from core.Initialization import StatePreparation
 import numpy as np
 
-# 目标: 量子傅立叶变换的特征态
+# Target: Quantum Fourier Transform eigenstate
 # |ψ⟩ = (|0⟩ + e^(2πi/8)|1⟩ + e^(4πi/8)|2⟩ + ...)/√8
 target = np.array([
     1/np.sqrt(8) * np.exp(2j*np.pi*k/8) 
@@ -501,26 +488,26 @@ target = np.array([
 qreg = Register("q", 3)
 circuit = GateSequence(qreg)
 
-# 自动准备态
+# Automatically prepare state
 StatePreparation.prepare(circuit, qreg, target)
 
-# 电路已包含所有必要的门
+# Circuit now contains all necessary gates
 ```
 
-### 3.3 分析量子态
+### 3.3 Quantum State Analysis
 
 ```python
 from core.State import State
 import numpy as np
 
-# 创建Bell态 (|00⟩ + |11⟩)/√2
+# Create Bell state (|00⟩ + |11⟩)/√2
 bell_state = State([1/np.sqrt(2), 0, 0, 1/np.sqrt(2)])
 
-# 分析
+# Analysis
 probs = bell_state.probabilities()
-print("测量概率:", probs)          # [0.5, 0, 0, 0.5]
+print("Measurement probabilities:", probs)          # [0.5, 0, 0, 0.5]
 
-# 与其他态取内积
+# Inner product with other state
 other = State([1, 0, 0, 0])      # |00⟩
 overlap = bell_state.inner_product(other)
 print("|⟨00|ψ⟩|²:", abs(overlap)**2)  # 0.5
@@ -528,62 +515,62 @@ print("|⟨00|ψ⟩|²:", abs(overlap)**2)  # 0.5
 
 ---
 
-## 四、学习路径
+## IV. Learning Path
 
-### 第一阶段：基础（1-2周）
-1. 理解 Register 和 ClassicalRegister 的概念
-2. 学习 GateSequence 的基本使用
-3. 实现简单的量子电路（Bell态、GHZ态）
-4. 使用 CircuitDrawer 可视化电路
+### Stage 1: Fundamentals (1-2 weeks)
+1. Understand Register and ClassicalRegister concepts
+2. Learn basic GateSequence usage
+3. Implement simple quantum circuits (Bell state, GHZ state)
+4. Use CircuitDrawer to visualize circuits
 
-**关键项目**：
-- 构建 2-3 个比特的量子电路
-- 执行和分析测量结果
-- 绘制电路图
+**Key Projects**:
+- Build 2-3 qubit quantum circuits
+- Execute and analyze measurement results
+- Generate circuit diagrams
 
-### 第二阶段：中级（2-3周）
-1. 深入理解 State 类的数学基础
-2. 学习 Initialization 模块的递归分解算法
-3. 实现参数化量子电路
-4. 处理复杂的多比特态
+### Stage 2: Intermediate (2-3 weeks)
+1. Deep dive into State class mathematics
+2. Learn Initialization module recursive decomposition
+3. Implement parameterized quantum circuits
+4. Handle complex multi-qubit states
 
-**关键项目**：
-- 使用参数化门构建变分电路
-- 准备特定的量子态（如特征态）
-- 设计混合量子-经典算法
+**Key Projects**:
+- Build variational circuits with parameterized gates
+- Prepare specific quantum states (such as eigenstates)
+- Design hybrid quantum-classical algorithms
 
-### 第三阶段：高级（3-4周）
-1. 量子算法的完整实现（Grover、QFT、VQE等）
-2. 电路优化和编译
-3. 错误分析和缓解
-4. 大规模模拟
+### Stage 3: Advanced (3-4 weeks)
+1. Complete quantum algorithm implementations (Grover, QFT, VQE, etc.)
+2. Circuit optimization and compilation
+3. Error analysis and mitigation
+4. Large-scale simulation
 
-**关键项目**：
-- 实现完整的量子算法
-- 性能优化和分析
-- 与实际量子硬件接口
+**Key Projects**:
+- Implement complete quantum algorithms
+- Performance optimization and analysis
+- Interface with actual quantum hardware
 
 ---
 
-## 五、常见操作参考
+## V. Quick Reference
 
-### 常见任务快速指南
+### Common Tasks Quick Guide
 
-**任务1: 创建基础量子电路**
+**Task 1: Create Basic Quantum Circuit**
 ```python
 qreg = Register("q", 3)
 circuit = GateSequence(qreg)
-circuit.h(qreg)         # 在所有比特上应用H门
+circuit.h(qreg)         # Apply H gate on all qubits
 circuit.cx(qreg[0], qreg[1])  # CNOT
 ```
 
-**任务2: 准备特定量子态**
+**Task 2: Prepare Specific Quantum State**
 ```python
 target_state = [1/np.sqrt(2), 0, 1/np.sqrt(2), 0]
 StatePreparation.prepare(circuit, qreg, target_state)
 ```
 
-**任务3: 执行和测量**
+**Task 3: Execute and Measure**
 ```python
 creg = ClassicalRegister("c", 3)
 circuit = GateSequence(qreg, creg)
@@ -591,7 +578,7 @@ circuit.measure(qreg, creg)
 result = circuit.execute(shots=1000)
 ```
 
-**任务4: 可视化电路**
+**Task 4: Visualize Circuit**
 ```python
 drawer = CircuitDrawer(circuit)
 drawer.draw('output.png')
@@ -599,26 +586,26 @@ drawer.draw('output.png')
 
 ---
 
-## 六、架构依赖关系
+## VI. Architecture Dependencies
 
 ```
 CircuitDrawer
   └─ GateSequence
-      ├─ Register (管理量子比特)
-      ├─ ClassicalRegister (存储测量结果)
-      ├─ Initialization (可选的态准备)
-      └─ State (用于分析)
+      ├─ Register (manages qubits)
+      ├─ ClassicalRegister (stores measurement results)
+      ├─ Initialization (optional state preparation)
+      └─ State (for analysis)
 
 State
-  └─ PyTorch (后端计算)
+  └─ PyTorch (computational backend)
 
 GateSequence
-  └─ 所有其他模块
+  └─ All other modules
 ```
 
 ---
 
-## 七、版本历史
+## VII. Version History
 
-- **v2.0**: 完整集成了所有子模块，添加了综合文档和工作流
-- **v1.0**: 初始版本，包含基本的门序列和寄存器功能
+- **v2.0**: Complete integration of all sub-modules, added comprehensive documentation and workflows
+- **v1.0**: Initial version with basic gate sequences and register functionality

@@ -15,58 +15,58 @@ keywords:
   - quantum circuit diagram
 ---
 
-# Circuit Drawer 技能指南
+# Circuit Drawer User Guide
 
-## 一、算法介绍
+## I. Algorithm Introduction
 
-### 1.1 基本概念
+### 1.1 Core Concepts
 
-**Circuit Drawer（量子电路绘制器）** 是将量子电路的抽象表示转换为可视化图像的工具。它负责：
-- 将量子门序列转换为可理解的电路图
-- 管理电路布局和空间利用
-- 应用样式和美学设计
-- 支持交互式或静态图像导出
+**Circuit Drawer** is a tool that converts abstract representations of quantum circuits into visual images. It is responsible for:
+- Converting quantum gate sequences into understandable circuit diagrams
+- Managing circuit layout and space utilization
+- Applying styling and aesthetic design
+- Supporting interactive or static image export
 
-### 1.2 核心架构
+### 1.2 Core Architecture
 
-#### 1.2.1 绘制流程
-
-```
-量子电路 (GateSequence)
-    ↓
-提取门列表
-    ↓
-门层折叠 (Layering)
-    ├─ 标准折叠: get_layered_gates
-    └─ 紧凑折叠: compact_get_layered_gates
-    ↓
-计算坐标信息
-    ├─ 门位置 (x, y)
-    ├─ 字体大小
-    ├─ 线宽
-    └─ 颜色配置
-    ↓
-逐层绘制
-    ├─ 绘制寄存器标签和线路
-    ├─ 绘制各类量子门
-    ├─ 绘制控制点和连接线
-    └─ 绘制其他元素（标签、参数）
-    ↓
-最终图像 (PNG/SVG/显示)
-```
-
-#### 1.2.2 坐标系统
+#### 1.2.1 Drawing Process
 
 ```
-y轴方向（向下为正）：
-  ↓ 0 ← 顶部
+Quantum Circuit (GateSequence)
+    ↓
+Extract gate list
+    ↓
+Gate layer folding (Layering)
+    ├─ Standard folding: get_layered_gates
+    └─ Compact folding: compact_get_layered_gates
+    ↓
+Compute coordinate information
+    ├─ Gate position (x, y)
+    ├─ Font size
+    ├─ Line width
+    └─ Color configuration
+    ↓
+Draw layer-by-layer
+    ├─ Draw register labels and lines
+    ├─ Draw various quantum gates
+    ├─ Draw control points and connection lines
+    └─ Draw other elements (labels, parameters)
+    ↓
+Final image (PNG/SVG/Display)
+```
+
+#### 1.2.2 Coordinate System
+
+```
+y-axis direction (downward is positive):
+  ↓ 0 ← Top
   ↓
-  ↓ -1, -2, -3, ... ← 每个比特向下
+  ↓ -1, -2, -3, ... ← Each qubit downward
   ↓
-  ↓ -(n+1) ← 折叠后第二层起始
+  ↓ -(n+1) ← Second layer start after folding
   ↓
 
-x轴方向（向右为正）：
+x-axis direction (rightward is positive):
   ←─── 0 (x_offset)
        │
        gate1 ← [x, width]
@@ -74,159 +74,159 @@ x轴方向（向右为正）：
   gate2 ← [x+width, width]
 ```
 
-#### 1.2.3 门折叠机制
+#### 1.2.3 Gate Folding Mechanism
 
-**标准折叠 (Non-compact)**
+**Standard Folding (Non-compact)**
 ```
 Gate1  Gate2  Gate3
 |─────|─────|─────|
-Layer 0: 按时间顺序放置，超过宽度限制则折叠
+Layer 0: Place in time order, fold when exceeding width limit
 
 Gate4  Gate5
 |─────|─────|
-Layer 1: 继续放置后续门
+Layer 1: Continue placing subsequent gates
 ```
 
-**紧凑折叠 (Compact)**
+**Compact Folding**
 ```
-关键优化：
-1. 每个比特独立维护"光标位置"
-2. 无依赖关系的门可并行放置
-3. 测量门自动对齐所有比特
+Key optimizations:
+1. Each qubit independently maintains "cursor position"
+2. Gates without dependencies can be placed in parallel
+3. Measurement gates automatically align all qubits
 
-结果：更高效的空间利用
+Result: More efficient space utilization
 ```
 
-### 1.3 样式系统
+### 1.3 Style System
 
-CircuitDrawer 使用分层样式系统：
+CircuitDrawer uses a layered style system:
 
 ```python
-样式配置 (Style Dictionary)
-├─ 颜色 (Color)
-│  ├─ 背景颜色 (backgroundColor)
-│  ├─ 线条颜色 (linecolor)
-│  ├─ 文本颜色 (gatetextcolor)
-│  └─ 显示颜色 (displaycolor)
-├─ 尺寸 (Size)
-│  ├─ 字体大小 (fontsize)
-│  ├─ 线宽 (lwidth1/2/3/4)
-│  ├─ 每层宽度 (width_per_layer)
-│  └─ 边距 (margin)
-├─ 显示文本 (Display Text)
-│  └─ 门名称映射 (displaytext)
-└─ 布局参数
-   ├─ x/y 偏移 (x_offset, y_offset)
-   └─ 比例因子 (scale_char)
+Style Configuration (Style Dictionary)
+├─ Color
+│  ├─ Background color (backgroundColor)
+│  ├─ Line color (linecolor)
+│  ├─ Gate text color (gatetextcolor)
+│  └─ Display color (displaycolor)
+├─ Size
+│  ├─ Font size (fontsize)
+│  ├─ Line width (lwidth1/2/3/4)
+│  ├─ Width per layer (width_per_layer)
+│  └─ Margin (margin)
+├─ Display Text
+│  └─ Gate name mapping (displaytext)
+└─ Layout Parameters
+   ├─ x/y offset (x_offset, y_offset)
+   └─ Scale factor (scale_char)
 ```
 
-### 1.4 门类型分类
+### 1.4 Gate Type Classification
 
-| 门类型 | 绘制方法 | 特点 | 示例 |
+| Gate Type | Draw Method | Characteristics | Examples |
 |--------|---------|------|------|
-| **单比特门** | `_gate()` | 单个量子比特上的操作 | H, X, Y, Z, S, T, RX, RY, RZ |
-| **多比特门** | `_multiqubit_gate()` | 多个量子比特上的操作 | SWAP, CX, CZ, CH |
-| **受控门** | `_control_gate()` | 带控制点的量子门 | CNOT, CCX, CRX |
-| **Swap门** | `_swap()` | 交换两个量子比特 | SWAP |
+| **Single-qubit gates** | `_gate()` | Operations on single qubit | H, X, Y, Z, S, T, RX, RY, RZ |
+| **Multi-qubit gates** | `_multiqubit_gate()` | Operations on multiple qubits | SWAP, CX, CZ, CH |
+| **Controlled gates** | `_control_gate()` | Quantum gates with control points | CNOT, CCX, CRX |
+| **Swap gates** | `_swap()` | Swap two qubits | SWAP |
 
 ---
 
-## 二、使用方法步骤
+## II. Usage Steps
 
-### 2.1 基础使用流程
+### 2.1 Basic Usage Workflow
 
-#### 第一步：导入模块
+#### Step 1: Import Modules
 ```python
 from drawer.circuit_drawer import CircuitDrawer
 from core.GateSequence import GateSequence
 from core.register import Register
 ```
 
-#### 第二步：创建量子电路
+#### Step 2: Create Quantum Circuit
 ```python
-# создать 寄存器和电路
+# Create register and circuit
 qreg = Register("q", 3)
 circuit = GateSequence(qreg)
 
-# 构建电路
+# Build circuit
 circuit.h(qreg[0])
 circuit.cnot(qreg[0], qreg[1])
 circuit.cnot(qreg[1], qreg[2])
 ```
 
-#### 第三步：创建 CircuitDrawer
+#### Step 3: Create CircuitDrawer
 ```python
-# 创建绘制器
+# Create drawer
 drawer = CircuitDrawer(
-    scale=1.0,           # 缩放因子
-    width_per_layer=30,  # 每层最大宽度
-    style='dark'         # 样式：'dark' 或 'light'
+    scale=1.0,           # Scale factor
+    width_per_layer=30,  # Max width per layer
+    style='dark'         # Style: 'dark' or 'light'
 )
 ```
 
-#### 第四步：绘制电路
+#### Step 4: Draw Circuit
 ```python
-# 绘制到屏幕
+# Draw to screen
 fig = drawer.draw(circuit, title="My Quantum Circuit")
 
-# 或保存到文件
+# Or save to file
 drawer.draw(circuit, filename="circuit.png", title="Bell State")
 ```
 
-### 2.2 详细使用示例
+### 2.2 Detailed Usage Examples
 
-#### 例子 1：简单电路绘制
+#### Example 1: Simple Circuit Drawing
 
 ```python
 from drawer.circuit_drawer import CircuitDrawer
 from core.GateSequence import GateSequence
 from core.register import Register
 
-# 创建 2 比特电路
+# Create 2-qubit circuit
 qreg = Register("q", 2)
 circuit = GateSequence(qreg, name="simple_circuit")
 
-# 添加门
+# Add gates
 circuit.h(qreg[0])
 circuit.h(qreg[1])
 circuit.cnot(qreg[0], qreg[1])
 
-# 绘制
+# Draw
 drawer = CircuitDrawer()
 figure = drawer.draw(circuit, title="Simple Circuit", filename="simple.png")
 ```
 
-#### 例子 2：Bell 态电路
+#### Example 2: Bell State Circuit
 
 ```python
 from drawer.circuit_drawer import CircuitDrawer
 from core.GateSequence import GateSequence
 from core.register import Register
 
-# 创建 Bell 态电路
+# Create Bell state circuit
 qreg = Register("q", 2)
 circuit = GateSequence(qreg, name="Bell State")
 
 circuit.h(qreg[0])
 circuit.cnot(qreg[0], qreg[1])
 
-# 使用紧凑布局绘制
+# Draw with compact layout
 drawer = CircuitDrawer(width_per_layer=50, style='light')
 drawer.draw(circuit, title="Bell State Circuit", compact=True)
 ```
 
-#### 例子 3：复杂的多比特电路
+#### Example 3: Complex Multi-qubit Circuit
 
 ```python
 from drawer.circuit_drawer import CircuitDrawer
 from core.GateSequence import GateSequence
 from core.register import Register
 
-# 创建 Grover 式电路
+# Create Grover-style circuit
 qreg = Register("q", 4)
 circuit = GateSequence(qreg, name="Grover Circuit")
 
-# 初始化层
+# Initialization layer
 for i in range(4):
     circuit.h(qreg[i])
 
@@ -246,12 +246,12 @@ for i in range(4):
     circuit.x(qreg[i])
     circuit.h(qreg[i])
 
-# 绘制
+# Draw
 drawer = CircuitDrawer(width_per_layer=40)
 drawer.draw(circuit, title="Grover Algorithm", filename="grover.png")
 ```
 
-#### 例子 4：参数化电路
+#### Example 4: Parameterized Circuit
 
 ```python
 from drawer.circuit_drawer import CircuitDrawer
@@ -259,42 +259,42 @@ from core.GateSequence import GateSequence
 from core.register import Register
 import numpy as np
 
-# 创建参数化电路
+# Create parameterized circuit
 qreg = Register("q", 2)
 circuit = GateSequence(qreg)
 
-# 应用参数化门
+# Apply parameterized gates
 angles = [np.pi/4, np.pi/3]
 circuit.rx(angles[0], qreg[0])
 circuit.rz(angles[1], qreg[1])
 circuit.cnot(qreg[0], qreg[1])
 
-# 绘制（参数会自动格式化显示）
+# Draw (parameters will be auto-formatted)
 drawer = CircuitDrawer(style='dark')
 drawer.draw(circuit, title="Parameterized Circuit")
 ```
 
-#### 例子 5：不同样式
+#### Example 5: Different Styles
 
 ```python
 from drawer.circuit_drawer import CircuitDrawer
 from core.GateSequence import GateSequence
 
-# 创建电路
+# Create circuit
 circuit = GateSequence(3)
 circuit.h(0)
 circuit.cnot(0, 1)
 circuit.x(2)
 
-# 暗色样式
+# Dark style
 drawer_dark = CircuitDrawer(style='dark')
 drawer_dark.draw(circuit, title="Dark Style", filename="circuit_dark.png")
 
-# 亮色样式
+# Light style
 drawer_light = CircuitDrawer(style='light')
 drawer_light.draw(circuit, title="Light Style", filename="circuit_light.png")
 
-# 自定义样式
+# Custom style
 custom_style = {
     'backgroundcolor': '#1a1a1a',
     'fontsize': 12,
@@ -304,33 +304,33 @@ drawer_custom = CircuitDrawer(style=custom_style)
 drawer_custom.draw(circuit, title="Custom Style")
 ```
 
-### 2.3 高级场景
+### 2.3 Advanced Scenarios
 
-#### 场景 1：大规模电路折叠
+#### Scenario 1: Large Circuit Folding
 
 ```python
 from drawer.circuit_drawer import CircuitDrawer
 from core.GateSequence import GateSequence
 
-# 创建大型电路
+# Create large circuit
 circuit = GateSequence(20)
 for i in range(100):
     circuit.h(i % 20)
     circuit.cnot(i % 20, (i + 1) % 20)
 
-# 使用较小的 width_per_layer 强制折叠
+# Use smaller width_per_layer to force folding
 drawer = CircuitDrawer(width_per_layer=20, scale=0.8)
 drawer.draw(circuit, filename="large_circuit.png", compact=True)
 ```
 
-#### 场景 2：电路批量保存
+#### Scenario 2: Batch Circuit Saving
 
 ```python
 from drawer.circuit_drawer import CircuitDrawer
 from core.GateSequence import GateSequence
 
 def save_circuit_family(n_qubits_list, output_dir='./circuits'):
-    """保存一系列不同大小的电路"""
+    """Save a series of circuits with different sizes"""
     import os
     
     if not os.path.exists(output_dir):
@@ -346,140 +346,140 @@ def save_circuit_family(n_qubits_list, output_dir='./circuits'):
         drawer.draw(circuit, filename=filename, title=f"{n}-Qubit Circuit")
         print(f"Saved: {filename}")
 
-# 使用
+# Usage
 save_circuit_family([2, 3, 4, 5, 6])
 ```
 
-#### 场景 3：自定义中文标题和标签
+#### Scenario 3: Custom Labels and Titles
 
 ```python
 from drawer.circuit_drawer import CircuitDrawer
 from core.GateSequence import GateSequence
 from core.register import Register
 
-# 创建中文寄存器
-qreg_data = Register("数据", 2)
-qreg_work = Register("工作", 1)
+# Create registers with meaningful names
+qreg_data = Register("data", 2)
+qreg_work = Register("work", 1)
 
 circuit = GateSequence(qreg_data, qreg_work)
 circuit.h(qreg_data)
 
-# 绘制（自动使用中文字体）
+# Draw with meaningful title
 drawer = CircuitDrawer()
-drawer.draw(circuit, title="量子傅里叶变换电路", filename="qft_cn.png")
+drawer.draw(circuit, title="Quantum Fourier Transform Circuit", filename="qft.png")
 ```
 
 ---
 
-## 三、关键 API 参考
+## III. Key API Reference
 
-### 3.1 构造函数
+### 3.1 Constructor
 
 ```python
 CircuitDrawer(scale=1.0, ax=None, width_per_layer=30, style='dark')
 ```
 
-**参数：**
-- `scale: float` - 整体缩放因子（默认 1.0）
-- `ax: matplotlib.axes.Axes` - 可选的 matplotlib 轴对象
-- `width_per_layer: float` - 每层门的最大宽度（默认 30）
-- `style: str | dict` - 样式配置（'dark'、'light'、JSON 文件路径或字典）
+**Parameters:**
+- `scale: float` - Overall scale factor (default 1.0)
+- `ax: matplotlib.axes.Axes` - Optional matplotlib axis object
+- `width_per_layer: float` - Maximum width of gates per layer (default 30)
+- `style: str | dict` - Style configuration ('dark', 'light', JSON file path, or dictionary)
 
-### 3.2 主要方法
+### 3.2 Main Methods
 
-| 方法 | 参数 | 返回值 | 说明 |
+| Method | Parameters | Return | Description |
 |------|------|--------|------|
-| `draw()` | circuit, filename, title, compact | Figure | 绘制并返回/保存电路 |
-| `get_layered_gates()` | gate_list | - | 标准门层折叠 |
-| `compact_get_layered_gates()` | gate_list | - | 紧凑门层折叠 |
-| `get_text_width()` | text | float | 计算文本宽度 |
+| `draw()` | circuit, filename, title, compact | Figure | Draw and return/save circuit |
+| `get_layered_gates()` | gate_list | - | Standard gate layer folding |
+| `compact_get_layered_gates()` | gate_list | - | Compact gate layer folding |
+| `get_text_width()` | text | float | Compute text width |
 
-### 3.3 draw() 方法详解
+### 3.3 draw() Method Details
 
 ```python
 draw(gate_sequence: GateSequence, filename=None, title=False, compact=True) -> Figure
 ```
 
-**参数：**
-- `gate_sequence` - 要绘制的 GateSequence 对象
-- `filename` - 输出文件名（如 'circuit.png'），不指定则显示
-- `title` - 电路标题（默认使用电路名称）
-- `compact` - 是否使用紧凑布局（默认 True）
+**Parameters:**
+- `gate_sequence` - GateSequence object to draw
+- `filename` - Output filename (e.g., 'circuit.png'), if not specified, display on screen
+- `title` - Circuit title (default: use circuit name)
+- `compact` - Whether to use compact layout (default True)
 
-**返回：**
-- Matplotlib Figure 对象
+**Returns:**
+- Matplotlib Figure object
 
-**示例：**
+**Examples:**
 ```python
-# 显示到屏幕
+# Display to screen
 fig = drawer.draw(circuit, title="My Circuit")
 
-# 保存到文件
+# Save to file
 drawer.draw(circuit, filename="output.png", title="Saved Circuit")
 ```
 
 ---
 
-## 四、样式配置详解
+## IV. Style Configuration Details
 
-### 4.1 预定义样式
+### 4.1 Predefined Styles
 
 ```python
-# 暗色主题
+# Dark theme
 drawer = CircuitDrawer(style='dark')
 
-# 亮色主题
+# Light theme
 drawer = CircuitDrawer(style='light')
 
-# 从 JSON 文件加载
+# Load from JSON file
 drawer = CircuitDrawer(style='my_style.json')
 
-# JSON 字符串格式
+# JSON string format
 json_string = '{"backgroundcolor": "#ffffff", "fontsize": 14}'
 drawer = CircuitDrawer(style=json_string)
 ```
 
-### 4.2 自定义样式参数
+### 4.2 Custom Style Parameters
 
 ```python
 custom_style = {
-    # 颜色配置
-    'backgroundcolor': '#1a1a1a',      # 背景色
-    'linecolor': '#666666',            # 线条色
-    'gatetextcolor': 'white',          # 门文本色
-    'textcolor': '#999999',            # 常规文本色
-    'subtextcolor': '#cccccc',         # 小文本色
+    # Color configuration
+    'backgroundcolor': '#1a1a1a',      # Background color
+    'linecolor': '#666666',            # Line color
+    'gatetextcolor': 'white',          # Gate text color
+    'textcolor': '#999999',            # Regular text color
+    'subtextcolor': '#cccccc',         # Small text color
     
-    # 尺寸配置
-    'fontsize': 11,                    # 主字体大小
-    'subfontsize': 8,                  # 小字体大小
-    'gatewidth': 0.9,                  # 门最小宽度
-    'scale_char': 0.15,                # 字符缩放因子
+    # Size configuration
+    'fontsize': 11,                    # Main font size
+    'subfontsize': 8,                  # Small font size
+    'gatewidth': 0.9,                  # Minimum gate width
+    'scale_char': 0.15,                # Character scale factor
     
-    # 线宽配置
-    'lwidth1': 0.5,                    # 细线
-    'lwidth15': 1.0,                   # 中细线
-    'lwidth2': 1.5,                    # 中线
-    'lwidth3': 2.0,                    # 粗线
-    'lwidth4': 2.5,                    # 最粗线
+    # Line width configuration
+    'lwidth1': 0.5,                    # Thin lines
+    'lwidth15': 1.0,                   # Medium-thin lines
+    'lwidth2': 1.5,                    # Medium lines
+    'lwidth3': 2.0,                    # Thick lines
+    'lwidth4': 2.5,                    # Thickest lines
     
-    # 布局配置
-    'x_offset': 1.0,                   # x 方向偏移
-    'y_offset': 0.5,                   # y 方向偏移
-    'margin': [1.5, 1.5, 1.5, 1.5],   # [左, 右, 下, 上]
-    'figwidth': 10.0,                  # 图形宽度
-    'dpi': 150,                        # 分辨率
+    # Layout configuration
+    'x_offset': 1.0,                   # x-direction offset
+    'y_offset': 0.5,                   # y-direction offset
+    'margin': [1.5, 1.5, 1.5, 1.5],   # [left, right, bottom, top]
+    'figwidth': 10.0,                  # Figure width
+    'dpi': 150,                        # Resolution
     
-    # 门文本映射
+    # Gate text mapping
     'displaytext': {
         'h': 'H',
         'x': 'X',
         'y': 'Y',
         'z': 'Z',
-        # ... 更多映射
+        # ... more mappings
     },
     
-    # 显示颜色映射
+    # Display color mapping
     'displaycolor': {
         'target': ['#1F52F0', 'white'],
         'control': ['#666666', 'white'],
@@ -491,79 +491,79 @@ drawer = CircuitDrawer(style=custom_style)
 
 ---
 
-## 五、布局算法详解
+## V. Layout Algorithm Details
 
-### 5.1 标准折叠算法
-
-```
-流程：
-1. 遍历所有门
-2. 对每个门计算宽度
-3. 如果 (当前x + 门宽) > 限制:
-   - 转到下一层
-   - 重置 x 坐标
-4. 放置门
-5. 更新 x 坐标
-```
-
-**复杂度：**
-- 时间：O(n × m)（n 个门，m 个层）
-- 空间：O(n)
-
-### 5.2 紧凑折叠算法
+### 5.1 Standard Folding Algorithm
 
 ```
-流程：
-1. 为每个比特维护一个"光标"(layer, x)
-2. 对每个门:
-   a. 确定涉及的比特范围
-   b. 找出这些比特中最晚的层
-   c. 计算该层中最远的 x 位置
-   d. 如果是测量门，对齐所有比特的光标
-   e. 更新涉及比特的光标
+Process:
+1. Iterate through all gates
+2. For each gate, compute width
+3. If (current_x + gate_width) > limit:
+   - Move to next layer
+   - Reset x coordinate
+4. Place gate
+5. Update x coordinate
 ```
 
-**优势：**
-- 更紧凑的布局
-- 测量门自动对齐
-- 无依赖关系的门可并行放置
+**Complexity:**
+- Time: O(n × m) (n gates, m layers)
+- Space: O(n)
 
-### 5.3 坐标计算
+### 5.2 Compact Folding Algorithm
+
+```
+Process:
+1. Maintain a "cursor" (layer, x) for each qubit
+2. For each gate:
+   a. Determine range of qubits involved
+   b. Find the latest layer among these qubits
+   c. Compute the farthest x position in that layer
+   d. If measurement gate, align cursors of all qubits
+   e. Update cursors of involved qubits
+```
+
+**Advantages:**
+- More compact layout
+- Measurement gates automatically aligned
+- Gates without dependencies can be placed in parallel
+
+### 5.3 Coordinate Calculation
 
 ```python
-# 单比特门位置
-gate['x'] = current_x              # 左上角
+# Single-qubit gate position
+gate['x'] = current_x              # Top-left
 gate['y'] = y_base - qmax - y_offset
 
-# 多比特门位置
+# Multi-qubit gate position
 gate['x'] = current_x
 gate['y'] = y_base - qmax - y_offset
 height = qmax - qmin + 1
 
-# 折叠后的 y 坐标调整
+# y-coordinate adjustment after folding
 y_base = -(layer * (n_qubits + 1))
 ```
 
 ---
 
-## 六、常见模式
+## VI. Common Patterns
 
-### 模式 1：快速绘制
+### Pattern 1: Quick Draw
 
 ```python
 def quick_draw(circuit, title="Circuit"):
-    """快速绘制电路"""
+    """Quick circuit drawing"""
     from drawer.circuit_drawer import CircuitDrawer
     
     drawer = CircuitDrawer()
     return drawer.draw(circuit, title=title)
 ```
 
-### 模式 2：批量导出
+### Pattern 2: Batch Export
 
 ```python
 def export_circuits(circuits_dict, output_dir='./outputs'):
-    """导出多个电路"""
+    """Export multiple circuits"""
     import os
     from drawer.circuit_drawer import CircuitDrawer
     
@@ -575,11 +575,11 @@ def export_circuits(circuits_dict, output_dir='./outputs'):
         drawer.draw(circuit, filename=filename, title=name)
 ```
 
-### 模式 3：样式预设
+### Pattern 3: Style Presets
 
 ```python
 def get_publication_style():
-    """高质量出版样式"""
+    """High-quality publication style"""
     return {
         'backgroundcolor': 'white',
         'fontsize': 12,
@@ -589,7 +589,7 @@ def get_publication_style():
     }
 
 def get_presentation_style():
-    """演示文稿样式"""
+    """Presentation slide style"""
     return {
         'backgroundcolor': '#2B2B2B',
         'fontsize': 14,
@@ -600,72 +600,72 @@ def get_presentation_style():
 
 ---
 
-## 七、性能优化
+## VII. Performance Optimization
 
-### 7.1 大规模电路优化
+### 7.1 Large Circuit Optimization
 
 ```python
-# 对大电路使用紧凑布局
+# Use compact layout for large circuits
 drawer = CircuitDrawer(
-    width_per_layer=25,    # 更小的宽度强制更多折叠
-    style='light'          # 亮色可能更快
+    width_per_layer=25,    # Smaller width forces more folding
+    style='light'          # Light may be faster
 )
 drawer.draw(circuit, compact=True)
 
-# 降低 DPI 以提高渲染速度
-custom_style = {'dpi': 72}  # 屏幕预览
+# Reduce DPI for faster rendering
+custom_style = {'dpi': 72}  # Screen preview
 drawer = CircuitDrawer(style=custom_style)
 ```
 
-### 7.2 文本宽度缓存
+### 7.2 Text Width Caching
 
 ```python
-# 内部已实现文本宽度缓存
-# 使用 pylatexenc 库高效计算
+# Text width caching is already implemented internally
+# Uses pylatexenc library for efficient computation
 ```
 
 ---
 
-## 八、错误处理指南
+## VIII. Error Handling Guide
 
-### 8.1 常见错误
+### 8.1 Common Errors
 
-**错误 1：缺少电路对象**
+**Error 1: Missing circuit object**
 ```python
-# 错误！
+# Wrong!
 drawer = CircuitDrawer()
 drawer.draw(None)  # TypeError
 
-# 正确
+# Correct
 from core.GateSequence import GateSequence
 circuit = GateSequence(3)
 drawer.draw(circuit)
 ```
 
-**错误 2：无效的样式字符串**
+**Error 2: Invalid style string**
 ```python
-# 错误！
+# Wrong!
 drawer = CircuitDrawer(style='invalid_style')
 
-# 正确
-drawer = CircuitDrawer(style='dark')  # 或 'light'
+# Correct
+drawer = CircuitDrawer(style='dark')  # or 'light'
 ```
 
-**错误 3: 文件覆盖**
+**Error 3: File overwrite**
 ```python
-# 需要检查文件是否存在再保存
+# Check if file exists before saving
 import os
 filename = "circuit.png"
 
 if os.path.exists(filename):
-    print(f"文件 {filename} 已存在")
+    print(f"File {filename} already exists")
 else:
     drawer.draw(circuit, filename=filename)
 ```
 
 ---
 
-## 九、完整工作流示例
+## IX. Complete Workflow Example
 
 ```python
 from drawer.circuit_drawer import CircuitDrawer
@@ -673,15 +673,15 @@ from core.GateSequence import GateSequence
 from core.register import Register
 
 def complete_visualization_workflow():
-    """完整的量子电路可视化工作流"""
+    """Complete quantum circuit visualization workflow"""
     
-    # 步骤 1: 创建量子电路
-    print("步骤 1: 创建量子电路")
+    # Step 1: Create quantum circuit
+    print("Step 1: Create quantum circuit")
     qreg = Register("q", 4)
     circuit = GateSequence(qreg, name="Complex Circuit")
     
-    # 步骤 2: 构建电路
-    print("步骤 2: 添加量子门")
+    # Step 2: Build circuit
+    print("Step 2: Add quantum gates")
     for i in range(4):
         circuit.h(qreg[i])
     
@@ -691,50 +691,50 @@ def complete_visualization_workflow():
     circuit.rx(1.57, qreg[0])
     circuit.rz(3.14, qreg[3])
     
-    # 步骤 3: 创建绘制器
-    print("步骤 3: 配置绘制参数")
+    # Step 3: Create drawer
+    print("Step 3: Configure drawing parameters")
     drawer = CircuitDrawer(
         style='dark',
         width_per_layer=40,
         scale=1.2
     )
     
-    # 步骤 4: 绘制到屏幕
-    print("步骤 4: 预览电路")
+    # Step 4: Draw to screen
+    print("Step 4: Preview circuit")
     fig = drawer.draw(
         circuit,
         title="Complex Quantum Circuit",
         compact=True
     )
     
-    # 步骤 5: 保存到文件
-    print("步骤 5: 保存电路图")
+    # Step 5: Save to file
+    print("Step 5: Save circuit diagram")
     drawer.draw(
         circuit,
         filename="complex_circuit.png",
         title="Complex Quantum Circuit"
     )
     
-    print("完成！电路图已保存")
+    print("Done! Circuit diagram saved")
 
-# 执行
+# Execute
 complete_visualization_workflow()
 ```
 
 ---
 
-## 十、总结检查清单
+## X. Checklist Summary
 
-使用 CircuitDrawer 时，请确保：
+When using CircuitDrawer, ensure:
 
-- [ ] 已正确导入 CircuitDrawer 和 GateSequence
-- [ ] 创建了有效的量子电路
-- [ ] 选择了合适的样式（dark/light 或自定义）
-- [ ] 设置了适当的 width_per_layer 值
-- [ ] 如果需要特定的布局，选择了正确的折叠方式
-- [ ] 指定了有意义的电路标题
-- [ ] 如果要保存文件，指定了正确的文件名和路径
-- [ ] 检查了文件覆盖问题
-- [ ] 对大规模电路使用了紧凑布局
-- [ ] 必要时自定义了样式以满足发表或演示需求
+- [ ] Correctly imported CircuitDrawer and GateSequence
+- [ ] Created a valid quantum circuit
+- [ ] Selected appropriate style (dark/light or custom)
+- [ ] Set appropriate width_per_layer value
+- [ ] Chose correct folding method if specific layout needed
+- [ ] Specified meaningful circuit title
+- [ ] Specified correct filename and path if saving
+- [ ] Checked for file overwrite issues
+- [ ] Used compact layout for large-scale circuits
+- [ ] Customized style when necessary for publication or presentation
 

@@ -12,71 +12,71 @@ keywords:
   - register abstraction
 ---
 
-# Register 技能指南
+# Register Skills Guide
 
-## 一、算法介绍
+## I. Algorithm Introduction
 
-### 1.1 基本概念
+### 1.1 Basic Concepts
 
-**Register（量子寄存器）** 是量子计算中用于组织和管理一组量子比特的抽象。它提供了灵活的索引机制，使得用户可以用 Python 风格的索引方式来访问和操作量子比特，类似于处理数组元素。
+**Register (Quantum Register)** is an abstraction in quantum computing used to organize and manage a group of quantum qubits. It provides a flexible indexing mechanism that allows users to access and manipulate quantum qubits using Python-style indexing, similar to processing array elements.
 
-### 1.2 设计原理
+### 1.2 Design Principles
 
-#### 1.2.1 寄存器层次结构
+#### 1.2.1 Register Hierarchy
 
 ```
-├─ 物理量子硬件
-│  └─ 物理量子比特（Qubits）
+├─ Physical Quantum Hardware
+│  └─ Physical Qubits
 │
-├─ 寄存器抽象层
-│  ├─ Register 对象：逻辑分组
-│  │  ├─ 比特 0
-│  │  ├─ 比特 1
-│  │  ├─ 比特 2
+├─ Register Abstraction Layer
+│  ├─ Register Object: Logical Grouping
+│  │  ├─ Bit 0
+│  │  ├─ Bit 1
+│  │  ├─ Bit 2
 │  │  └─ ...
 │  │
-│  └─ 索引映射
-│     ├─ 本地索引（Local）
-│     └─ 全局索引（Global）
+│  └─ Index Mapping
+│     ├─ Local Index
+│     └─ Global Index
 │
-└─ 应用层
-   ├─ 量子电路（GateSequence）
-   ├─ 量子算法
-   └─ 混合算法
+└─ Application Layer
+   ├─ Quantum Circuits (GateSequence)
+   ├─ Quantum Algorithms
+   └─ Hybrid Algorithms
 ```
 
-#### 1.2.2 索引系统
+#### 1.2.2 Index System
 
-Register 支持多种索引方式，将其转换为统一的内部表示：
+Register supports multiple indexing methods, converting them to unified internal representation:
 
-| 索引类型 | 符号 | 返回值 | 说明 |
+| Index Type | Symbol | Return Value | Description |
 |---------|------|--------|------|
-| 整数 | `r[0]` | `[(r, [0])]` | 单个比特 |
-| 切片 | `r[0:2]` | `[(r, [0, 1])]` | 连续比特 |
-| 列表 | `r[[0, 2]]` | `[(r, [0, 2])]` | 批量选择 |
-| 元组 | `r[(0, 2)]` | `[(r, [0, 2])]` | 非连续选择 |
-| 负索引 | `r[-1]` | `[(r, [n-1])]` | 倒数访问 |
+| Integer | `r[0]` | `[(r, [0])]` | Single bit |
+| Slice | `r[0:2]` | `[(r, [0, 1])]` | Consecutive bits |
+| List | `r[[0, 2]]` | `[(r, [0, 2])]` | Batch selection |
+| Tuple | `r[(0, 2)]` | `[(r, [0, 2])]` | Non-consecutive selection |
+| Negative Index | `r[-1]` | `[(r, [n-1])]` | Reverse access |
 
-#### 1.2.3 返回值结构
+#### 1.2.3 Return Value Structure
 
-所有 `__getitem__` 操作都返回统一的格式：
+All `__getitem__` operations return a unified format:
 
 ```python
-[(Register对象, [索引列表])]
+[(Register object, [Index list])]
 ```
 
-这种设计的好处：
+Benefits of this design:
 
-1. **统一接口**：无论使用何种索引方式，返回类型一致
-2. **向上传导**：Register 信息可以传递给 GateSequence
-3. **灵活性**：支持复合操作和链式调用
-4. **可扩展性**：易于在 GateSequence 中进行全局索引转换
+1. **Unified Interface**: Regardless of indexing method, return type is consistent
+2. **Upward Propagation**: Register information can be passed to GateSequence
+3. **Flexibility**: Supports composite operations and chaining
+4. **Extensibility**: Easy global index conversion in GateSequence
 
-### 1.3 唯一性和哈希
+### 1.3 Uniqueness and Hashing
 
-#### 1.3.1 UUID 标识符
+#### 1.3.1 UUID Identifier
 
-每个 Register 实例都获得一个唯一的 UUID：
+Each Register instance receives a unique UUID:
 
 ```python
 import uuid
@@ -84,338 +84,338 @@ import uuid
 r1 = Register("q", 3)
 r2 = Register("q", 3)
 
-print(r1.id)  # 例如：'a1b2c3d4e5f6...'
-print(r2.id)  # 例如：'x9y8z7w6v5u4...'
-print(r1.id == r2.id)  # False，即使名称和大小相同
+print(r1.id)  # e.g.: 'a1b2c3d4e5f6...'
+print(r2.id)  # e.g.: 'x9y8z7w6v5u4...'
+print(r1.id == r2.id)  # False, even with same name and size
 ```
 
-#### 1.3.2 哈希和字典使用
+#### 1.3.2 Hashing and Dictionary Usage
 
-Register 支持作为字典键和集合元素使用：
+Register supports use as dictionary keys and set elements:
 
 ```python
-# 用作字典键
+# Use as dictionary key
 mapping = {}
 r = Register("q", 3)
 mapping[r] = "value"
 
-# 用于集合
+# Use in sets
 registers_set = {r1, r2, r3}
 
-# 在 Python 字典中使用
+# Use in Python dictionaries
 register_info = {
     r: {"type": "quantum", "size": 3}
 }
 ```
 
-### 1.4 范围验证机制
+### 1.4 Range Validation Mechanism
 
-Register 自动检查索引范围的有效性：
+Register automatically checks index range validity:
 
 ```
-索引提交
+Index Submission
   ↓
-类型检查（int, slice, tuple, list）
+Type Check (int, slice, tuple, list)
   ↓
-范围验证
+Range Validation
   ├─ max(indices) < n_qubits
   ├─ min(indices) >= -n_qubits
-  └─ 都有效则返回，否则抛出异常
+  └─ Return if all valid, otherwise raise exception
 ```
 
-**负索引支持**：
-- Python 风格的负索引被正确处理
-- `-1` 表示最后一个比特
-- `-n` 表示第一个比特
-- 范围检查同时验证正负索引
+**Negative Index Support**:
+- Python-style negative indices are correctly handled
+- `-1` represents the last bit
+- `-n` represents the first bit
+- Range checks validate both positive and negative indices
 
 ---
 
-## 二、使用方法步骤
+## II. Usage Steps
 
-### 2.1 基础使用流程
+### 2.1 Basic Usage Workflow
 
-#### 第一步：导入模块
+#### Step 1: Import Module
 ```python
 from core.register import Register
 ```
 
-#### 第二步：创建寄存器
+#### Step 2: Create Register
 ```python
-# 创建一个包含 3 个量子比特的寄存器
+# Create a register with 3 quantum qubits
 qreg = Register("q", 3)
 
-# 创建多个不同的寄存器
+# Create multiple different registers
 qreg1 = Register("q1", 2)
 qreg2 = Register("q2", 4)
 ```
 
-#### 第三步：访问比特
+#### Step 3: Access Bits
 ```python
-# 单个比特
+# Single bit
 bit0 = qreg[0]
 bit_last = qreg[-1]
 
-# 比特范围
+# Bit range
 bits_0_1 = qreg[0:2]
 bits_all = qreg[:]
 
-# 多个具体比特
+# Multiple specific bits
 bits_select = qreg[[0, 2]]
 
-# 使用元组
+# Using tuple
 bits_tuple = qreg[(0, 2, 1)]
 ```
 
-#### 第四步：查询寄存器信息
+#### Step 4: Query Register Information
 ```python
-# 获取比特数
+# Get number of qubits
 num_qubits = len(qreg)
 num_qubits = qreg.n_qubits
 
-# 获取名称
+# Get name
 name = qreg.name
 
-# 获取唯一 ID
+# Get unique ID
 unique_id = qreg.id
 
-# 字符串表示
+# String representation
 print(qreg)  # Register(name='q', n_qubits=3)
 ```
 
-### 2.2 详细使用示例
+### 2.2 Detailed Usage Examples
 
-#### 例子 1：基本寄存器创建和访问
+#### Example 1: Basic Register Creation and Access
 
 ```python
 from core.register import Register
 
-# 创建一个 5 比特寄存器
+# Create a 5-qubit register
 qreg = Register("quantum", 5)
 
-# 信息查询
-print(f"寄存器名称: {qreg.name}")
-print(f"比特总数: {len(qreg)}")
-print(f"寄存器 ID: {qreg.id}")
+# Information query
+print(f"Register name: {qreg.name}")
+print(f"Total bits: {len(qreg)}")
+print(f"Register ID: {qreg.id}")
 
-# 访问单个比特
-print(qreg[0])  # 第一个比特
-print(qreg[4])  # 最后一个比特
-print(qreg[-1])  # 倒数第一个比特
-print(qreg[-5])  # 倒数第五个（第一个）
+# Access single bits
+print(qreg[0])  # First bit
+print(qreg[4])  # Last bit
+print(qreg[-1])  # Penultimate bit
+print(qreg[-5])  # Fifth from end (first)
 
-# 访问范围
-print(qreg[0:3])  # 前三个比特
-print(qreg[2:])   # 从第二个开始的所有比特
-print(qreg[::2])  # 每隔一个比特
+# Access ranges
+print(qreg[0:3])  # First three bits
+print(qreg[2:])   # All bits starting from second
+print(qreg[::2])  # Every other bit
 ```
 
-#### 例子 2：灵活的索引方式
+#### Example 2: Flexible Indexing Methods
 
 ```python
 from core.register import Register
 
 qreg = Register("q", 8)
 
-# 方式 1: 单个索引
+# Method 1: Single index
 result1 = qreg[3]
-# 返回: [(qreg, [3])]
+# Returns: [(qreg, [3])]
 
-# 方式 2: 切片（Python 标准）
+# Method 2: Slice (Python standard)
 result2 = qreg[2:5]
-# 返回: [(qreg, [2, 3, 4])]
+# Returns: [(qreg, [2, 3, 4])]
 
-# 方式 3: 步长切片
+# Method 3: Stride slice
 result3 = qreg[::2]
-# 返回: [(qreg, [0, 2, 4, 6])]
+# Returns: [(qreg, [0, 2, 4, 6])]
 
-# 方式 4: 列表选择
+# Method 4: List selection
 result4 = qreg[[1, 3, 5]]
-# 返回: [(qreg, [1, 3, 5])]
+# Returns: [(qreg, [1, 3, 5])]
 
-# 方式 5: 元组选择
+# Method 5: Tuple selection
 result5 = qreg[(0, 2, 7)]
-# 返回: [(qreg, [0, 2, 7])]
+# Returns: [(qreg, [0, 2, 7])]
 
-# 方式 6: 倒数索引
+# Method 6: Reverse index
 result6 = qreg[-1]
-# 返回: [(qreg, [7])]
+# Returns: [(qreg, [7])]
 
-# 方式 7: 倒数范围
+# Method 7: Reverse range
 result7 = qreg[-3:]
-# 返回: [(qreg, [5, 6, 7])]
+# Returns: [(qreg, [5, 6, 7])]
 
-print(f"单个: {result1}")
-print(f"切片: {result2}")
-print(f"步长: {result3}")
-print(f"列表: {result4}")
-print(f"元组: {result5}")
-print(f"负数: {result6}")
-print(f"负数范围: {result7}")
+print(f"Single: {result1}")
+print(f"Slice: {result2}")
+print(f"Stride: {result3}")
+print(f"List: {result4}")
+print(f"Tuple: {result5}")
+print(f"Negative: {result6}")
+print(f"Negative range: {result7}")
 ```
 
-#### 例子 3: 与 GateSequence 集成
+#### Example 3: GateSequence Integration
 
 ```python
 from core.register import Register
 from core.GateSequence import GateSequence
 
-# 创建寄存器
+# Create register
 qreg = Register("q", 3)
 
-# 创建量子电路
+# Create quantum circuit
 circuit = GateSequence(qreg, name="demo")
 
-# 使用寄存器索引应用门
-circuit.h(qreg[0])           # H 门在第 0 比特
-circuit.x(qreg[1:3])         # X 门在第 1, 2 比特
-circuit.cnot(qreg[0], qreg[1])  # CNOT：控制=0，目标=1
+# Use register indices to apply gates
+circuit.h(qreg[0])           # H gate on bit 0
+circuit.x(qreg[1:3])         # X gate on bits 1, 2
+circuit.cnot(qreg[0], qreg[1])  # CNOT: control=0, target=1
 
-# 执行
+# Execute
 result = circuit.execute()
-print(f"执行完成")
+print(f"Execution complete")
 ```
 
-#### 例子 4: 多寄存器管理
+#### Example 4: Multiple Register Management
 
 ```python
 from core.register import Register
 from core.GateSequence import GateSequence
 
-# 创建多个寄存器
+# Create multiple registers
 qreg_data = Register("data", 3)
 qreg_ancilla = Register("ancilla", 2)
 
-# 创建电路
+# Create circuit
 circuit = GateSequence(qreg_data, qreg_ancilla)
 
-# 操作数据寄存器
+# Operate on data register
 circuit.h(qreg_data)
 
-# 操作辅助寄存器
+# Operate on ancilla register
 circuit.x(qreg_ancilla[0])
 
-# 跨寄存器的相互作用
+# Cross-register interaction
 circuit.cnot(qreg_data[0], qreg_ancilla[1])
 
-# 执行
+# Execute
 result = circuit.execute()
-print("多寄存器电路完成")
+print("Multi-register circuit complete")
 ```
 
-#### 例子 5: 寄存器比较和相等性
+#### Example 5: Register Comparison and Equality
 
 ```python
 from core.register import Register
 
-# 创建寄存器
+# Create registers
 qreg1 = Register("q", 3)
 qreg2 = Register("q", 3)
-qreg3 = qreg1  # 引用同一对象
+qreg3 = qreg1  # Reference same object
 
-# 比较
-print(f"qreg1 == qreg2: {qreg1 == qreg2}")  # False，不同对象
-print(f"qreg1 == qreg3: {qreg1 == qreg3}")  # True，同一对象
+# Compare
+print(f"qreg1 == qreg2: {qreg1 == qreg2}")  # False, different objects
+print(f"qreg1 == qreg3: {qreg1 == qreg3}")  # True, same object
 print(f"qreg1.id == qreg2.id: {qreg1.id == qreg2.id}")  # False
 
-# 用于集合
+# Use in set
 regs_set = {qreg1, qreg2, qreg3}
-print(f"集合大小: {len(regs_set)}")  # 2（qreg1 和 qreg3 是同一个）
+print(f"Set size: {len(regs_set)}")  # 2 (qreg1 and qreg3 are same)
 ```
 
-### 2.3 高级使用场景
+### 2.3 Advanced Usage Scenarios
 
-#### 场景 1: 动态寄存器创建
+#### Scenario 1: Dynamic Register Creation
 
 ```python
 def create_registers_for_algorithm(n_data, n_ancilla):
-    """为特定算法创建所需的寄存器"""
+    """Create required registers for specific algorithm"""
     data_reg = Register("data", n_data)
     ancilla_reg = Register("ancilla", n_ancilla)
     return data_reg, ancilla_reg
 
-# 使用
-n = 4  # 数据比特数
-m = 2  # 辅助比特数
+# Usage
+n = 4  # Number of data qubits
+m = 2  # Number of ancilla qubits
 
 data_qreg, ancilla_qreg = create_registers_for_algorithm(n, m)
 
-print(f"数据寄存器: {data_qreg}")
-print(f"辅助寄存器: {ancilla_qreg}")
+print(f"Data register: {data_qreg}")
+print(f"Ancilla register: {ancilla_qreg}")
 ```
 
-#### 场景 2: 寄存器分区操作
+#### Scenario 2: Register Partition Operations
 
 ```python
 from core.register import Register
 
 qreg = Register("q", 8)
 
-# 将寄存器分成若干部分
-upper_half = qreg[0:4]    # 前一半
-lower_half = qreg[4:]     # 后一半
+# Partition register into sections
+upper_half = qreg[0:4]    # First half
+lower_half = qreg[4:]     # Second half
 
-# 奇偶分割
-odd_qubits = qreg[::2]    # 偶数位置（0, 2, 4, 6）
-even_qubits = qreg[1::2]  # 奇数位置（1, 3, 5, 7）
+# Even/odd split
+odd_qubits = qreg[::2]    # Even positions (0, 2, 4, 6)
+even_qubits = qreg[1::2]  # Odd positions (1, 3, 5, 7)
 
-# 特定比特
-important_bits = qreg[[0, 3, 7]]  # 关键比特
+# Specific bits
+important_bits = qreg[[0, 3, 7]]  # Key bits
 
-print(f"前一半: {upper_half}")
-print(f"后一半: {lower_half}")
-print(f"奇数位: {odd_qubits}")
-print(f"偶数位: {even_qubits}")
-print(f"关键位: {important_bits}")
+print(f"First half: {upper_half}")
+print(f"Second half: {lower_half}")
+print(f"Odd bits: {odd_qubits}")
+print(f"Even bits: {even_qubits}")
+print(f"Key bits: {important_bits}")
 ```
 
-#### 场景 3: 寄存器映射和跟踪
+#### Scenario 3: Register Mapping and Tracking
 
 ```python
 from core.register import Register
 
-# 创建多个寄存器
+# Create multiple registers
 registers = [
     Register("input", 3),
     Register("work", 4),
     Register("output", 2)
 ]
 
-# 使用字典进行映射
+# Use dictionary for mapping
 reg_map = {
     reg.id: {"name": reg.name, "size": len(reg)}
     for reg in registers
 }
 
-# 查询信息
+# Query information
 for reg in registers:
     info = reg_map[reg.id]
-    print(f"寄存器 {info['name']}: {info['size']} 比特")
+    print(f"Register {info['name']}: {info['size']} qubits")
 
-# 反向查询
+# Reverse query
 by_name = {
     reg.name: reg
     for reg in registers
 }
 
 input_reg = by_name["input"]
-print(f"输入寄存器: {input_reg}")
+print(f"Input register: {input_reg}")
 ```
 
-#### 场景 4: 寄存器索引工具函数
+#### Scenario 4: Register Indexing Helper Function
 
 ```python
 from core.register import Register
 
 def get_qubit_indices(register, index_spec):
     """
-    灵活的比特索引获取函数
+    Flexible qubit index retrieval function
     
-    index_spec 可以是:
-    - int: 单个索引
+    index_spec can be:
+    - int: single index
     - str: 'all', 'even', 'odd', 'first', 'last'
-    - slice: 切片对象
-    - list/tuple: 索引列表
+    - slice: slice object
+    - list/tuple: index list
     """
     if isinstance(index_spec, str):
         n = len(register)
@@ -434,198 +434,198 @@ def get_qubit_indices(register, index_spec):
     else:
         return register[index_spec]
 
-# 使用
+# Usage
 qreg = Register("q", 6)
 
-print(get_qubit_indices(qreg, 'all'))    # 所有比特
-print(get_qubit_indices(qreg, 'even'))   # 偶数位置
-print(get_qubit_indices(qreg, 'odd'))    # 奇数位置
-print(get_qubit_indices(qreg, 'first'))  # 第一个
-print(get_qubit_indices(qreg, 'last'))   # 最后一个
-print(get_qubit_indices(qreg, [0, 3]))   # 特定位置
+print(get_qubit_indices(qreg, 'all'))    # All bits
+print(get_qubit_indices(qreg, 'even'))   # Even positions
+print(get_qubit_indices(qreg, 'odd'))    # Odd positions
+print(get_qubit_indices(qreg, 'first'))  # First one
+print(get_qubit_indices(qreg, 'last'))   # Last one
+print(get_qubit_indices(qreg, [0, 3]))   # Specific positions
 ```
 
 ---
 
-## 三、关键 API 参考
+## III. Key API Reference
 
-### 3.1 构造函数
+### 3.1 Constructor
 
 ```python
 Register(name: str, n_qubits: int)
 ```
 
-**参数：**
-- `name: str` - 寄存器的标识符（用于调试和显示）
-- `n_qubits: int` - 寄存器包含的量子比特数量
+**Parameters:**
+- `name: str` - Register identifier (used for debugging and display)
+- `n_qubits: int` - Number of quantum bits in the register
 
-**属性：**
-- `name: str` - 寄存器名称
-- `n_qubits: int` - 比特数量
-- `id: str` - 唯一的 UUID 标识符
+**Properties:**
+- `name: str` - Register name
+- `n_qubits: int` - Number of bits
+- `id: str` - Unique UUID identifier
 
-**示例：**
+**Example:**
 ```python
 qreg = Register("quantum_register", 4)
 ```
 
-### 3.2 索引方法 - `__getitem__`
+### 3.2 Indexing Method - `__getitem__`
 
 ```python
 register[index] -> List[Tuple[Register, List[int]]]
 ```
 
-**支持的索引类型：**
+**Supported Index Types:**
 
-| 类型 | 示例 | 返回值 |
+| Type | Example | Return Value |
 |------|------|--------|
 | `int` | `r[0]` | `[(r, [0])]` |
 | `slice` | `r[0:2]` | `[(r, [0, 1])]` |
 | `list` | `r[[0, 2]]` | `[(r, [0, 2])]` |
 | `tuple` | `r[(0, 2)]` | `[(r, [0, 2])]` |
 
-**负索引支持：**
+**Negative Index Support:**
 ```python
 r = Register("q", 5)
-r[-1]      # 最后一个比特 → [(r, [4])]
-r[-2:]     # 最后两个 → [(r, [3, 4])]
-r[:-1]     # 除了最后一个 → [(r, [0, 1, 2, 3])]
+r[-1]      # Last bit → [(r, [4])]
+r[-2:]     # Last two → [(r, [3, 4])]
+r[:-1]     # All except last → [(r, [0, 1, 2, 3])]
 ```
 
-**异常：**
-- `TypeError` - 索引类型不支持
-- `IndexError` - 索引超出范围
+**Exceptions:**
+- `TypeError` - Unsupported index type
+- `IndexError` - Index out of range
 
-### 3.3 长度方法 - `__len__`
+### 3.3 Length Method - `__len__`
 
 ```python
 len(register) -> int
 ```
 
-返回寄存器中的比特数量。
+Returns the number of qubits in the register.
 
-**示例：**
+**Example:**
 ```python
 qreg = Register("q", 5)
 print(len(qreg))  # 5
 ```
 
-### 3.4 相等性比较 - `__eq__`
+### 3.4 Equality Comparison - `__eq__`
 
 ```python
 register1 == register2 -> bool
 ```
 
-两个 Register 对象相等当且仅当它们有相同的唯一 ID（即同一个对象）。
+Two Register objects are equal if and only if they have the same unique ID (i.e., they are the same object).
 
-**示例：**
+**Example:**
 ```python
 r1 = Register("q", 3)
 r2 = Register("q", 3)
 r3 = r1
 
 print(r1 == r2)  # False
-print(r1 == r3)  # True（同一对象）
+print(r1 == r3)  # True (same object)
 ```
 
-### 3.5 哈希方法 - `__hash__`
+### 3.5 Hash Method - `__hash__`
 
 ```python
 hash(register) -> int
 ```
 
-返回基于名称、比特数和 ID 的哈希值，使 Register 可用作字典键或集合元素。
+Returns a hash value based on the name, number of bits, and ID, allowing Register to be used as a dictionary key or set element.
 
-**示例：**
+**Example:**
 ```python
 qreg = Register("q", 3)
 reg_dict = {qreg: "value"}
 reg_set = {qreg}
 ```
 
-### 3.6 字符串表示 - `__repr__`
+### 3.6 String Representation - `__repr__`
 
 ```python
 repr(register) -> str
 ```
 
-返回可读的字符串表示。
+Returns a readable string representation.
 
-**示例：**
+**Example:**
 ```python
 qreg = Register("quantum", 3)
 print(qreg)
-# 输出: Register(name='quantum', n_qubits=3)
+# Output: Register(name='quantum', n_qubits=3)
 ```
 
 ---
 
-## 四、索引系统详解
+## IV. Index System Explained
 
-### 4.1 Python 风格索引
+### 4.1 Python-Style Indexing
 
-Register 完全支持 Python 列表风格的索引：
+Register fully supports Python list-style indexing:
 
 ```python
 qreg = Register("q", 10)
 
-# 基本索引
-qreg[0]        # 第 0 个
-qreg[9]        # 第 9 个
-qreg[-1]       # 最后一个（第 9 个）
-qreg[-10]      # 第一个
+# Basic indexing
+qreg[0]        # 0-th qubit
+qreg[9]        # 9-th qubit
+qreg[-1]       # Last qubit (9th)
+qreg[-10]      # First qubit
 
-# 切片
-qreg[2:5]      # 第 2, 3, 4 个
-qreg[:3]       # 前 3 个（0, 1, 2）
-qreg[7:]       # 从第 7 个开始
-qreg[:]        # 所有
+# Slicing
+qreg[2:5]      # Qubits 2, 3, 4
+qreg[:3]       # First 3 qubits (0, 1, 2)
+qreg[7:]       # Starting from 7-th qubit
+qreg[:]        # All qubits
 
-# 步长
-qreg[::2]      # 每隔一个（0, 2, 4, 6, 8）
-qreg[1::2]     # 从 1 开始每隔一个（1, 3, 5, 7, 9）
-qreg[::-1]     # 反向（9, 8, 7, ..., 0）
+# Striding
+qreg[::2]      # Every other qubit (0, 2, 4, 6, 8)
+qreg[1::2]     # Every other starting from 1 (1, 3, 5, 7, 9)
+qreg[::-1]     # Reverse (9, 8, 7, ..., 0)
 ```
 
-### 4.2 返回值统一性
+### 4.2 Return Value Uniformity
 
-所有索引操作都返回相同的格式，便于与 GateSequence 集成：
+All indexing operations return the same format, facilitating integration with GateSequence:
 
 ```python
 qreg = Register("q", 5)
 
-# 虽然索引方式不同，返回格式相同
+# Although indexing methods differ, return format is the same
 print(qreg[0])        # [(qreg, [0])]
 print(qreg[0:1])      # [(qreg, [0])]
 print(qreg[[0]])      # [(qreg, [0])]
 print(qreg[(0,)])     # [(qreg, [0])]
 ```
 
-### 4.3 索引范围检查
+### 4.3 Index Range Checking
 
 ```python
 qreg = Register("q", 3)
 
-# 有效索引：0, 1, 2, -1, -2, -3
+# Valid indices: 0, 1, 2, -1, -2, -3
 qreg[0]     # ✓
 qreg[2]     # ✓
 qreg[-1]    # ✓
 qreg[-3]    # ✓
 
-# 无效索引
+# Invalid indices
 # qreg[3]    # ✗ IndexError
 # qreg[-4]   # ✗ IndexError
 ```
 
 ---
 
-## 五、常见模式
+## V. Common Patterns
 
-### 模式 1: 量子-经典分离
+### Pattern 1: Quantum-Classical Separation
 
 ```python
 def setup_quantum_classical():
-    """设置量子和经典寄存器"""
+    """Set up quantum and classical registers"""
     from core.register import Register
     from core.Classicalregister import ClassicalRegister
     
@@ -635,29 +635,29 @@ def setup_quantum_classical():
     return qreg, creg
 ```
 
-### 模式 2: 多部分寄存器管理
+### Pattern 2: Multi-Part Register Management
 
 ```python
 def create_modular_registers(n_encoding, n_work, n_output):
-    """为模块化算法创建寄存器"""
+    """Create registers for modular algorithm"""
     return {
         'input': Register("input", n_encoding),
         'work': Register("work", n_work),
         'output': Register("output", n_output)
     }
 
-# 使用
+# Usage
 regs = create_modular_registers(4, 2, 3)
 encoding_reg = regs['input']
 work_reg = regs['work']
 output_reg = regs['output']
 ```
 
-### 模式 3: 寄存器验证
+### Pattern 3: Register Validation
 
 ```python
 def validate_register(reg, expected_size=None):
-    """验证寄存器的有效性"""
+    """Validate register validity"""
     if not isinstance(reg, Register):
         raise TypeError(f"Expected Register, got {type(reg)}")
     
@@ -666,16 +666,16 @@ def validate_register(reg, expected_size=None):
     
     return True
 
-# 使用
+# Usage
 qreg = Register("q", 3)
 validate_register(qreg, expected_size=3)  # ✓
 ```
 
-### 模式 4: 动态分区
+### Pattern 4: Dynamic Partitioning
 
 ```python
 def partition_register(register, partition_size):
-    """将寄存器分割成指定大小的块"""
+    """Partition register into chunks of specified size"""
     n = len(register)
     partitions = []
     
@@ -686,7 +686,7 @@ def partition_register(register, partition_size):
     
     return partitions
 
-# 使用
+# Usage
 qreg = Register("q", 8)
 parts = partition_register(qreg, 2)
 # parts = [qreg[0:2], qreg[2:4], qreg[4:6], qreg[6:8]]
@@ -694,98 +694,98 @@ parts = partition_register(qreg, 2)
 
 ---
 
-## 六、错误处理指南
+## VI. Error Handling Guide
 
-### 6.1 常见错误
+### 6.1 Common Errors
 
-**错误 1: 索引超出范围**
+**Error 1: Index Out of Range**
 ```python
 qreg = Register("q", 3)
 
-# 错误！
+# Wrong!
 # qreg[3]  # IndexError: Register index [3] out of range
 
-# 正确
-qreg[2]  # 最后一个有效索引
-qreg[-1]  # 或用负索引
+# Correct
+qreg[2]  # Last valid index
+qreg[-1]  # Or use negative index
 ```
 
-**错误 2: 无效的索引类型**
+**Error 2: Invalid Index Type**
 ```python
 qreg = Register("q", 3)
 
-# 错误！
+# Wrong!
 # qreg[1.5]  # TypeError
 # qreg["0"]  # TypeError
 
-# 正确
+# Correct
 qreg[1]      # int
 qreg[0:2]    # slice
 qreg[[0, 1]]  # list
 ```
 
-**错误 3: 混淆本地和全局索引**
+**Error 3: Confusing Local and Global Indices**
 ```python
-# Register 总是使用本地索引
+# Register always uses local indices
 qreg = Register("q", 3)
-result = qreg[0]  # 这是本地索引 0
+result = qreg[0]  # This is local index 0
 
-# GateSequence 将其转换为全局索引
+# GateSequence converts it to global index
 circuit = GateSequence(qreg)
-circuit.h(qreg[0])  # GateSequence 内部处理转换
+circuit.h(qreg[0])  # GateSequence handles conversion internally
 ```
 
-### 6.2 最佳实践
+### 6.2 Best Practices
 
 ```python
 def safe_index_register(register, index):
-    """安全的寄存器索引"""
+    """Safe register indexing"""
     try:
-        # 验证类型
+        # Validate type
         if not isinstance(register, Register):
             raise TypeError(f"Expected Register, got {type(register)}")
         
-        # 验证索引
+        # Validate index
         if isinstance(index, int):
             n = len(register)
             if not (-n <= index < n):
                 raise IndexError(f"Index {index} out of range [0, {n-1}]")
         
-        # 执行索引
+        # Perform indexing
         result = register[index]
         return result
         
     except (TypeError, IndexError) as e:
-        print(f"索引失败: {e}")
+        print(f"Indexing failed: {e}")
         return None
 
-# 使用
+# Usage
 qreg = Register("q", 5)
 safe_index_register(qreg, 2)   # ✓
-safe_index_register(qreg, 10)  # ✗ 带错误处理
+safe_index_register(qreg, 10)  # ✗ With error handling
 ```
 
 ---
 
-## 七、性能考虑
+## VII. Performance Considerations
 
-### 7.1 内存效率
+### 7.1 Memory Efficiency
 
 ```python
 import sys
 
 qreg = Register("q", 1000)
 
-# Register 对象本身占用空间很小
+# Register object itself occupies small space
 size = sys.getsizeof(qreg)
-print(f"Register 对象大小: {size} 字节")  # 约 60-100 字节
+print(f"Register object size: {size} bytes")  # ~60-100 bytes
 
-# UUID 字符串占用的额外空间
+# Additional space for UUID string
 id_size = sys.getsizeof(qreg.id)
-print(f"ID 字符串大小: {id_size} 字节")
+print(f"ID string size: {id_size} bytes")
 ```
 
-### 7.2 索引操作性能
+### 7.2 Indexing Operation Performance
 
 ```python
 from core.register import Register
@@ -793,26 +793,26 @@ import time
 
 qreg = Register("q", 1000)
 
-# 索引操作是 O(n)（n = 索引数量）
+# Indexing operation is O(n) (n = number of indices)
 start = time.time()
 for _ in range(10000):
     result = qreg[500]
 end = time.time()
 
-print(f"单个索引 10000 次: {end - start:.6f} 秒")
+print(f"Single index 10000 times: {end - start:.6f} seconds")
 
-# 范围索引生成索引列表，也是 O(n)
+# Range indexing generates index list, also O(n)
 start = time.time()
 for _ in range(10000):
     result = qreg[0:100]
 end = time.time()
 
-print(f"范围索引 10000 次: {end - start:.6f} 秒")
+print(f"Range index 10000 times: {end - start:.6f} seconds")
 ```
 
 ---
 
-## 八、完整工作流示例
+## VIII. Complete Workflow Example
 
 ```python
 from core.register import Register
@@ -820,63 +820,63 @@ from core.GateSequence import GateSequence
 from core.Classicalregister import ClassicalRegister
 
 def complete_register_workflow():
-    """完整的寄存器使用工作流"""
+    """Complete register usage workflow"""
     
-    # 步骤 1: 创建寄存器
-    print("步骤 1: 创建寄存器")
+    # Step 1: Create registers
+    print("Step 1: Create registers")
     qreg = Register("quantum", 4)
     creg = ClassicalRegister("classical", 4)
     
-    # 步骤 2: 检查寄存器信息
-    print(f"  寄存器: {qreg}")
-    print(f"  比特数: {len(qreg)}")
+    # Step 2: Check register information
+    print(f"  Register: {qreg}")
+    print(f"  Number of bits: {len(qreg)}")
     
-    # 步骤 3: 创建电路
-    print("步骤 2: 创建量子电路")
+    # Step 3: Create circuit
+    print("Step 2: Create quantum circuit")
     circuit = GateSequence(qreg, creg)
     
-    # 步骤 4: 使用不同的索引方式应用门
-    print("步骤 3: 应用量子门")
-    circuit.h(qreg[0])          # 单个比特
-    circuit.x(qreg[1:3])        # 范围
-    circuit.z(qreg[[3]])        # 列表
+    # Step 4: Apply gates using different indexing methods
+    print("Step 3: Apply quantum gates")
+    circuit.h(qreg[0])          # Single bit
+    circuit.x(qreg[1:3])        # Range
+    circuit.z(qreg[[3]])        # List
     
-    # 步骤 5: 添加相互作用
-    print("步骤 4: 添加相互作用")
+    # Step 5: Add interactions
+    print("Step 4: Add interactions")
     circuit.cnot(qreg[0], qreg[1])
     circuit.cnot(qreg[2], qreg[3])
     
-    # 步骤 6: 测量
-    print("步骤 5: 测量")
+    # Step 6: Measure
+    print("Step 5: Measurement")
     circuit.measure(qreg, creg)
     
-    # 步骤 7: 执行
-    print("步骤 6: 执行电路")
+    # Step 7: Execute
+    print("Step 6: Execute circuit")
     result = circuit.execute()
     
-    print(f"  执行完成")
-    print(f"  测量结果: {creg.values}")
+    print(f"  Execution complete")
+    print(f"  Measurement results: {creg.values}")
     
     return circuit, result
 
-# 执行
+# Execute
 circuit, result = complete_register_workflow()
 ```
 
 ---
 
-## 九、总结检查清单
+## IX. Summary Checklist
 
-使用 Register 时，请确保：
+When using Register, ensure:
 
-- [ ] 已正确导入 Register 类
-- [ ] 为寄存器指定了有意义的名称
-- [ ] 寄存器大小正确反映了所需的比特数量
-- [ ] 理解了返回值格式 `[(register, [indices])]`
-- [ ] 使用了正确的索引方式（int、slice、list、tuple）
-- [ ] 注意了负索引的支持
-- [ ] 在范围内访问索引（不超出边界）
-- [ ] 必要时将 Register 用作字典键或集合元素
-- [ ] 理解了寄存器是通过 UUID 来比较相等性的
-- [ ] 在与 GateSequence 集成时，正确传递了寄存器索引
+- [ ] Register class has been correctly imported
+- [ ] Registers are assigned meaningful names
+- [ ] Register size correctly reflects the required number of qubits
+- [ ] Understand the return value format `[(register, [indices])]`
+- [ ] Use correct indexing methods (int, slice, list, tuple)
+- [ ] Note support for negative indices
+- [ ] Access indices within range (no out-of-bounds)
+- [ ] Use Register as dictionary key or set element when necessary
+- [ ] Understand that registers are compared by unique UUID
+- [ ] Pass register indices correctly when integrating with GateSequence
 

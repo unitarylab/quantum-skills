@@ -14,498 +14,498 @@ keywords:
   - expectation value
 ---
 
-# State 技能指南
+# State Skills Guide
 
-## 一、算法介绍
+## I. Algorithm Introduction
 
-### 1.1 基本概念
+### 1.1 Basic Concepts
 
-**State（量子态）** 是量子计算中的核心概念，表示一个量子系统的完整描述。State 类使用向量表示法在计算基下表达量子态，并通过 PyTorch 张量进行高效计算。
+**State (Quantum State)** is a core concept in quantum computing, representing a complete description of a quantum system. The State class uses vector notation to express quantum states in the computational basis and performs efficient calculations through PyTorch tensors.
 
-### 1.2 数学基础
+### 1.2 Mathematical Foundation
 
-#### 1.2.1 状态向量表示
+#### 1.2.1 State Vector Representation
 
-对于 $n$ 个量子比特的系统，量子态可表示为：
+For an $n$ qubit system, the quantum state can be expressed as:
 
 $$|\psi\rangle = \sum_{i=0}^{2^n-1} \alpha_i |i\rangle$$
 
-其中：
-- $\alpha_i \in \mathbb{C}$ 是第 $i$ 个基态的振幅
-- $|i\rangle$ 是计算基态 $|i_1 i_2 \cdots i_n\rangle$
-- 归一化条件：$\sum_{i=0}^{2^n-1} |\alpha_i|^2 = 1$
+Where:
+- $\alpha_i \in \mathbb{C}$ is the amplitude of the $i$-th basis state
+- $|i\rangle$ is the computational basis state $|i_1 i_2 \cdots i_n\rangle$
+- Normalization condition: $\sum_{i=0}^{2^n-1} |\alpha_i|^2 = 1$
 
-在 State 类中，此向量以长度为 $2^n$ 的一维 PyTorch 张量存储。
+In the State class, this vector is stored as a one-dimensional PyTorch tensor of length $2^n$.
 
-#### 1.2.2 量子操作的数学表示
+#### 1.2.2 Mathematical Representation of Quantum Operations
 
-**测量在计算基下**：
+**Measurement in Computational Basis**:
 $$P(i) = |\alpha_i|^2$$
 
-**内积**：
+**Inner Product**:
 $$\langle \psi | \phi \rangle = \sum_{i=0}^{2^n-1} \alpha_i^* \beta_i$$
 
-**期望值**：
+**Expectation Value**:
 $$\langle O \rangle = \langle \psi | O | \psi \rangle$$
 
-**张量积**：
+**Tensor Product**:
 $$|\psi_1\rangle \otimes |\psi_2\rangle = \sum_{i,j} \alpha_i \beta_j |i\rangle \otimes |j\rangle$$
 
-### 1.3 处理流程
+### 1.3 Processing Workflow
 
 ```
-创建 State
+Create State
     ↓
-初始化数据（比特数或向量）
+Initialize Data (number of bits or vector)
     ↓
-自动归一化
+Auto-normalize
     ↓
-查询：概率、期望值
-    或
-操作：内积、张量积
-    或
-测量：概率分布、采样、状态坍缩
+Query: probability, expectation value
+    or
+Operations: inner product, tensor product
+    or
+Measurement: probability distribution, sampling, state collapse
     ↓
-结果输出
+Output results
 ```
 
-### 1.4 核心特性
+### 1.4 Core Features
 
-**灵活的初始化**
-- 用比特数创建基态 $|0\rangle^{\otimes n}$
-- 用数据向量初始化任意态
+**Flexible Initialization**
+- Create ground state |0⟩^⊗n with number of qubits
+- Initialize arbitrary state with data vector
 
-**自动数据处理**
-- 支持多种输入格式（Tensor、List、Numpy）
-- 自动维度检查和扁平化
-- 自动在创建时归一化
+**Automatic Data Processing**
+- Support multiple input formats (Tensor, List, Numpy)
+- Automatic dimension check and flattening
+- Auto-normalization during creation
 
-**精确的量子操作**
-- 支持复数振幅
-- 端序灵活性（大端/小端）
-- 数值稳定性保证
+**Precise Quantum Operations**
+- Support complex amplitudes
+- Endian flexibility (big-endian/little-endian)
+- Numerical stability guarantee
 
-**高效的 PyTorch 实现**
-- GPU 加速支持
-- 向量化操作
-- 内存高效
+**Efficient PyTorch Implementation**
+- GPU acceleration support
+- Vectorized operations
+- Memory efficient
 
-### 1.5 Endian（端序）约定
+### 1.5 Endian Convention
 
 ```
-Little Endian（小端，Qiskit 默认）:
-- 比特 0 是最右边（最低有效位）
-- 张量表示：[q_{n-1}, q_{n-2}, ..., q_0]
-- 二进制字符串 "101" 表示：q_0=1, q_1=0, q_2=1
+Little Endian (little-endian, Qiskit default):
+- Bit 0 is rightmost (least significant)
+- Tensor representation: [q_{n-1}, q_{n-2}, ..., q_0]
+- Binary string "101" means: q_0=1, q_1=0, q_2=1
 
-Big Endian（大端）:
-- 比特 0 是最左边
-- 张量表示：[q_0, q_1, ..., q_{n-1}]
-- 二进制字符串 "101" 表示：q_0=1, q_1=0, q_2=1
+Big Endian (big-endian):
+- Bit 0 is leftmost
+- Tensor representation: [q_0, q_1, ..., q_{n-1}]
+- Binary string "101" means: q_0=1, q_1=0, q_2=1
 ```
 
 ---
 
-## 二、使用方法步骤
+## II. Usage Steps
 
-### 2.1 基础使用流程
+### 2.1 Basic Usage Workflow
 
-#### 第一步：导入模块
+#### Step 1: Import Module
 ```python
 from core.State import State
 import torch
 import numpy as np
 ```
 
-#### 第二步：创建状态
+#### Step 2: Create State
 ```python
-# 方法 1: 用比特数（创建 |0⟩^⊗n）
-state = State(3)  # 3-比特基态 |000⟩
+# Method 1: Create with number of bits (creates |0⟩^⊗n)
+state = State(3)  # 3-bit ground state |000⟩
 
-# 方法 2: 用向量数据
+# Method 2: With vector data
 state = State([1/np.sqrt(2), 1/np.sqrt(2)])
 
-# 方法 3: 用 PyTorch 张量
+# Method 3: With PyTorch tensor
 data = torch.tensor([1, 1], dtype=torch.complex128)
-state = State(data)  # 自动归一化
+state = State(data)  # Auto-normalize
 ```
 
-#### 第三步：查询状态信息
+#### Step 3: Query State Information
 ```python
-# 获取基本信息
+# Get basic info
 n_qubits = state.num_qubits
 dimension = state.dim
 prob_dist = state.probabilities()
 
-# 获取数据
+# Get data
 data = state.data
 dtype = state.dtype
 ```
 
-#### 第四步：执行量子操作
+#### Step 4: Perform Quantum Operations
 ```python
-# 查看概率分布
+# View probability distribution
 probs = state.probabilities_dict([0, 1])
 
-# 计算期望值
+# Calculate expectation value
 matrix = torch.eye(4, dtype=torch.complex128)
 exp_val = state.expectation_value(matrix)
 
-# 测量（坍缩）
+# Measurement (collapse)
 result = state.measure([0, 1])
 
-# 采样
+# Sampling
 samples = state.sample_counts(shots=1024)
 ```
 
-### 2.2 详细使用示例
+### 2.2 Detailed Usage Examples
 
-#### 例子 1：创建和检查基本态
+#### Example 1: Creating and Checking Basic States
 
 ```python
 import numpy as np
 from core.State import State
 
-# 创建 |0⟩ 态
+# Create |0⟩ state
 state_0 = State(1)
 print(state_0)
-# 输出：State: qubits: 1, data: [1+0j, 0+0j]
+# Output: State: qubits: 1, data: [1+0j, 0+0j]
 
-# 创建 |1⟩ 态
+# Create |1⟩ state
 state_1_data = [0, 1]
 state_1 = State(state_1_data)
 print(state_1)
-# 输出：State: qubits: 1, data: [0+0j, 1+0j]
+# Output: State: qubits: 1, data: [0+0j, 1+0j]
 
-# 验证基本信息
-print(f"比特数: {state_0.num_qubits}")    # 1
-print(f"希尔伯特空间维度: {state_0.dim}") # 2
-print(f"数据类型: {state_0.dtype}")       # torch.complex128
+# Verify basic information
+print(f"Number of bits: {state_0.num_qubits}")    # 1
+print(f"Hilbert space dimension: {state_0.dim}") # 2
+print(f"Data type: {state_0.dtype}")       # torch.complex128
 ```
 
-#### 例子 2：创建叠加态
+#### Example 2: Creating Superposition States
 
 ```python
 import numpy as np
 from core.State import State
 
-# 创建单比特叠加态 |+⟩ = (1/√2)(|0⟩ + |1⟩)
+# Create single-qubit superposition |+⟩ = (1/√2)(|0⟩ + |1⟩)
 plus_state = State([1/np.sqrt(2), 1/np.sqrt(2)])
-print(f"+ 态数据: {plus_state.data}")
+print(f"+ state data: {plus_state.data}")
 
-# 创建 |-⟩ = (1/√2)(|0⟩ - |1⟩)
+# Create |-⟩ = (1/√2)(|0⟩ - |1⟩)
 minus_state = State([1/np.sqrt(2), -1/np.sqrt(2)])
-print(f"- 态数据: {minus_state.data}")
+print(f"- state data: {minus_state.data}")
 
-# 带相位的态 |i⟩ = (1/√2)(|0⟩ + i|1⟩)
+# State with phase |i⟩ = (1/√2)(|0⟩ + i|1⟩)
 i_state = State([1/np.sqrt(2), 1j/np.sqrt(2)])
-print(f"i 态数据: {i_state.data}")
+print(f"i state data: {i_state.data}")
 
-# 检查概率分布都是 50%-50%
-print(f"概率分布: {plus_state.probabilities()}")
+# Check probability distributions are 50%-50%
+print(f"Probability distribution: {plus_state.probabilities()}")
 ```
 
-#### 例子 3：多比特基态
+#### Example 3: Multi-qubit Basis States
 
 ```python
 from core.State import State
 import torch
 import numpy as np
 
-# 创建 3 比特 |000⟩ 态
+# Create 3-qubit |000⟩ state
 state = State(3)
-print(f"比特数: {state.num_qubits}")      # 3
-print(f"维度: {state.dim}")              # 8
-print(f"数据: {state.data}")
-# 只有第一个分量为 1，其他为 0
+print(f"Number of bits: {state.num_qubits}")      # 3
+print(f"Dimension: {state.dim}")              # 8
+print(f"Data: {state.data}")
+# Only the first component is 1, others are 0
 
-# 创建特定的 3 比特态 |101⟩
-# 二进制 101 = 十进制 5
+# Create specific 3-qubit state |101⟩
+# Binary 101 = Decimal 5
 state_101_data = [0] * 8
-state_101_data[5] = 1  # 位置 5 对应 |101⟩（小端序）
+state_101_data[5] = 1  # Position 5 corresponds to |101⟩ (little-endian)
 state_101 = State(state_101_data)
-print(f"|101⟩ 态: {state_101.data}")
+print(f"|101⟩ state: {state_101.data}")
 ```
 
-#### 例子 4：概率分布查询（非坍缩）
+#### Example 4: Probability Distribution Query (Non-Collapse)
 
 ```python
 from core.State import State
 import numpy as np
 
-# 创建贝尔态 |Φ+⟩ = (1/√2)(|00⟩ + |11⟩)
+# Create Bell state |Φ+⟩ = (1/√2)(|00⟩ + |11⟩)
 bell_plus_data = [
     1/np.sqrt(2), 0, 0, 1/np.sqrt(2)
 ]
 state = State(bell_plus_data)
 
-# 查询全部比特的概率
+# Query probability of all bits
 full_probs = state.probabilities_dict([0, 1])
-print("完整概率分布:")
+print("Complete probability distribution:")
 for bits, prob in full_probs.items():
     print(f"  {bits}: {prob:.4f}")
 
-# 查询部分比特的概率（partial trace）
+# Query probability of specific bits (partial trace)
 partial_0 = state.probabilities_dict([0])
-print("\n仅比特 0 的概率:")
+print("\nProbability of qubit 0 only:")
 for bits, prob in partial_0.items():
     print(f"  {bits}: {prob:.4f}")
 ```
 
-#### 例子 5：测量和状态坍缩
+#### Example 5: Measurement and State Collapse
 
 ```python
 from core.State import State
 import numpy as np
 
-# 创建均匀叠加态
+# Create uniform superposition state
 uniform_data = np.ones(4) / 2  # (1/2)(|00⟩ + |01⟩ + |10⟩ + |11⟩)
 state = State(uniform_data)
 
-print(f"初始态概率: {state.probabilities()}")
+print(f"Initial state probability: {state.probabilities()}")
 
-# 测量第 0 个比特
+# Measure qubit 0
 result = state.measure([0])
-print(f"测量结果: {result}")
-print(f"测量后概率: {state.probabilities()}")
-# 状态已坍缩到两个可能性之一
+print(f"Measurement result: {result}")
+print(f"Probability after measurement: {state.probabilities()}")
+# State has collapsed to one of two possibilities
 
-# 再测量第 1 个比特（状态已改变）
+# Measure qubit 1 again (state has changed)
 result2 = state.measure([1])
-print(f"第二次测量结果: {result2}")
-print(f"最终态: {state.data}")
-# 现在状态是确定的基态
+print(f"Second measurement result: {result2}")
+print(f"Final state: {state.data}")
+# Now state is a definite basis state
 ```
 
-#### 例子 6：采样和统计
+#### Example 6: Sampling and Statistics
 
 ```python
 from core.State import State
 import numpy as np
 
-# 创建不均匀分布
+# Create non-uniform distribution
 # P(|0⟩) = 0.25, P(|1⟩) = 0.75
 weighted_state = State([0.5, np.sqrt(0.75)])
 
-# 采样 10000 次
+# Sample 10000 times
 samples = weighted_state.sample_counts(shots=10000)
-print("采样结果:")
+print("Sampling results:")
 for state_str, count in sorted(samples.items()):
     print(f"  {state_str}: {count}/10000 ({count/100:.1f}%)")
 
-# 理论值
-print("\n理论概率:")
+# Theoretical values
+print("\nTheoretical probability:")
 print(f"  |0⟩: 25%")
-print(f"  |1⟩: 75%")
+print(f"  |1⟩: 75%"
 ```
 
-### 2.3 与量子电路的集成
+### 2.3 Integration with Quantum Circuits
 
-#### 集成方式 1：电路后获取态
+#### Integration Method 1: Getting State After Circuit Execution
 
 ```python
 from core.GateSequence import GateSequence
 from core.State import State
 from core.register import Register
 
-# 创建电路
+# Create circuit
 qreg = Register("q", 2)
 circuit = GateSequence(qreg)
 
-# 构建电路
+# Build circuit
 circuit.h(qreg[0])
 circuit.cnot(qreg[0], qreg[1])
 
-# 执行获取状态向量
+# Execute and get state vector
 result_vector = circuit.execute()
 
-# 创建 State 对象
+# Create State object
 state = State(result_vector)
-print(f"电路结果态: {state}")
-print(f"概率分布: {state.probabilities()}")
+print(f"Circuit result state: {state}")
+print(f"Probability distribution: {state.probabilities()}")
 ```
 
-#### 集成方式 2：分析电路结果
+#### Integration Method 2: Analyzing Circuit Results
 
 ```python
 from core.GateSequence import GateSequence
 from core.State import State
 from core.register import Register
 
-# 创建 Bell 电路
+# Create Bell circuit
 qreg = Register("q", 2)
 circuit = GateSequence(qreg)
 circuit.h(qreg[0])
 circuit.cnot(qreg[0], qreg[1])
 
-# 执行
+# Execute
 result_vector = circuit.execute()
 state = State(result_vector)
 
-# 分析概率分布
+# Analyze probability distribution
 probs = state.calculate_state([0, 1])
-print("完整分析:")
+print("Complete analysis:")
 for bits, info in probs.items():
-    print(f"  {bits}: 概率={info['prob']:.4f}, 整数值={info['int']}")
+    print(f"  {bits}: probability={info['prob']:.4f}, int_value={info['int']}")
 
-# 进行测量采样
+# Perform measurement sampling
 samples = state.sample_counts(shots=1000)
-print(f"\n1000 次采样: {samples}")
+print(f"\n1000 samples: {samples}")
 ```
 
-### 2.4 高级场景
+### 2.4 Advanced Scenarios
 
-#### 场景 1：内积计算
+#### Scenario 1: Inner Product Calculation
 
 ```python
 from core.State import State
 import numpy as np
 
-# 创建两个态
+# Create two states
 state1 = State([1/np.sqrt(2), 1/np.sqrt(2)])  # |+⟩
 state2 = State([1/np.sqrt(2), -1/np.sqrt(2)])  # |-⟩
 
-# 计算内积 ⟨+|-⟩
+# Calculate inner product ⟨+|-⟩
 inner = state1.inner_product(state2)
 print(f"⟨+|-⟩ = {inner}")
-# 理论值：0
+# Theoretical value: 0
 
-# 计算 ⟨+|+⟩（应该是 1）
+# Calculate ⟨+|+⟩ (should be 1)
 self_inner = state1.inner_product(state1)
 print(f"⟨+|+⟩ = {self_inner}")
 ```
 
-#### 场景 2：期望值计算
+#### Scenario 2: Expectation Value Calculation
 
 ```python
 from core.State import State
 import torch
 import numpy as np
 
-# 创建一个态
+# Create a state
 state = State([1/np.sqrt(2), 1/np.sqrt(2)])  # |+⟩
 
-# 定义 Pauli-Z 矩阵
+# Define Pauli-Z matrix
 pauli_z = torch.tensor([
     [1, 0],
     [0, -1]
 ], dtype=torch.complex128)
 
-# 计算 ⟨Z⟩ 期望值
+# Calculate ⟨Z⟩ expectation value
 exp_z = state.expectation_value(pauli_z)
 print(f"⟨Z⟩ = {exp_z}")
-# 对于 |+⟩，⟨Z⟩ = 0
+# For |+⟩, ⟨Z⟩ = 0
 
-# 定义投影算子 P_0 = |0⟩⟨0|
+# Define projection operator P_0 = |0⟩⟨0|
 proj_0 = torch.tensor([
     [1, 0],
     [0, 0]
 ], dtype=torch.complex128)
 
-# 计算测量到 |0⟩ 的概率
+# Calculate probability of measuring |0⟩
 prob_0 = state.expectation_value(proj_0).real
 print(f"P(|0⟩) = {prob_0}")
 ```
 
-#### 场景 3：张量积
+#### Scenario 3: Tensor Product
 
 ```python
 from core.State import State
 import numpy as np
 
-# 创建两个单比特态
+# Create two single-qubit states
 state_0 = State(1)  # |0⟩
 state_plus = State([1/np.sqrt(2), 1/np.sqrt(2)])  # |+⟩
 
-# 计算张量积 |0⟩ ⊗ |+⟩
+# Calculate tensor product |0⟩ ⊗ |+⟩
 combined = state_0.tensor(state_plus)
 
-print(f"结果类型: {type(combined)}")
-print(f"比特数: {combined.num_qubits}")  # 2
-print(f"数据: {combined.data}")
-# 应该是 (1/√2)|00⟩ + (1/√2)|01⟩
+print(f"Result type: {type(combined)}")
+print(f"Number of qubits: {combined.num_qubits}")  # 2
+print(f"Data: {combined.data}")
+# Should be (1/√2)|00⟩ + (1/√2)|01⟩
 ```
 
-#### 场景 4：部分测量后继续操作
+#### Scenario 4: Continue Operation After Partial Measurement
 
 ```python
 from core.State import State
 import numpy as np
 
-# 创建贝尔态
+# Create Bell state
 bell_data = [1/np.sqrt(2), 0, 0, 1/np.sqrt(2)]
 state = State(bell_data)
 
-print("初始贝尔态:")
-print(f"  完整概率: {state.probabilities_dict([0, 1])}")
+print("Initial Bell state:")
+print(f"  Complete probability: {state.probabilities_dict([0, 1])}")
 
-# 测量第 0 个比特
+# Measure qubit 0
 result_0 = state.measure([0])
-print(f"\n测量比特 0: {result_0}")
+print(f"\nMeasure qubit 0: {result_0}")
 
-# 查看测量后的态
-print(f"  坍缺后的全态概率: {state.probabilities()}")
+# View state after measurement
+print(f"  Complete state probability after collapse: {state.probabilities()}")
 
-# 部分态概率
+# Partial state probability
 partial = state.calculate_state([1])
-print(f"  比特 1 的分布: {partial}")
+print(f"  Distribution of qubit 1: {partial}")
 
-# 继续测量比特 1
+# Continue measuring qubit 1
 result_1 = state.measure([1])
-print(f"\n测量比特 1: {result_1}")
-print(f"  最终态: {state.data}")
+print(f"\nMeasure qubit 1: {result_1}")
+print(f"  Final state: {state.data}")
 ```
 
 ---
 
-## 三、关键 API 参考
+## III. Key API Reference
 
-### 3.1 构造函数
+### 3.1 Constructor
 
 ```python
 State(data, num_qubits=None)
 ```
 
-**参数：**
-- `data: int | array-like` - 初始化数据
-  - 如果是 `int`：创建 n 比特基态 $|0\rangle^{\otimes n}$
-  - 如果是数组：状态向量数据（自动拉平为 1D）
-- `num_qubits: int` - 可选，用于验证（通常自动推导）
+**Parameters:**
+- `data: int | array-like` - Initialization data
+  - If `int`: Create n-qubit ground state $|0\rangle^{\otimes n}$
+  - If array: State vector data (auto-flattened to 1D)
+- `num_qubits: int` - Optional, for validation (usually auto-derived)
 
-**返回值：**
-- 初始化且归一化的 State 对象
+**Returns:**
+- Initialized and normalized State object
 
-**异常：**
-- `ValueError` - 如果维度不是 $2^n$ 或归一化失败
+**Exceptions:**
+- `ValueError` - If dimension is not $2^n$ or normalization fails
 
-### 3.2 属性访问
+### 3.2 Properties Access
 
 ```python
-# 只读属性
-state.num_qubits    # 比特数
-state.dim           # 希尔伯特空间维度
-state.data          # 状态向量（PyTorch张量）
-state.dtype         # 数据类型（torch.complex128）
+# Read-only properties
+state.num_qubits    # Number of qubits
+state.dim           # Hilbert space dimension
+state.data          # State vector (PyTorch tensor)
+state.dtype         # Data type (torch.complex128)
 
-# 方法
-state.norm()        # 計算向量范数
+# Methods
+state.norm()        # Calculate vector norm
 ```
 
-### 3.3 核心方法
+### 3.3 Core Methods
 
-| 方法 | 参数 | 返回值 | 说明 |
+| Method | Parameter | Return | Description |
 |------|------|--------|------|
-| `normalize()` | - | self | 归一化状态 |
-| `inner_product(other)` | other: State | complex | 计算内积 $\langle\psi\|\phi\rangle$ |
-| `tensor(other)` | other: State | State | 张量积 $\|\psi\rangle\otimes\|\phi\rangle$ |
-| `expectation_value(matrix)` | matrix: Tensor | complex | 期望值 $\langle\psi\|O\|\psi\rangle$ |
-| `probabilities()` | - | Tensor | 所有基态的概率分布 |
-| `probabilities_dict(targets)` | targets: list | dict | 指定比特的概率分布 |
-| `measure(targets)` | targets: list | str | 测量并返回结果字符串 |
-| `sample_counts(shots)` | shots: int | dict | 采样指定次数的结果统计 |
-| `calculate_state(targets)` | targets: list | dict | 详细的状态分析 |
+| `normalize()` | - | self | Normalize state |
+| `inner_product(other)` | other: State | complex | Calculate inner product $\langle\psi\|\phi\rangle$ |
+| `tensor(other)` | other: State | State | Tensor product $\|\psi\rangle\otimes\|\phi\rangle$ |
+| `expectation_value(matrix)` | matrix: Tensor | complex | Expectation value $\langle\psi|O|\psi\rangle$ |
+| `probabilities()` | - | Tensor | Probability distribution of all basis states |
+| `probabilities_dict(targets)` | targets: list | dict | Probability distribution of specified qubits |
+| `measure(targets)` | targets: list | str | Measure and return result string |
+| `sample_counts(shots)` | shots: int | dict | Statistics of sampling results for specified times |
+| `calculate_state(targets)` | targets: list | dict | Detailed state analysis |
 
-### 3.4 方法详解
+### 3.4 Method Description
 
 #### probabilities_dict
 
@@ -513,12 +513,12 @@ state.norm()        # 計算向量范数
 probabilities_dict(target_indices, endian='little', threshold=1e-9) -> dict
 ```
 
-**参数：**
-- `target_indices` - 要分析的比特索引
-- `endian` - 字节序（'little' 或 'big'）
-- `threshold` - 概率阈值（低于此值忽略）
+**Parameters:**
+- `target_indices` - Index of qubits to analyze
+- `endian` - Endianness ('little' or 'big')
+- `threshold` - Probability threshold (values below this are ignored)
 
-**返回：**
+**Returns:**
 ```python
 {
     '00': 0.5,
@@ -532,15 +532,15 @@ probabilities_dict(target_indices, endian='little', threshold=1e-9) -> dict
 measure(target_indices, endian='little') -> str
 ```
 
-**参数：**
-- `target_indices` - 要测量的比特索引
-- `endian` - 字节序
+**Parameters:**
+- `target_indices` - Index of qubits to measure
+- `endian` - Endianness
 
-**返回：**
-- 测量结果的二进制字符串（如 '101'）
+**Returns:**
+- Binary string of measurement result (e.g., '101')
 
-**副作用：**
-- 修改 State 对象（状态坍缩）
+**Side Effect:**
+- Modifies State object (state collapse)
 
 #### calculate_state
 
@@ -548,7 +548,7 @@ measure(target_indices, endian='little') -> str
 calculate_state(target_indices, endian='little', threshold=1e-5) -> dict
 ```
 
-**返回：**
+**Returns:**
 ```python
 {
     '00': {'prob': 0.5, 'int': 0},
@@ -558,190 +558,186 @@ calculate_state(target_indices, endian='little', threshold=1e-5) -> dict
 
 ---
 
-## 四、数学操作详解
+## IV. Mathematical Operations Explained
 
-### 4.1 量子测量的数学模型
+### 4.1 Mathematical Model of Quantum Measurement
 
-单次测量流程：
+Single measurement process:
 
-1. **概率计算**：$P(i) = |\alpha_i|^2$
-2. **采样选择**：按概率从 $\{0, 1, ..., 2^n-1\}$ 采样
-3. **状态坍缩**：$|\psi\rangle \rightarrow \frac{|i\rangle}{\sqrt{P(i)}}$
+1. **Probability Calculation**: $P(i) = |\alpha_i|^2$
+2. **Sample Selection**: Sample from $\{0, 1, ..., 2^n-1\}$ according to probability
+3. **State Collapse**: $|\psi\rangle \rightarrow \frac{|i\rangle}{\sqrt{P(i)}}$
 
-### 4.2 部分比特的测量与 Partial Trace
+### 4.2 Partial Bit Measurement and Partial Trace
 
-对子集比特的概率分布，通过 partial trace 计算：
+For probability distribution of a subset of bits, calculate via partial trace:
 
 $$\rho_A = \text{Tr}_B(\rho)$$
 
-其对角元素即为测量 A 中比特的概率。
+The diagonal elements represent the probability of measuring bits in A.
 
-### 4.3 期望值与投影算子
+### 4.3 Expectation Value and Projection Operators
 
-测量到状态 $|i\rangle$ 的概率：
+Probability of measuring state $|i\rangle$:
 
 $$P(i) = \langle\psi|P_i|\psi\rangle$$
 
-其中 $P_i = |i\rangle\langle i|$ 是投影算子。
+where $P_i = |i\rangle\langle i|$ is the projection operator.
 
 ---
+## V. Common Patterns
 
-## 五、常见模式
-
-### 模式 1：创建标准基态
+### Pattern 1: Create Standard Basis State
 
 ```python
 def create_basis_state(n_qubits, target_state_int):
-    """创建计算基态 |target_state⟩"""
+    """Create computational basis state |target_state⟩"""
     data = [0] * (2**n_qubits)
     data[target_state_int] = 1
     return State(data)
 
-# 使用
+# Usage
 state_5 = create_basis_state(3, 5)  # |101⟩
 ```
 
-### 模式 2：创建均匀叠加
+### Pattern 2: Create Uniform Superposition
 
 ```python
 def create_uniform_superposition(n_qubits):
-    """创建均匀叠加态"""
+    """Create uniform superposition state"""
     amplitude = 1 / np.sqrt(2**n_qubits)
     data = [amplitude] * (2**n_qubits)
     return State(data)
 
-# 使用
+# Usage
 uniform = create_uniform_superposition(3)
 ```
 
-### 模式 3：分析量子电路结果
+### Pattern 3: Analyze Quantum Circuit Output
 
 ```python
 def analyze_circuit_output(circuit, num_qubits, shots=1000):
-    """分析电路输出"""
+    """Analyze circuit output"""
     result_vector = circuit.execute()
     state = State(result_vector)
     
-    # 获取统计
+    # Get statistics
     stats = state.sample_counts(shots=shots)
     
-    # 获取理论概率
+    # Get theoretical probabilities
     theory = state.probabilities_dict(list(range(num_qubits)))
     
     return stats, theory
 ```
 
 ---
+## VI. Error Handling Guide
 
-## 六、错误处理指南
+### 6.1 Common Errors
 
-### 6.1 常见错误
-
-**错误 1：维度不是 2 的幂**
+**Error 1: Dimension is not a power of 2**
 ```python
-# 错误！
+# Wrong!
 try:
     state = State([1, 1, 1])  # 3 ≠ 2^n
 except ValueError as e:
-    print(f"错误: {e}")  # 输入数据长度 3 不是 2 的幂
+    print(f"Error: {e}")  # Input data length 3 is not a power of 2
 
-# 正确
+# Correct
 state = State([1, 1, 1, 1]) / 2  # 4 = 2^2
 ```
 
-**错误 2：未归一化的向量**
+**Error 2: Non-normalized vector**
 ```python
-# 可以但会自动修复
-state = State([1, 1])  # 未归一化
-print(state.data)  # 自动归一化为 [1/√2, 1/√2]
+# Acceptable, but will be auto-fixed
+state = State([1, 1])  # Not normalized
+print(state.data)  # Auto-normalized to [1/√2, 1/√2]
 ```
 
-**错误 3：维度不匹配的操作**
+**Error 3: Dimension mismatch in operations**
 ```python
-state1 = State(1)   # 1 比特
-state2 = State(2)   # 2 比特
+state1 = State(1)   # 1 qubit
+state2 = State(2)   # 2 qubits
 
-# 错误！
+# Wrong!
 try:
     inner = state1.inner_product(state2)
 except ValueError as e:
-    print(f"错误: {e}")  # 维度不匹配
+    print(f"Error: {e}")  # Dimension mismatch
 
-# 正确：使用张量积
+# Correct: Use tensor product
 combined = state1.tensor(state2)
 ```
 
-### 6.2 验证函数
+### 6.2 Validation Function
 
 ```python
 def validate_state(state):
-    """验证 State 对象的有效性"""
-    # 检查类型
+    """Validate State object validity"""
+    # Check type
     if not isinstance(state, State):
         raise TypeError("Expected State object")
     
-    # 检查规范化
+    # Check normalization
     norm = state.norm()
     if not np.isclose(norm, 1.0):
-        print(f"警告：状态未正确规范化（范数={norm}）")
+        print(f"Warning: State not properly normalized (norm={norm})")
     
-    # 检查维度
+    # Check dimension
     if state.dim != 2**state.num_qubits:
-        raise ValueError("维度和比特数不一致")
+        raise ValueError("Dimension and qubit count mismatch")
     
     return True
 ```
 
 ---
+## VII. Performance Optimization
 
-## 七、性能优化
-
-### 7.1 使用 GPU 加速
+### 7.1 Using GPU Acceleration
 
 ```python
 import torch
 from core.State import State
 
-# 如果有 GPU 可用
+# If GPU is available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# 创建状态并移到 GPU（需要修改 State 类）
+# Create state and move to GPU (requires State class modification)
 state_data = torch.tensor([1, 1], dtype=torch.complex128, device=device)
 state = State(state_data)
 ```
 
-### 7.2 批量采样的效率
+### 7.2 Efficiency of Batch Sampling
 
 ```python
-# 对大量比特进行采样
+# Sample large number of qubits
 n_qubits = 20
 n_shots = 100000
 
 state = State(n_qubits)
 samples = state.sample_counts(shots=n_shots)
 
-# 比单次测量 n_shots 次更高效
+# More efficient than measuring n_shots times individually
 ```
 
-### 7.3 复用 State 对象
+### 7.3 Reusing State Objects
 
 ```python
-# 好的做法：创建一次，多次分析
+# Good practice: Create once, analyze multiple times
 state = State([1/np.sqrt(2), 1/np.sqrt(2)])
 
-# 多次查询（不修改状态）
+# Multiple queries (does not modify state)
 state.probabilities_dict([0])
 state.calculate_state([0])
 state.sample_counts(shots=100)
 
-# 不要重复创建
+# Avoid repeated creation
 # for i in range(100):
-#     s = State([1/np.sqrt(2), 1/np.sqrt(2)])  # X
+#     s = State([1/np.sqrt(2), 1/np.sqrt(2)])  # Bad
 ```
 
 ---
-
-## 八、完整工作流示例
+## VIII. Complete Workflow Example
 
 ```python
 import numpy as np
@@ -750,65 +746,64 @@ from core.GateSequence import GateSequence
 from core.register import Register
 
 def complete_quantum_workflow():
-    """完整的量子计算工作流"""
+    """Complete quantum computing workflow"""
     
-    # 步骤 1: 创建量子电路
-    print("步骤 1: 构建量子电路")
+    # Step 1: Create quantum circuit
+    print("Step 1: Build quantum circuit")
     qreg = Register("q", 2)
     circuit = GateSequence(qreg)
     
-    # 步骤 2: 应用量子门构建 Bell 态
-    print("步骤 2: 应用量子门")
+    # Step 2: Apply quantum gates to build Bell state
+    print("Step 2: Apply quantum gates")
     circuit.h(qreg[0])
     circuit.cnot(qreg[0], qreg[1])
     
-    # 步骤 3: 执行电路获取态向量
-    print("步骤 3: 执行电路")
+    # Step 3: Execute circuit to get state vector
+    print("Step 3: Execute circuit")
     result_vector = circuit.execute()
     
-    # 步骤 4: 创建 State 对象
-    print("步骤 4: 创建量子态对象")
+    # Step 4: Create State object
+    print("Step 4: Create quantum state object")
     state = State(result_vector)
     
-    # 步骤 5: 分析态
-    print("步骤 5: 分析量子态")
-    print(f"  比特数: {state.num_qubits}")
-    print(f"  完整概率分布: {state.probabilities_dict([0, 1])}")
+    # Step 5: Analyze state
+    print("Step 5: Analyze quantum state")
+    print(f"  Number of qubits: {state.num_qubits}")
+    print(f"  Complete probability distribution: {state.probabilities_dict([0, 1])}")
     
-    # 步骤 6: 验证保理度
-    print("步骤 6: 验证结果")
+    # Step 6: Verify fidelity
+    print("Step 6: Verify results")
     fidelity = np.abs(state.data[0])**2 + np.abs(state.data[3])**2
-    print(f"  贝尔态保真度: {fidelity:.4f}")
+    print(f"  Bell state fidelity: {fidelity:.4f}")
     
-    # 步骤 7: 采样
-    print("步骤 7: 量子采样")
+    # Step 7: Sampling
+    print("Step 7: Quantum sampling")
     samples = state.sample_counts(shots=1000)
-    print(f"  采样结果: {samples}")
+    print(f"  Sampling results: {samples}")
     
-    # 步骤 8: 测量（修改状态）
-    print("步骤 8: 执行测量")
+    # Step 8: Measurement (modifies state)
+    print("Step 8: Execute measurement")
     result = state.measure([0, 1])
-    print(f"  测量结果: {result}")
-    print(f"  最终态: {state.data}")
+    print(f"  Measurement result: {result}")
+    print(f"  Final state: {state.data}")
 
-# 执行
+# Execute
 complete_quantum_workflow()
 ```
 
 ---
+## IX. Summary Checklist
 
-## 九、总结检查清单
+When using the State class, please ensure:
 
-使用 State 类时，请确保：
-
-- [ ] 已正确导入 State 类
-- [ ] 数据维度是 $2^n$ 或使用比特数创建
-- [ ] 理解了状态的自动归一化
-- [ ] 知道测量会修改状态（坍缺）
-- [ ] 理解了 endian 参数的作用
-- [ ] 使用正确的索引方式访问比特
-- [ ] 区分了概率查询（非坍缺）和测量（坍缺）
-- [ ] 正确处理了复数振幅
-- [ ] 在必要时检验状态的规范化性
-- [ ] 使用了适当的数值阈值处理浮点误差
+- [ ] State class has been correctly imported
+- [ ] Data dimension is $2^n$ or created with qubit count
+- [ ] Understand automatic state normalization
+- [ ] Know that measurement modifies state (collapse)
+- [ ] Understand the role of endian parameter
+- [ ] Use correct indexing method to access qubits
+- [ ] Distinguish between probability query (non-collapse) and measurement (collapse)
+- [ ] Handle complex amplitudes correctly
+- [ ] Verify state normalization when necessary
+- [ ] Use appropriate numerical threshold for floating-point error handling
 

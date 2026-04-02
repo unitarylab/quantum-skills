@@ -13,219 +13,219 @@ keywords:
   - amplitude encoding
 ---
 
-# Initialization 技能指南
+# Initialization Skills Guide
 
-## 一、算法介绍
+## I. Algorithm Introduction
 
-### 1.1 基本概念
+### 1.1 Basic Concepts
 
-**State Preparation（量子态准备）** 是将量子系统初始化为特定目标态的过程。给定一个归一化的量子态向量 $|\psi\rangle$，Initialization 模块会自动构建一个量子电路，该电路通过一系列量子门的操作将初始的基态 $|00...0\rangle$ 演化为目标态。
+**State Preparation (Quantum State Initialization)** is the process of initializing a quantum system to a specific target state. Given a normalized quantum state vector $|\psi\rangle$, the Initialization module automatically constructs a quantum circuit that evolves the initial ground state $|00...0\rangle$ to the target state through a series of quantum gate operations.
 
-### 1.2 数学基础
+### 1.2 Mathematical Foundation
 
-#### 1.2.1 量子态表示
+#### 1.2.1 Quantum State Representation
 
-一个 n 比特量子系统的状态向量表示为：
+An n-qubit quantum system state vector is represented as:
 
 $$|\psi\rangle = \sum_{i=0}^{2^n-1} \alpha_i |i\rangle$$
 
-其中：
-- $\alpha_i \in \mathbb{C}$ 是振幅（amplitude）
-- $|i\rangle$ 是计算基态
-- 归一化条件：$\sum_{i=0}^{2^n-1} |\alpha_i|^2 = 1$
+Where:
+- $\alpha_i \in \mathbb{C}$ is the amplitude
+- $|i\rangle$ is the computational basis state
+- Normalization condition: $\sum_{i=0}^{2^n-1} |\alpha_i|^2 = 1$
 
-#### 1.2.2 相位和振幅
+#### 1.2.2 Phase and Amplitude
 
-每个振幅可以表示为极坐标形式：
+Each amplitude can be represented in polar form:
 
 $$\alpha_i = r_i e^{i\phi_i}$$
 
-其中：
-- $r_i = |\alpha_i|$ 是振幅大小（非负实数）
-- $\phi_i = \arg(\alpha_i)$ 是相位
+Where:
+- $r_i = |\alpha_i|$ is the amplitude magnitude (non-negative real number)
+- $\phi_i = \arg(\alpha_i)$ is the phase
 
-### 1.3 递归分解算法
+### 1.3 Recursive Decomposition Algorithm
 
-Initialization 使用递归分解方法来构建态准备电路。
+Initialization uses a recursive decomposition method to construct state preparation circuits.
 
-#### 1.3.1 算法流程
+#### 1.3.1 Algorithm Workflow
 
 ```
-输入: 目标态向量 |v⟩
+Input: Target state vector |v⟩
     ↓
-检查归一化条件
+Check normalization condition
     ↓
-判断是否为单比特情景
-    ├─ 是 → 直接应用单比特门
-    └─ 否 → 向量分解
+Determine if single-qubit scenario
+    ├─ Yes → Apply single-qubit gates directly
+    └─ No → Vector decomposition
         ↓
-    将 |v⟩ 分解为两部分
+    Decompose |v⟩ into two parts
     v1 = v[0:2^(n-1)]
     v2 = v[2^(n-1):]
         ↓
-    计算概率
+    Calculate probabilities
     p1 = ||v1||²
     p2 = ||v2||²
         ↓
-    应用 RY 门调整最后一个比特的概率
+    Apply RY gate to adjust last qubit probability
         ↓
-    递归准备 v1 和 v2
-    使用受控门限制
+    Recursively prepare v1 and v2
+    Using controlled gates
         ↓
-    返回完整电路
+    Return complete circuit
 ```
 
-#### 1.3.2 单比特初始化
+#### 1.3.2 Single-Qubit Initialization
 
-对于单个量子比特，目标态为：
+For a single quantum qubit, the target state is:
 
 $$|\psi\rangle = \alpha_0 |0\rangle + \alpha_1 |1\rangle$$
 
-初始化步骤：
+Initialization steps:
 
-1. **提取相位**：
+1. **Extract Phase**:
    - $\phi_0 = \arg(\alpha_0)$
    - $\phi_1 = \arg(\alpha_1)$
 
-2. **应用全局相位**：
+2. **Apply Global Phase**:
    $$|\psi'\rangle = e^{-i\phi_0} |\psi\rangle$$
 
-3. **计算旋转角**：
+3. **Compute Rotation Angle**:
    $$\theta = \arccos(|\alpha_0|)$$
 
-4. **应用 RY 旋转**：
+4. **Apply RY Rotation**:
    $$RY(2\theta) |0\rangle \rightarrow |\psi''\rangle$$
 
-5. **应用相位门**：
+5. **Apply Phase Gate**:
    $$P(\phi_1 - \phi_0) |\psi''\rangle \rightarrow |\psi\rangle$$
 
 ```python
-# 单比特初始化示意
-初始态: |0⟩
-    ↓ [应用全局相位]
-初始态 (相位调整)
-    ↓ [应用 RY(2θ)]
-叠加态
-    ↓ [应用相位门 P(Δφ)]
-目标态: α₀|0⟩ + α₁|1⟩
+# Single-qubit initialization process diagram
+Initial state: |0⟩
+    ↓ [Apply global phase]
+Initial state (phase adjusted)
+    ↓ [Apply RY(2θ)]
+Superposition state
+    ↓ [Apply phase gate P(Δφ)]
+Target state: α₀|0⟩ + α₁|1⟩
 ```
 
-#### 1.3.3 多比特递归分解
+#### 1.3.3 Multi-Qubit Recursive Decomposition
 
-对于 n 比特情景，在第 (n-1) 个比特上应用 RY 旋转：
+For n-qubit scenarios, apply RY rotation on qubit (n-1):
 
-1. **概率分布计算**：
-   - $p_1 = ||v_1||^2$ （前半部分比特在 0 的概率）
-   - $p_2 = ||v_2||^2$ （前半部分比特在 1 的概率）
+1. **Probability Distribution Calculation**:
+   - $p_1 = ||v_1||^2$ (probability of first half being in state 0)
+   - $p_2 = ||v_2||^2$ (probability of first half being in state 1)
 
-2. **旋转角计算**：
+2. **Rotation Angle Calculation**:
    $$\theta = \arccos(\sqrt{p_1})$$
 
-3. **受控态准备**：
-   - 当第 (n-1) 比特为 0 时，准备归一化的 $v_1/||v_1||$
-   - 当第 (n-1) 比特为 1 时，准备归一化的 $v_2/||v_2||$
+3. **Controlled State Preparation**:
+   - When qubit (n-1) is 0: prepare normalized $v_1/||v_1||$
+   - When qubit (n-1) is 1: prepare normalized $v_2/||v_2||$
 
 ```
-n 比特分解示意:
+n-qubit decomposition diagram:
 ┌──────────────────────────────────┐
-│  目标态 |v⟩ (2ⁿ 个振幅)           │
+│  Target state |v⟩ (2ⁿ amplitudes)│
 └──────────────────────────────────┘
-            ↓ [分割]
+            ↓ [Split]
     ┌───────────────────┐
-    │   v1 (前2^(n-1))  │  v2 (后2^(n-1))
+    │   v1 (first 2^(n-1))  │  v2 (last 2^(n-1))
     └───────────────────┘
-         ↓ [RY 旋转]
-    概率重新分配
-         ↓ [受控准备]
-    ├─ 控制=0: 递归准备 v1
-    └─ 控制=1: 递归准备 v2
+         ↓ [RY rotation]
+    Probability redistribution
+         ↓ [Controlled preparation]
+    ├─ Control=0: Recursively prepare v1
+    └─ Control=1: Recursively prepare v2
 ```
 
-### 1.4 复杂性分析
+### 1.4 Complexity Analysis
 
-| 指标 | 复杂度 | 说明 |
+| Metric | Complexity | Description |
 |------|---------|------|
-| 电路深度 | $O(n^2)$ | 递归分解深度 |
-| 门数 | $O(2^n)$ | 指数级门操作 |
-| 参数参与度 | $O(2^n)$ | 需要 $2^n$ 个振幅 |
-| 时间复杂度 | $O(2^n)$ | 计算电路所需时间 |
+| Circuit Depth | $O(n^2)$ | Recursion decomposition depth |
+| Gate Count | $O(2^n)$ | Exponential number of gate operations |
+| Parameter Participation | $O(2^n)$ | Need $2^n$ amplitudes |
+| Time Complexity | $O(2^n)$ | Time to compute circuit |
 
 ---
 
-## 二、使用方法步骤
+## II. Usage Steps
 
-### 2.1 基本使用流程
+### 2.1 Basic Usage Workflow
 
-#### 第一步：导入模块
+#### Step 1: Import Module
 ```python
 from core.Initialization import state_preparation
 from core.GateSequence import GateSequence
 import numpy as np
 ```
 
-#### 第二步：定义目标态向量
+#### Step 2: Define Target State Vector
 ```python
-# 目标态必须是归一化的
-# 示例：单比特基态
+# Target state must be normalized
+# Example: Single-qubit ground state
 state_0 = np.array([1, 0])
 state_1 = np.array([0, 1])
 
-# 示例：单比特叠加态
+# Example: Single-qubit superposition
 superposition = np.array([1/np.sqrt(2), 1/np.sqrt(2)])
 
-# 示例：两比特 Bell 态
+# Example: Two-qubit Bell state
 bell_plus = np.array([1/np.sqrt(2), 0, 0, 1/np.sqrt(2)])
 ```
 
-#### 第三步：调用 state_preparation
+#### Step 3: Call state_preparation
 ```python
-# 生成态准备电路
+# Generate state preparation circuit
 circuit = state_preparation(superposition, backend='torch')
 ```
 
-#### 第四步：验证和使用电路
+#### Step 4: Verify and Use Circuit
 ```python
-# 执行电路获取量子态
+# Execute circuit to get quantum state
 result_state = circuit.execute()
 
-# 绘制电路
+# Draw circuit
 circuit.draw(title="State Preparation Circuit")
 
-# 打印电路信息
-print(f"电路名称: {circuit.name}")
-print(f"量子比特数: {circuit.get_num_qubits()}")
+# Print circuit information
+print(f"Circuit name: {circuit.name}")
+print(f"Number of qubits: {circuit.get_num_qubits()}")
 ```
 
-### 2.2 详细使用示例
+### 2.2 Detailed Usage Examples
 
-#### 例子 1：准备单比特叠加态
+#### Example 1: Prepare Single-Qubit Superposition State
 
 ```python
 import numpy as np
 from core.Initialization import state_preparation
 
-# 目标态: |+⟩ = (1/√2)(|0⟩ + |1⟩)
+# Target state: |+⟩ = (1/√2)(|0⟩ + |1⟩)
 target_state = np.array([1/np.sqrt(2), 1/np.sqrt(2)])
 
-# 生成电路
+# Generate circuit
 circuit = state_preparation(target_state)
 
-# 执行
+# Execute
 result = circuit.execute()
-print(f"目标态: {target_state}")
-print(f"执行结果: {result}")
+print(f"Target state: {target_state}")
+print(f"Execution result: {result}")
 
-# 绘制
+# Draw
 circuit.draw(title="Superposition State")
 ```
 
-#### 例子 2：准备两比特纠缠态 (Bell 态)
+#### Example 2: Prepare Two-Qubit Entangled State (Bell State)
 
 ```python
 import numpy as np
 from core.Initialization import state_preparation
 
-# Bell 态 |Φ+⟩ = (1/√2)(|00⟩ + |11⟩)
+# Bell state |Φ+⟩ = (1/√2)(|00⟩ + |11⟩)
 bell_state = np.array([
     1/np.sqrt(2),  # |00⟩
     0,              # |01⟩
@@ -233,131 +233,131 @@ bell_state = np.array([
     1/np.sqrt(2)   # |11⟩
 ])
 
-# 生成电路
+# Generate circuit
 circuit = state_preparation(bell_state)
 
-# 执行并验证
+# Execute and verify
 result = circuit.execute()
 
-print(f"贝尔态: {bell_state}")
-print(f"结果: {result}")
+print(f"Bell state: {bell_state}")
+print(f"Result: {result}")
 
-# 验证纠缠
-print(f"是否准备成功: {np.allclose(result, bell_state)}")
+# Verify preparation success
+print(f"Preparation successful: {np.allclose(result, bell_state)}")
 ```
 
-#### 例子 3：准备复杂的三比特态
+#### Example 3: Prepare Complex Three-Qubit State
 
 ```python
 import numpy as np
 from core.Initialization import state_preparation
 
-# 定义一个 GHZ 态：|GHZ⟩ = (1/√2)(|000⟩ + |111⟩)
+# Define a GHZ state: |GHZ⟩ = (1/√2)(|000⟩ + |111⟩)
 ghz_state = np.zeros(8)
 ghz_state[0] = 1/np.sqrt(2)
 ghz_state[7] = 1/np.sqrt(2)
 
-# 生成电路
+# Generate circuit
 circuit = state_preparation(ghz_state)
 
-# 执行
+# Execute
 result = circuit.execute()
 
-print("目标 GHZ 态已成功准备！")
-print(f"非零分量: {np.nonzero(result)[0]}")
+print("GHZ state successfully prepared!")
+print(f"Non-zero components: {np.nonzero(result)[0]}")
 ```
 
-#### 例子 4：带有相位的态准备
+#### Example 4: State Preparation with Phase
 
 ```python
 import numpy as np
 from core.Initialization import state_preparation
 
-# 态中包含相位: |ψ⟩ = (1/√2)|0⟩ + (i/√2)|1⟩
-# 其中 i = e^(iπ/2)
+# State with phase: |ψ⟩ = (1/√2)|0⟩ + (i/√2)|1⟩
+# where i = e^(iπ/2)
 target_state = np.array([
-    1/np.sqrt(2),           # 实部: 1/√2
-    1j/np.sqrt(2)           # 虚部: i/√2
+    1/np.sqrt(2),           # Real: 1/√2
+    1j/np.sqrt(2)           # Imaginary: i/√2
 ])
 
-# 生成电路
+# Generate circuit
 circuit = state_preparation(target_state)
 
-# 执行
+# Execute
 result = circuit.execute()
 
-print(f"带相位的目标态: {target_state}")
-print(f"执行结果: {result}")
-print(f"相位差: {np.angle(result[1]) - np.angle(result[0])}")
+print(f"State with phase (target): {target_state}")
+print(f"Execution result: {result}")
+print(f"Phase difference: {np.angle(result[1]) - np.angle(result[0])}")
 ```
 
-### 2.3 与 GateSequence 集成
+### 2.3 GateSequence Integration
 
-#### 集成方式 1：直接在电路中初始化
+#### Integration Method 1: Direct Initialization in Circuit
 
 ```python
 from core.GateSequence import GateSequence
 from core.Initialization import state_preparation
 import numpy as np
 
-# 目标初始态
+# Target initial state
 initial_state = np.array([1/np.sqrt(2), 1/np.sqrt(2)])
 
-# 创建主电路
+# Create main circuit
 main_circuit = GateSequence(3)
 
-# 使用 initialize 方法
+# Use initialize method
 main_circuit.initialize(initial_state, target=[0, 1])
 
-# 在初始化后的态上应用更多操作
+# Apply more operations after initialization
 main_circuit.h(2)
 main_circuit.cnot(0, 2)
 
-# 执行
+# Execute
 result = main_circuit.execute()
 ```
 
-#### 集成方式 2：组合多个準備電路
+#### Integration Method 2: Combine Multiple Preparation Circuits
 
 ```python
 from core.GateSequence import GateSequence
 from core.Initialization import state_preparation
 import numpy as np
 
-# 准备两个不同的态
+# Prepare two different states
 state1 = np.array([1/np.sqrt(2), 1/np.sqrt(2)])
 state2 = np.array([1/np.sqrt(3), np.sqrt(2/3)])
 
-# 生成对应电路
+# Generate corresponding circuits
 circuit1 = state_preparation(state1)
 circuit2 = state_preparation(state2)
 
-# 创建主电路
+# Create main circuit
 main_circuit = GateSequence(4)
 
-# 分别在不同的比特上应用
+# Apply separately on different bits
 main_circuit.append(circuit1, [0, 1])
 main_circuit.append(circuit2, [2, 3])
 
-# 在两个部分之间添加相互作用
+# Add interaction between two parts
 main_circuit.cnot(1, 2)
 
-# 执行
+# Execute
 result = main_circuit.execute()
 ```
 
-### 2.4 高级场景
+### 2.4 Advanced Scenarios
 
-#### 场景 1：参数化态准备
+#### Scenario 1: Parameterized State Preparation
 
 ```python
 def create_parameterized_state(theta):
-    """创建参数化的单比特态"""
-    # 态: |ψ(θ)⟩ = cos(θ)|0⟩ + sin(θ)|1⟩
+    """Create parameterized single-qubit state"""
+    # State: |ψ(θ)⟩ = cos(θ)|0⟩ + sin(θ)|1⟩
     state = np.array([np.cos(theta), np.sin(theta)])
     return state_preparation(state)
 
-# 使用不同的参数
+# Use different parameters
 theta_values = [0, np.pi/4, np.pi/2]
 
 for theta in theta_values:
@@ -366,137 +366,137 @@ for theta in theta_values:
     print(f"θ = {theta:.4f}: {result}")
 ```
 
-#### 场景 2：量子算法初始化
+#### Scenario 2: Quantum Algorithm Initialization
 
 ```python
 def prepare_search_state(n):
-    """为 Grover 搜索准备均匀叠加态"""
-    # 创建均匀叠加: |s⟩ = (1/√2ⁿ) Σᵢ |i⟩
+    """Prepare uniform superposition state for Grover search"""
+    # Create uniform superposition: |s⟩ = (1/√2ⁿ) Σᵢ |i⟩
     state = np.ones(2**n) / np.sqrt(2**n)
     return state_preparation(state)
 
-# 为 3 比特搜索准备
+# Prepare for 3-qubit search
 circuit = prepare_search_state(3)
 result = circuit.execute()
 
-print("均匀叠加态已准备")
-print(f"所有振幅相等: {np.allclose(np.abs(result), 1/np.sqrt(8))}")
+print("Uniform superposition state prepared")
+print(f"All amplitudes equal: {np.allclose(np.abs(result), 1/np.sqrt(8))}")
 ```
 
-#### 场景 3：编码经典数据
+#### Scenario 3: Encode Classical Data
 
 ```python
 def amplitude_encode_data(data):
     """
-    使用振幅编码来编码经典数据
+    Use amplitude encoding to encode classical data
     
-    输入数据必须归一化到 [-1, 1]
+    Input data must be normalized to [-1, 1]
     """
-    # 归一化数据
+    # Normalize data
     normalized = np.array(data, dtype=float)
     normalized = normalized / np.linalg.norm(normalized)
     
-    # 创建态
+    # Create state
     circuit = state_preparation(normalized)
     
     return circuit
 
-# 编码数据 [1, 2, 3, 4]
+# Encode data [1, 2, 3, 4]
 data = [1, 2, 3, 4]
 circuit = amplitude_encode_data(data)
 
 result = circuit.execute()
-print(f"编码的数据: {result}")
+print(f"Encoded data: {result}")
 ```
 
 ---
 
-## 三、关键 API 参考
+## III. Key API Reference
 
-### 3.1 state_preparation 函数
+### 3.1 state_preparation Function
 
 ```python
 state_preparation(v, backend='torch')
 ```
 
-**参数：**
-- `v: array-like` - 目标量子态向量
-  - 必须是逐元素复数数组
-  - 必须满足归一化条件：$\sum_i |v_i|^2 = 1$
-  - 长度必须是 2 的整数次幂 ($2^n$)
+**Parameters:**
+- `v: array-like` - Target quantum state vector
+  - Must be element-wise complex array
+  - Must satisfy normalization condition: $\sum_i |v_i|^2 = 1$
+  - Length must be integer power of 2 ($2^n$)
 
-- `backend: str` - 使用的后端
-  - 默认值：`'torch'`
-  - 可选值：`'torch'`, 等其他支持的后端
+- `backend: str` - Backend to use
+  - Default: `'torch'`
+  - Optional: `'torch'`, other supported backends
 
-**返回值：**
-- `GateSequence` - 准备好的量子电路对象
+**Returns:**
+- `GateSequence` - Prepared quantum circuit object
 
-**异常：**
-- `ValueError` - 如果向量未归一化
+**Exceptions:**
+- `ValueError` - If vector is not normalized
 
-### 3.2 返回的 GateSequence 对象
+### 3.2 Returned GateSequence Object
 
-返回的电路对象支持以下操作：
+The returned circuit object supports following operations:
 
 ```python
-# 执行电路
+# Execute circuit
 state = circuit.execute()
 
-# 获取电路矩阵
+# Get circuit matrix
 matrix = circuit.get_matrix()
 
-# 复制电路
+# Copy circuit
 circuit_copy = circuit.copy()
 
-# 绘制电路
+# Draw circuit
 circuit.draw(filename=None, title=None)
 
-# 获取信息
+# Get information
 num_qubits = circuit.get_num_qubits()
 backend = circuit.get_backend_type()
 ```
 
 ---
 
-## 四、数学细节与验证
+## IV. Mathematical Details and Verification
 
-### 4.1 归一化条件检查
+### 4.1 Normalization Condition Check
 
 ```python
 import numpy as np
 
 def check_normalization(state_vector):
-    """检查向量是否归一化"""
+    """Check if vector is normalized"""
     norm = np.linalg.norm(state_vector)
     
-    print(f"向量范数: {norm}")
-    print(f"是否归一化（范数=1）: {np.isclose(norm, 1)}")
+    print(f"Vector norm: {norm}")
+    print(f"Is normalized (norm=1): {np.isclose(norm, 1)}")
     
-    # 检查每个振幅的模平方和
+    # Check sum of squared amplitudes
     prob_sum = np.sum(np.abs(state_vector)**2)
-    print(f"概率总和: {prob_sum}")
+    print(f"Probability sum: {prob_sum}")
     
     return np.isclose(prob_sum, 1)
 
-# 测试
+# Test
 state = np.array([1/np.sqrt(2), 1/np.sqrt(2)])
 check_normalization(state)
 ```
 
-### 4.2 相位验证
+### 4.2 Phase Verification
 
 ```python
 import numpy as np
 
 def analyze_phases(state_vector):
-    """分析态向量中的相位信息"""
+    """Analyze phase information in state vector"""
     amplitudes = np.abs(state_vector)
     phases = np.angle(state_vector)
     
-    print("振幅和相位分析:")
+    print("Amplitude and phase analysis:")
     for i, (amp, phase) in enumerate(zip(amplitudes, phases)):
-        print(f"  |{i}⟩: 振幅={amp:.4f}, 相位={phase:.4f} rad ({np.degrees(phase):.1f}°)")
+        print(f"  |{i}⟩: amplitude={amp:.4f}, phase={phase:.4f} rad ({np.degrees(phase):.1f}°)")
     
     return amplitudes, phases
 
@@ -531,14 +531,14 @@ print(f"保真度: {f:.6f}")
 
 ---
 
-## 五、常见模式
+## V. Common Patterns
 
-### 模式 1：简单单比特初始化
+### Pattern 1: Simple Single-Qubit Initialization
 
 ```python
 def create_single_qubit_state(theta, phi):
     """
-    create arbitrary single qubit state
+    Create arbitrary single qubit state
     |ψ⟩ = cos(θ/2)|0⟩ + e^(iφ)sin(θ/2)|1⟩
     """
     state = np.array([
@@ -548,7 +548,7 @@ def create_single_qubit_state(theta, phi):
     return state_preparation(state)
 ```
 
-### 模式 2：多比特纠缠态
+### Pattern 2: Multi-Qubit Entangled States
 
 ```python
 def create_ghz_state(n):
@@ -567,7 +567,7 @@ def create_w_state(n):
     return state_preparation(state)
 ```
 
-### 模式 3：数据编码
+### Pattern 3: Data Encoding
 
 ```python
 def encode_amplitude(values):
@@ -584,75 +584,75 @@ def encode_amplitude(values):
 
 ---
 
-## 六、错误处理指南
+## VI. Error Handling Guide
 
-### 6.1 常见错误
+### 6.1 Common Errors
 
-**错误 1：向量未归一化**
+**Error 1: Vector Not Normalized**
 ```python
-# 错误！
+# Wrong!
 state = np.array([1, 1])  # ||state|| = √2 ≠ 1
 
 try:
     circuit = state_preparation(state)
 except ValueError as e:
-    print(f"错误: {e}")  # The vector is not unit!
+    print(f"Error: {e}")  # The vector is not unit!
 
-# 正确做法
+# Correct way
 state = state / np.linalg.norm(state)
 circuit = state_preparation(state)
 ```
 
-**错误 2：向量长度不是 2 的幂**
+**Error 2: Vector Length Not a Power of 2**
 ```python
-# 错误！
+# Wrong!
 state = np.array([1/np.sqrt(3)] * 3)  # 3 ≠ 2^n
 
-# 正确做法
+# Correct way
 state = np.zeros(4)  # 4 = 2²
 state[0] = 1/np.sqrt(2)
 state[3] = 1/np.sqrt(2)
 ```
 
-**错误 3：复数振幅处理**
+**Error 3: Complex Amplitude Handling**
 ```python
-# 可能出错
+# Possible error
 state = np.array([0.5 + 0.5j, 0.5 - 0.5j])
 
-# 正确做法
+# Correct way
 state = np.array([0.5 + 0.5j, 0.5 - 0.5j])
-state = state / np.linalg.norm(state)  # 先归一化
+state = state / np.linalg.norm(state)  # Normalize first
 circuit = state_preparation(state)
 ```
 
-### 6.2 验证措施
+### 6.2 Verification Measures
 
 ```python
 def safe_state_preparation(state_vector):
-    """带验证的态准备"""
-    # 1. 转换为 numpy 数组
+    """State preparation with validation"""
+    # 1. Convert to numpy array
     state = np.array(state_vector, dtype=complex)
     
-    # 2. 检查长度是否为 2 的幂
+    # 2. Check if length is power of 2
     n = len(state)
     if not (n & (n - 1) == 0):
         raise ValueError(f"State length {n} is not a power of 2")
     
-    # 3. 检查和归一化
+    # 3. Check and normalize
     norm = np.linalg.norm(state)
     if np.isclose(norm, 0):
         raise ValueError("State vector is all zeros")
     
     state = state / norm
     
-    # 4. 再次验证
+    # 4. Verify again
     if not np.isclose(np.linalg.norm(state), 1):
         raise ValueError("Normalization failed")
     
-    # 5. 准备态
+    # 5. Prepare state
     return state_preparation(state)
 
-# 使用
+# Usage
 try:
     circuit = safe_state_preparation([1, 1])
     print("Success!")
@@ -662,50 +662,50 @@ except ValueError as e:
 
 ---
 
-## 七、性能优化
+## VII. Performance Optimization
 
-### 7.1 电路复杂度管理
+### 7.1 Circuit Complexity Management
 
 ```python
 def estimate_circuit_complexity(n_qubits):
-    """估计态准备电路的复杂度"""
+    """Estimate state preparation circuit complexity"""
     
     num_params = 2**n_qubits
-    depth = n_qubits**2  # 递归分解深度
-    num_gates = 3 * (2**n_qubits - 1)  # 近似门数
+    depth = n_qubits**2  # Recursive decomposition depth
+    num_gates = 3 * (2**n_qubits - 1)  # Approximate gate count
     
     print(f"n = {n_qubits}:")
-    print(f"  参数数: {num_params}")
-    print(f"  电路深度: {depth}")
-    print(f"  门数: {num_gates}")
+    print(f"  Number of parameters: {num_params}")
+    print(f"  Circuit depth: {depth}")
+    print(f"  Gate count: {num_gates}")
     
     return num_params, depth, num_gates
 
-# 分析不同规模
+# Analyze different scales
 for n in range(1, 6):
     estimate_circuit_complexity(n)
 ```
 
-### 7.2 缓存策略
+### 7.2 Caching Strategy
 
 ```python
-# 缓存已生成的电路
+# Cache generated circuits
 circuit_cache = {}
 
 def get_or_create_circuit(state_key, state_vector):
-    """带缓存的电路创建"""
+    """Circuit creation with caching"""
     if state_key not in circuit_cache:
         circuit_cache[state_key] = state_preparation(state_vector)
     
     return circuit_cache[state_key]
 
-# 使用
+# Usage
 circuit = get_or_create_circuit("bell", bell_state)
 ```
 
 ---
 
-## 八、完整工作流示例
+## VIII. Complete Workflow Example
 
 ```python
 import numpy as np
@@ -713,10 +713,10 @@ from core.Initialization import state_preparation
 from core.GateSequence import GateSequence
 
 def complete_workflow():
-    """完整的态准备和处理工作流"""
+    """Complete state preparation and handling workflow"""
     
-    # 1. 定义目标态
-    print("步骤 1: 定义目标态")
+    # 1. Define target state
+    print("Step 1: Define target state")
     target_state = np.array([
         1/np.sqrt(8),
         1/np.sqrt(8),
@@ -726,50 +726,50 @@ def complete_workflow():
         np.sqrt(3/8)
     ])
     
-    # 2. 准备态
-    print("步骤 2: 生成态准备电路")
+    # 2. Prepare state
+    print("Step 2: Generate state preparation circuit")
     circuit = state_preparation(target_state)
     
-    # 3. 执行电路
-    print("步骤 3: 执行电路")
+    # 3. Execute circuit
+    print("Step 3: Execute circuit")
     result_state = circuit.execute()
     
-    # 4. 验证结果
-    print("步骤 4: 验证结果")
+    # 4. Verify results
+    print("Step 4: Verify results")
     fidelity = np.abs(np.vdot(target_state, result_state))**2
-    print(f"  保真度: {fidelity:.6f}")
+    print(f"  Fidelity: {fidelity:.6f}")
     
-    # 5. 扩展电路
-    print("步骤 5: 扩展电路")
+    # 5. Extend circuit
+    print("Step 5: Extend circuit")
     extended_circuit = GateSequence(6)
     extended_circuit.append(circuit, [0, 1, 2])
     extended_circuit.h(3)
     extended_circuit.cnot(2, 5)
     
-    # 6. 绘制
-    print("步骤 6: 绘制电路")
+    # 6. Draw circuit
+    print("Step 6: Draw circuit")
     circuit.draw(title="State Preparation Circuit")
     
     return circuit, result_state, fidelity
 
-# 执行工作流
+# Execute workflow
 circuit, result, f = complete_workflow()
 ```
 
 ---
 
-## 九、总结检查清单
+## IX. Summary Checklist
 
-使用 Initialization 模块时，请确保：
+When using the Initialization module, ensure:
 
-- [ ] 目标态向量已归一化（$\sum_i |v_i|^2 = 1$）
-- [ ] 向量长度是 2 的整数次幂
-- [ ] 使用了正确的数据类型（复数 numpy 数组）
-- [ ] 验证了生成的电路的准确性（保真度接近 1）
-- [ ] 了解递归分解的复杂性
-- [ ] 对于大量子比特系统（n > 10），考虑计算资源
-- [ ] 如果需要多次使用同一态，实现了缓存机制
-- [ ] 正确处理了包含相位的态向量
-- [ ] 在集成到主电路时，使用了正确的目标比特索引
-- [ ] 对复杂的量子态，考虑使用特定的编码方法（如振幅编码）
+- [ ] Target state vector is normalized ($\sum_i |v_i|^2 = 1$)
+- [ ] Vector length is an integer power of 2
+- [ ] Using correct data types (complex numpy arrays)
+- [ ] Verified generated circuit accuracy (fidelity close to 1)
+- [ ] Understood recursive decomposition complexity
+- [ ] Consider computational resources for large qubit systems (n > 10)
+- [ ] Implement caching mechanism if using same state multiple times
+- [ ] Correctly handle state vectors with phases
+- [ ] Use correct target qubit indices when integrating to main circuit
+- [ ] Consider using specific encoding methods (e.g., amplitude encoding) for complex quantum states
 
