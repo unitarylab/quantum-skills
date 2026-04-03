@@ -158,8 +158,8 @@ n-qubit decomposition diagram:
 
 #### Step 1: Import Module
 ```python
-from core.Initialization import state_preparation
-from core.GateSequence import GateSequence
+from engine.core.initialization import state_preparation
+from engine.core.gate_sequence import GateSequence
 import numpy as np
 ```
 
@@ -202,7 +202,7 @@ print(f"Number of qubits: {circuit.get_num_qubits()}")
 
 ```python
 import numpy as np
-from core.Initialization import state_preparation
+from engine.core.initialization import state_preparation
 
 # Target state: |+⟩ = (1/√2)(|0⟩ + |1⟩)
 target_state = np.array([1/np.sqrt(2), 1/np.sqrt(2)])
@@ -223,7 +223,7 @@ circuit.draw(title="Superposition State")
 
 ```python
 import numpy as np
-from core.Initialization import state_preparation
+from engine.core.initialization import state_preparation
 
 # Bell state |Φ+⟩ = (1/√2)(|00⟩ + |11⟩)
 bell_state = np.array([
@@ -250,7 +250,7 @@ print(f"Preparation successful: {np.allclose(result, bell_state)}")
 
 ```python
 import numpy as np
-from core.Initialization import state_preparation
+from engine.core.initialization import state_preparation
 
 # Define a GHZ state: |GHZ⟩ = (1/√2)(|000⟩ + |111⟩)
 ghz_state = np.zeros(8)
@@ -271,7 +271,7 @@ print(f"Non-zero components: {np.nonzero(result)[0]}")
 
 ```python
 import numpy as np
-from core.Initialization import state_preparation
+from engine.core.initialization import state_preparation
 
 # State with phase: |ψ⟩ = (1/√2)|0⟩ + (i/√2)|1⟩
 # where i = e^(iπ/2)
@@ -296,8 +296,8 @@ print(f"Phase difference: {np.angle(result[1]) - np.angle(result[0])}")
 #### Integration Method 1: Direct Initialization in Circuit
 
 ```python
-from core.GateSequence import GateSequence
-from core.Initialization import state_preparation
+from engine.core.gate_sequence import GateSequence
+from engine.core.initialization import state_preparation
 import numpy as np
 
 # Target initial state
@@ -320,8 +320,8 @@ result = main_circuit.execute()
 #### Integration Method 2: Combine Multiple Preparation Circuits
 
 ```python
-from core.GateSequence import GateSequence
-from core.Initialization import state_preparation
+from engine.core.gate_sequence import GateSequence
+from engine.core.initialization import state_preparation
 import numpy as np
 
 # Prepare two different states
@@ -709,8 +709,9 @@ circuit = get_or_create_circuit("bell", bell_state)
 
 ```python
 import numpy as np
-from core.Initialization import state_preparation
-from core.GateSequence import GateSequence
+from engine.core.initialization import state_preparation
+from engine.core.gate_sequence import GateSequence
+
 
 def complete_workflow():
     """Complete state preparation and handling workflow"""

@@ -78,7 +78,7 @@ All index accesses are subject to range validation:
 
 #### Step 1: Import Module
 ```python
-from core.Classicalregister import ClassicalRegister
+from engine.core.classical_register import ClassicalRegister
 ```
 
 #### Step 2: Create Classical Register
@@ -129,7 +129,7 @@ tuple_bits = creg[(1, 2)]     # Returns [(creg, [1, 2])]
 #### Scenario: Quantum Circuit Measurement Result Storage
 
 ```python
-from core.Classicalregister import ClassicalRegister
+from engine.core.classical_register import ClassicalRegister
 
 # Step 1: Create register
 creg = ClassicalRegister("quantum_measurement", 5)
@@ -302,9 +302,9 @@ def safe_access(creg: ClassicalRegister, index):
 ### 5.1 Integration with Quantum Circuits
 
 ```python
-from core.Classicalregister import ClassicalRegister
-from core.gate_sequence import GateSequence
-from core.register import Register
+from engine.core.classical_register import ClassicalRegister
+from engine.core.gate_sequence import GateSequence
+from engine.core.register import Register
 
 # Create quantum and classical registers
 qreg = Register("qreg", 3)

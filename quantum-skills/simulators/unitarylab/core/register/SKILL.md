@@ -137,7 +137,7 @@ Range Validation
 
 #### Step 1: Import Module
 ```python
-from core.register import Register
+from engine.core.register import Register
 ```
 
 #### Step 2: Create Register
@@ -188,7 +188,7 @@ print(qreg)  # Register(name='q', n_qubits=3)
 #### Example 1: Basic Register Creation and Access
 
 ```python
-from core.register import Register
+from engine.core.register import Register
 
 # Create a 5-qubit register
 qreg = Register("quantum", 5)
@@ -213,7 +213,7 @@ print(qreg[::2])  # Every other bit
 #### Example 2: Flexible Indexing Methods
 
 ```python
-from core.register import Register
+from engine.core.register import Register
 
 qreg = Register("q", 8)
 
@@ -257,8 +257,8 @@ print(f"Negative range: {result7}")
 #### Example 3: GateSequence Integration
 
 ```python
-from core.register import Register
-from core.GateSequence import GateSequence
+from engine.core.register import Register
+from engine.core.gate_sequence import GateSequence
 
 # Create register
 qreg = Register("q", 3)
@@ -279,8 +279,8 @@ print(f"Execution complete")
 #### Example 4: Multiple Register Management
 
 ```python
-from core.register import Register
-from core.GateSequence import GateSequence
+from engine.core.register import Register
+from engine.core.gate_sequence import GateSequence
 
 # Create multiple registers
 qreg_data = Register("data", 3)
@@ -306,7 +306,7 @@ print("Multi-register circuit complete")
 #### Example 5: Register Comparison and Equality
 
 ```python
-from core.register import Register
+from engine.core.register import Register
 
 # Create registers
 qreg1 = Register("q", 3)
@@ -347,7 +347,7 @@ print(f"Ancilla register: {ancilla_qreg}")
 #### Scenario 2: Register Partition Operations
 
 ```python
-from core.register import Register
+from engine.core.register import Register
 
 qreg = Register("q", 8)
 
@@ -372,7 +372,7 @@ print(f"Key bits: {important_bits}")
 #### Scenario 3: Register Mapping and Tracking
 
 ```python
-from core.register import Register
+from engine.core.register import Register
 
 # Create multiple registers
 registers = [
@@ -405,7 +405,7 @@ print(f"Input register: {input_reg}")
 #### Scenario 4: Register Indexing Helper Function
 
 ```python
-from core.register import Register
+from engine.core.register import Register
 
 def get_qubit_indices(register, index_spec):
     """
@@ -626,8 +626,8 @@ qreg[-3]    # ✓
 ```python
 def setup_quantum_classical():
     """Set up quantum and classical registers"""
-    from core.register import Register
-    from core.Classicalregister import ClassicalRegister
+    from engine.core.register import Register
+    from engine.core.classical_register import ClassicalRegister
     
     qreg = Register("q", 3)
     creg = ClassicalRegister("c", 3)
@@ -788,7 +788,7 @@ print(f"ID string size: {id_size} bytes")
 ### 7.2 Indexing Operation Performance
 
 ```python
-from core.register import Register
+from engine.core.register import Register
 import time
 
 qreg = Register("q", 1000)
@@ -815,9 +815,9 @@ print(f"Range index 10000 times: {end - start:.6f} seconds")
 ## VIII. Complete Workflow Example
 
 ```python
-from core.register import Register
-from core.GateSequence import GateSequence
-from core.Classicalregister import ClassicalRegister
+from engine.core.register import Register
+from engine.core.gate_sequence import GateSequence
+from engine.core.classical_register import ClassicalRegister
 
 def complete_register_workflow():
     """Complete register usage workflow"""

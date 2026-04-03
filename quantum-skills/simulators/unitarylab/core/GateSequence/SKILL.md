@@ -117,9 +117,9 @@ Extract Circuit Matrix or Draw Image
 
 #### Step 1: Import Required Modules
 ```python
-from core.GateSequence import GateSequence
-from core.register import Register
-from core.Classicalregister import ClassicalRegister
+from engine.core.gate_sequence import GateSequence
+from engine.core.register import Register
+from engine.core.classical_register import ClassicalRegister
 ```
 
 #### Step 2: Create Registers
@@ -175,9 +175,9 @@ circuit.draw(filename="my_circuit.png")
 ### 2.2 Detailed Usage Example - Bell State Preparation
 
 ```python
-from core.GateSequence import GateSequence
-from core.register import Register
-from core.Classicalregister import ClassicalRegister
+from engine.core.gate_sequence import GateSequence
+from engine.core.register import Register
+from engine.core.classical_register import ClassicalRegister
 
 # Step 1: Create registers
 qreg = Register("q", 2)
@@ -620,9 +620,9 @@ matrix2 = circuit.get_matrix()  # Fast
 ## VIII. Integration Example - Complete Quantum Algorithm
 
 ```python
-from core.GateSequence import GateSequence
-from core.register import Register
-from core.Classicalregister import ClassicalRegister
+from engine.core.gate_sequence import GateSequence
+from engine.core.register import Register
+from engine.core.classical_register import ClassicalRegister
 
 # Deutsch Algorithm Implementation
 def deutsch_algorithm(oracle_type='balanced'):

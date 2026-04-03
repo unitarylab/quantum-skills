@@ -304,9 +304,9 @@ print(f"  |1⟩: 75%"
 #### Integration Method 1: Getting State After Circuit Execution
 
 ```python
-from core.GateSequence import GateSequence
-from core.State import State
-from core.register import Register
+from engine.core.gate_sequence import GateSequence
+from engine.core.State import State
+from engine.core.register import Register
 
 # Create circuit
 qreg = Register("q", 2)
@@ -328,9 +328,9 @@ print(f"Probability distribution: {state.probabilities()}")
 #### Integration Method 2: Analyzing Circuit Results
 
 ```python
-from core.GateSequence import GateSequence
-from core.State import State
-from core.register import Register
+from engine.core.gate_sequence import GateSequence
+from engine.core.State import State
+from engine.core.register import Register
 
 # Create Bell circuit
 qreg = Register("q", 2)
@@ -358,7 +358,7 @@ print(f"\n1000 samples: {samples}")
 #### Scenario 1: Inner Product Calculation
 
 ```python
-from core.State import State
+from engine.core.State import State
 import numpy as np
 
 # Create two states
@@ -378,7 +378,7 @@ print(f"⟨+|+⟩ = {self_inner}")
 #### Scenario 2: Expectation Value Calculation
 
 ```python
-from core.State import State
+from engine.core.State import State
 import torch
 import numpy as np
 
@@ -410,7 +410,7 @@ print(f"P(|0⟩) = {prob_0}")
 #### Scenario 3: Tensor Product
 
 ```python
-from core.State import State
+from engine.core.State import State
 import numpy as np
 
 # Create two single-qubit states
@@ -429,7 +429,7 @@ print(f"Data: {combined.data}")
 #### Scenario 4: Continue Operation After Partial Measurement
 
 ```python
-from core.State import State
+from engine.core.State import State
 import numpy as np
 
 # Create Bell state
@@ -697,7 +697,7 @@ def validate_state(state):
 
 ```python
 import torch
-from core.State import State
+from engine.core.State import State
 
 # If GPU is available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -741,9 +741,9 @@ state.sample_counts(shots=100)
 
 ```python
 import numpy as np
-from core.State import State
-from core.GateSequence import GateSequence
-from core.register import Register
+from engine.core.State import State
+from engine.core.gate_sequence import GateSequence
+from engine.core.register import Register
 
 def complete_quantum_workflow():
     """Complete quantum computing workflow"""

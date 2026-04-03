@@ -137,9 +137,9 @@ Style Configuration (Style Dictionary)
 
 #### Step 1: Import Modules
 ```python
-from drawer.circuit_drawer import CircuitDrawer
-from core.GateSequence import GateSequence
-from core.register import Register
+from engine.drawer.circuit_drawer import CircuitDrawer
+from engine.core.gate_sequence import GateSequence
+from engine.core.register import Register
 ```
 
 #### Step 2: Create Quantum Circuit
@@ -178,9 +178,9 @@ drawer.draw(circuit, filename="circuit.png", title="Bell State")
 #### Example 1: Simple Circuit Drawing
 
 ```python
-from drawer.circuit_drawer import CircuitDrawer
-from core.GateSequence import GateSequence
-from core.register import Register
+from engine.drawer.circuit_drawer import CircuitDrawer
+from engine.core.gate_sequence import GateSequence
+from engine.core.register import Register
 
 # Create 2-qubit circuit
 qreg = Register("q", 2)
@@ -199,9 +199,9 @@ figure = drawer.draw(circuit, title="Simple Circuit", filename="simple.png")
 #### Example 2: Bell State Circuit
 
 ```python
-from drawer.circuit_drawer import CircuitDrawer
-from core.GateSequence import GateSequence
-from core.register import Register
+from engine.drawer.circuit_drawer import CircuitDrawer
+from engine.core.gate_sequence import GateSequence
+from engine.core.register import Register
 
 # Create Bell state circuit
 qreg = Register("q", 2)
@@ -218,9 +218,9 @@ drawer.draw(circuit, title="Bell State Circuit", compact=True)
 #### Example 3: Complex Multi-qubit Circuit
 
 ```python
-from drawer.circuit_drawer import CircuitDrawer
-from core.GateSequence import GateSequence
-from core.register import Register
+from engine.drawer.circuit_drawer import CircuitDrawer
+from engine.core.gate_sequence import GateSequence
+from engine.core.register import Register
 
 # Create Grover-style circuit
 qreg = Register("q", 4)
@@ -254,9 +254,9 @@ drawer.draw(circuit, title="Grover Algorithm", filename="grover.png")
 #### Example 4: Parameterized Circuit
 
 ```python
-from drawer.circuit_drawer import CircuitDrawer
-from core.GateSequence import GateSequence
-from core.register import Register
+from engine.drawer.circuit_drawer import CircuitDrawer
+from engine.core.gate_sequence import GateSequence
+from engine.core.register import Register
 import numpy as np
 
 # Create parameterized circuit
@@ -277,8 +277,9 @@ drawer.draw(circuit, title="Parameterized Circuit")
 #### Example 5: Different Styles
 
 ```python
-from drawer.circuit_drawer import CircuitDrawer
-from core.GateSequence import GateSequence
+from engine.drawer.circuit_drawer import CircuitDrawer
+from engine.core.gate_sequence import GateSequence
+
 
 # Create circuit
 circuit = GateSequence(3)
@@ -309,8 +310,8 @@ drawer_custom.draw(circuit, title="Custom Style")
 #### Scenario 1: Large Circuit Folding
 
 ```python
-from drawer.circuit_drawer import CircuitDrawer
-from core.GateSequence import GateSequence
+from engine.drawer.circuit_drawer import CircuitDrawer
+from engine.core.gate_sequence import GateSequence
 
 # Create large circuit
 circuit = GateSequence(20)
@@ -326,8 +327,8 @@ drawer.draw(circuit, filename="large_circuit.png", compact=True)
 #### Scenario 2: Batch Circuit Saving
 
 ```python
-from drawer.circuit_drawer import CircuitDrawer
-from core.GateSequence import GateSequence
+from engine.drawer.circuit_drawer import CircuitDrawer
+from engine.core.gate_sequence import GateSequence
 
 def save_circuit_family(n_qubits_list, output_dir='./circuits'):
     """Save a series of circuits with different sizes"""
@@ -353,9 +354,9 @@ save_circuit_family([2, 3, 4, 5, 6])
 #### Scenario 3: Custom Labels and Titles
 
 ```python
-from drawer.circuit_drawer import CircuitDrawer
-from core.GateSequence import GateSequence
-from core.register import Register
+from engine.drawer.circuit_drawer import CircuitDrawer
+from engine.core.gate_sequence import GateSequence
+from engine.core.register import Register
 
 # Create registers with meaningful names
 qreg_data = Register("data", 2)
@@ -553,7 +554,7 @@ y_base = -(layer * (n_qubits + 1))
 ```python
 def quick_draw(circuit, title="Circuit"):
     """Quick circuit drawing"""
-    from drawer.circuit_drawer import CircuitDrawer
+    from engine.drawer.circuit_drawer import CircuitDrawer
     
     drawer = CircuitDrawer()
     return drawer.draw(circuit, title=title)
@@ -565,7 +566,7 @@ def quick_draw(circuit, title="Circuit"):
 def export_circuits(circuits_dict, output_dir='./outputs'):
     """Export multiple circuits"""
     import os
-    from drawer.circuit_drawer import CircuitDrawer
+    from engine.drawer.circuit_drawer import CircuitDrawer
     
     os.makedirs(output_dir, exist_ok=True)
     drawer = CircuitDrawer()
@@ -637,7 +638,7 @@ drawer = CircuitDrawer()
 drawer.draw(None)  # TypeError
 
 # Correct
-from core.GateSequence import GateSequence
+from engine.core.gate_sequence import GateSequence
 circuit = GateSequence(3)
 drawer.draw(circuit)
 ```
@@ -668,9 +669,9 @@ else:
 ## IX. Complete Workflow Example
 
 ```python
-from drawer.circuit_drawer import CircuitDrawer
-from core.GateSequence import GateSequence
-from core.register import Register
+from engine.drawer.circuit_drawer import CircuitDrawer
+from engine.core.gate_sequence import GateSequence
+from engine.core.register import Register
 
 def complete_visualization_workflow():
     """Complete quantum circuit visualization workflow"""
