@@ -52,7 +52,7 @@ print(result.get_counts(0))  # Output: {'00': 50, '11': 50}
 
 This creates an entangled Bell state and runs it on a simulator!
 
-
+<!-- 
 
 ## Visualization
 Qiskit provides powerful visualization tools to help understand quantum circuits and results:
@@ -72,7 +72,7 @@ plot_state_city(result.get_statevector(0))
 ```python
 from qiskit.visualization import plot_histogram
 plot_histogram(result.get_counts(0))
-```
+``` -->
 ## Key Features
 
 ### 1. Intuitive Circuit Design
