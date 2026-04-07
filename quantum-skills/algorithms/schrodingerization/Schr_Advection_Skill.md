@@ -2,6 +2,7 @@
 name: advection_schrodingerization
 description: A Schrödingerization-based solver for the 1D advection equation, supporting both direct unitary evolution (under periodic and central difference discretization) and general transformation for non-unitary cases. Enables classical and quantum simulation through Hamiltonian formulation.
 ---
+
 # Skill: Advection Equation Solver via Schrödingerization
 
 ## Skill Identity

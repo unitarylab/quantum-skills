@@ -2,6 +2,7 @@
 name: backward_heat_2d_schrodingerization
 description: A Schrödingerization-based solver for the 2D backward heat equation using Kronecker-structured discretization. Handles ill-posed diffusion dynamics and supports classical solvers and quantum Trotter evolution with circuit generation.
 ---
+
 # Skill: 2D Backward Heat Equation Solver via Schrödingerization
 
 ## Skill Identity
