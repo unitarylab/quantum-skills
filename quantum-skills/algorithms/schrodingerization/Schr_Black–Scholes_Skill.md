@@ -1,3 +1,7 @@
+---
+name: black_scholes_schrodingerization
+description: A quantum-compatible solver for the Black–Scholes equation in log-price formulation using Schrödingerization. Supports European option pricing with far-field boundary treatment, enabling both classical and quantum Hamiltonian-based simulation approaches.
+---
 # Skill: Quantum Solver for Black–Scholes Equation via Schrödingerization
 
 ## Skill Identity

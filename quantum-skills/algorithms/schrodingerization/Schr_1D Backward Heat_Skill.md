@@ -1,3 +1,7 @@
+---
+name: backward_heat_1d_schrodingerization
+description: A Schrödingerization-based solver for the 1D backward heat equation, addressing its ill-posed nature by transforming unstable exponential growth into a structured evolution system. Supports classical matrix methods and quantum-inspired Trotter simulation.
+---
 # Skill: 1D Backward Heat Equation Solver via Schrödingerization
 
 ## Skill Identity
