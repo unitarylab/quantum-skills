@@ -68,7 +68,7 @@ After mastering this skill, you will be able to:
 
 ```python
 from engine.algorithms.linear_algebra import HHLAlgorithm
-from unitarylab import GateSequence
+from engine import GateSequence
 import numpy as np
 
 # Step 1: Define a linear system Ax = b
@@ -344,7 +344,7 @@ print(f"Success probability: {result['post_selection_prob']:.6f}")
 ```python
 import numpy as np
 from typing import Tuple, Dict, Any, Optional
-from unitarylab import GateSequence, State
+from engine import GateSequence, State
 
 class MyHHL:
     """User-implemented HHL Algorithm."""

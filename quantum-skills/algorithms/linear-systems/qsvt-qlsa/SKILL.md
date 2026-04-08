@@ -77,7 +77,7 @@ After mastering this skill, you will be able to:
 
 ```python
 from engine.algorithms.linear_algebra import QSVTLinearSolverAlgorithm
-from unitarylab import GateSequence
+from engine import GateSequence
 import numpy as np
 
 # Step 1: Create block-encoding of matrix A
@@ -390,7 +390,7 @@ Let's solve a simple $2 \times 2$ system:
 
 ```python
 from engine.algorithms.linear_algebra import QSVTLinearSolverAlgorithm
-from unitarylab import GateSequence
+from engine import GateSequence
 import numpy as np
 
 # Define the linear system: [[0.8, 0.2], [0.2, 0.6]] · x = [1, 0]
@@ -462,7 +462,7 @@ print(f"\nClassical solution: {x_classical}")
 ```python
 import numpy as np
 from typing import List, Dict, Any, Tuple
-from unitarylab import GateSequence, State
+from engine import GateSequence, State
 import mpmath as mp
 
 class MyQSVTSolver:

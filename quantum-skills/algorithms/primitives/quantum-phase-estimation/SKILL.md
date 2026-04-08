@@ -67,7 +67,7 @@ After mastering this skill, you will be able to:
 
 ```python
 from engine.algorithms.fundamental_algorithm import QPEAlgorithm
-from unitarylab import GateSequence
+from engine import GateSequence
 import numpy as np
 
 # Step 1: Define the unitary U to estimate eigenvalues
@@ -272,7 +272,7 @@ Let's estimate the eigenphase of the T gate where $T = P(\pi/4) = e^{i\pi/4}$:
 
 ```python
 from engine.algorithms.fundamental_algorithm import QPEAlgorithm
-from unitarylab import GateSequence
+from engine import GateSequence
 import numpy as np
 
 # Create T gate (Phase gate with angle π/4)
@@ -319,7 +319,7 @@ Notice how increasing $d$ narrows the uncertainty range!
 ```python
 import numpy as np
 from typing import Optional, Dict, Any
-from unitarylab import GateSequence, State
+from engine import GateSequence, State
 
 class MyQuantumPhaseEstimation:
     """User-implemented Quantum Phase Estimation."""

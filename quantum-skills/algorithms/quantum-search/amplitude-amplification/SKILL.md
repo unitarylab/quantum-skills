@@ -49,7 +49,7 @@ After mastering this skill, you will be able to:
 
 ```python
 from engine.algorithms.fundamental_algorithm import AmplitudeAmplificationAlgorithm
-from unitarylab import GateSequence
+from engine import GateSequence
 
 # Step 1: Create the state preparation unitary U
 U_prep = GateSequence(2)  # 2-qubit register
@@ -181,7 +181,7 @@ Let's amplify the probability of finding state |101⟩ in a 3-qubit superpositio
 
 ```python
 from engine.algorithms.fundamental_algorithm import AmplitudeAmplificationAlgorithm
-from unitarylab import GateSequence
+from engine import GateSequence
 
 # Create a non-uniform superposition: we apply different gates to each qubit
 U_prep = GateSequence(3)
@@ -271,7 +271,7 @@ class MyAmplitudeAmplification:
     
     def _init_circuit(self, U, n_qubits, backend):
         """Initialize GateSequence and prepare initial state"""
-        from unitarylab import GateSequence
+        from engine import GateSequence
         gs = GateSequence(n_qubits + 1, backend=backend)  # +1 for ancilla
         gs.append(U, list(range(n_qubits)))
         return gs

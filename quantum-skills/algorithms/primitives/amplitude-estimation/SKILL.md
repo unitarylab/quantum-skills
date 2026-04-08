@@ -58,7 +58,7 @@ After mastering this skill, you will be able to:
 
 ```python
 from algorithm import AmplitudeEstimationAlgorithm
-from unitarylab import GateSequence
+from engine import GateSequence
 
 # Step 1: Create a state preparation circuit
 U = GateSequence(2)  # 2-qubit register

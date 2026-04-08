@@ -74,7 +74,7 @@ After mastering this skill, you will be able to:
 
 ```python
 from engine.algorithms.linear_algebra import LCUAlgorithm
-from unitarylab import GateSequence
+from engine import GateSequence
 import numpy as np
 
 # Step 1: Define the unitaries U_j
