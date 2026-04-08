@@ -60,7 +60,7 @@ Otherwise, full Schrödingerization procedure is required.
 
 Extract coefficients, domain, grid, qubits, boundary type:
 
-```
+```python
 a1 = eq.get_parameter('a1')
 a2 = eq.get_parameter('a2')
 L, T, nx, na, R, order, f0 = eq.get_common_coefficients()
@@ -76,7 +76,7 @@ y = np.arange(dx, L, dx)
 
 ### Step 2: Initialize 2D Temperature Field
 
-```
+```python
 u0 = f0(x[:, None], y[None, :])  # 2D initial condition
 u0 = u0.flatten()                # flatten for solver
 ```
@@ -85,7 +85,7 @@ u0 = u0.flatten()                # flatten for solver
 
 ### Step 3: Assemble 2D Laplacian Matrix (Kronecker Product)
 
-```
+```python
 A0 = CDiff(N=Nx, dx=dx, order=2, scheme=scheme, boundary=bd).get_matrix()
 A = a1 * sp.kron(A0, sp.eye(Nx)) + a2 * sp.kron(sp.eye(Nx), A0)
 ```
@@ -97,7 +97,7 @@ A = a1 * sp.kron(A0, sp.eye(Nx)) + a2 * sp.kron(sp.eye(Nx), A0)
 
 ### Step 4: Build Source Term
 
-```
+```python
 b0 = source(x)
 b = a1 * np.kron(b0, np.ones(Nx)) + a2 * np.kron(np.ones(Nx), b0)
 ```
@@ -106,17 +106,18 @@ b = a1 * np.kron(b0, np.ones(Nx)) + a2 * np.kron(np.ones(Nx), b0)
 
 ### Step 5: Schrödingerization Solver
 
-```
+```python
 u = schro(A, u0, T=T, na=na, R=R, order=order, b=b)
 u = u.reshape((Nx, Nx))  # reshape to 2D
 qc = circuit_classical(nx, na, dim=2)
 ```
 
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 ------
 
 ### Step 6: Trotter Quantum Circuit (Optional)
 
-```
+```python
 func1 = TDiff(nx, dx, 2, boundary=bd).data()[0]
 D1 = lambda a: func1(a * dt/R)
 
@@ -129,7 +130,7 @@ H1.append(D1(a2), range(nx, 2*nx))# y-direction
 
 ### Step 7: Run Trotter Evolution
 
-```
+```python
 u, qc = schro(u0=u0, H1=H1, H2=None, Nt=Nt, na=na)
 u = u.reshape((Nx, Nx))
 ```
@@ -138,7 +139,7 @@ u = u.reshape((Nx, Nx))
 
 ### Step 8: Visualization
 
-```
+```python
 X, Y = np.meshgrid(x, y)
 ax.plot_surface(X, Y, u, cmap='viridis')
 ```

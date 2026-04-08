@@ -50,7 +50,7 @@ $$
 
 - Smooth potential near boundaries to suppress reflections:
 
-```
+```python
 # Absorbing potential near edges
 sigma[x_mask] += amplitude * (np.abs(X[x_mask]) - rcut)**2
 sigma[y_mask] += amplitude * (np.abs(Y[y_mask]) - rcut)**2
@@ -60,7 +60,7 @@ sigma[y_mask] += amplitude * (np.abs(Y[y_mask]) - rcut)**2
 
 - Laplacian + internal potential + ABC:
 
-```
+```python
 # 2D Laplacian operator
 D = diags([off_diag, main_diag, off_diag], [-1, 0, 1], shape=(Nx, Nx))
 Z_mat = kron(D, I) + kron(I, D)
@@ -73,12 +73,13 @@ A = H0 * 1j - H1
 
 ### Step 3: Schrödingerization Quantum Solver
 
-```
+```python
 # Solve 2D Schrödinger with ABC
 u = schro(A, u0, T=T, na=na, R=R, order=order, point=point)
 u = u.reshape(Nx, Nx)
 ```
 
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 ------
 
 ## 3. Execution Pipeline

@@ -42,6 +42,7 @@ $$
 
 > Note: General source or non-periodic BC requires full Schrödingerization.
 
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 ------
 
 ## 2. Supported Features
@@ -59,7 +60,7 @@ $$
 
 ### Step 1: Parse Input Parameters
 
-```
+```python
 L, T, nx, na, R, order, point, f0 = eq.get_common_coefficients()
 bd = eq.boundary.type
 
@@ -75,7 +76,7 @@ u0 = f0(x)  # initial condition
 
 Construct 2nd-order differential operator:
 
-```
+```python
 A0, b0 = second_order_derivative(
     N=Nx,
     dx=dx,
@@ -104,7 +105,7 @@ $$
 
 #### Classical Schrödinger Solver
 
-```
+```python
 u = schro(
     A,
     u0,
@@ -124,7 +125,7 @@ $$
 e^{-iHt} \approx \left(e^{-i H_1 \Delta t} e^{-i H_2 \Delta t}\right)^{N_t}
 $$
 
-```
+```python
 u, qc = schro(
     u0=u0,
     H1=H1,
@@ -143,7 +144,7 @@ u, qc = schro(
 
 ### Step 5: Visualization
 
-```
+```python
 ax.plot(x, u, "r-", linewidth=2)
 ax.fill_between(x, u, alpha=0.3)
 ```
@@ -155,7 +156,7 @@ ax.fill_between(x, u, alpha=0.3)
 
 ### Step 6: Quantum Circuit Export
 
-```
+```python
 qc.draw(filename="heat_1d_circuit.svg")
 ```
 

@@ -48,6 +48,7 @@ H = l_p^{-} \nu p^2
 
 Valid for **periodic boundary conditions** and **symmetric (Hermitian) difference schemes**.
 
+The Schrödingerization framework can be referred to in "./Schr_skills.markdown"
 ---
 
 ## 2. Supported Features
@@ -84,7 +85,7 @@ $$
 \phi_0(x) = \exp\Bigg(-\frac{1}{2\nu} \int_0^x u_0(s) \, ds \Bigg)
 $$
 
-```
+```python
 I = cumulative_trapezoid(u0, x, initial=0.0)
 exponent = -I / (2.0 * nu)
 exponent -= np.max(exponent)  # avoid overflow
@@ -98,7 +99,7 @@ $$
 \mathbf{A} = \nu \mathbf{L}, \quad \mathbf{L} \text{ is the discrete Laplacian matrix}
 $$
 
-```
+```python
 A0, b0 = second_order_derivative(N=Nx, dx=dx, boundary_condition=bd)
 A = A0 * nu
 b = b0 * nu
@@ -106,10 +107,11 @@ b = b0 * nu
 
 ### Step 4: Quantum Schrödingerization Solver
 
-```
+```python
 phi = schro(A, phi0, T=T, na=na, R=R, order=order, b=b)
 qc = circuit_classical(nx, na)
 ```
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 
 ### Step 5: Invert Cole-Hopf to Recover u
 
@@ -117,14 +119,14 @@ $$
 u(x,t) = -2 \nu \frac{\partial_x \phi(x,t)}{\phi(x,t)}
 $$
 
-```
+```python
 phi_x_over_phi = np.gradient(phi, dx) / phi
 u = -2.0 * nu * phi_x_over_phi
 ```
 
 ### Step 6: Optional Trotter Quantum Circuit
 
-```
+```python
 func1, func2 = (nu * TDiff(nx, dx, 2, boundary=bd)).data()
 H1 = func1(dt / R)
 phi, qc = schro(u0=phi0, H1=H1, H2=None, Nt=Nt, na=na)
@@ -132,7 +134,7 @@ phi, qc = schro(u0=phi0, H1=H1, H2=None, Nt=Nt, na=na)
 
 ### Step 7: Visualization
 
-```
+```python
 ax.plot(x, u, "b-", linewidth=2)
 ax.fill_between(x, u, alpha=0.3)
 ```

@@ -96,7 +96,7 @@ u = \frac{\int \ell \, u_\ell d\ell}{\int u_\ell d\ell}
 
 ### Stage 1: Parse Parameters
 
-```
+```python
 eq = parse_equation(params)
 L, T, source, nx, na, R, point, order, f0 = eq.get_common_coefficients()
 nu = eq.get_parameter('ν')
@@ -106,7 +106,7 @@ nu = eq.get_parameter('ν')
 
 ### Stage 2: Grid Construction
 
-```
+```python
 Nx = 2**nx
 dx = L / Nx
 x = np.arange(0, L, dx)
@@ -119,7 +119,7 @@ u0 = f0(x[:, None], y[None, :]).flatten()
 
 ### Stage 3: Level-set Sampling
 
-```
+```python
 nl = eq.get_parameter('nl', 15)
 l_vec = np.linspace(-1, 1, nl)
 dl = 1 / (nl - 1)
@@ -129,7 +129,7 @@ dl = 1 / (nl - 1)
 
 ### Stage 4: Delta Approximation (关键!)
 
-```
+```python
 phi = l * np.ones(u0.size) - u0
 w = 0.1
 
@@ -146,7 +146,7 @@ psi = np.where(
 
 #### Classical
 
-```
+```python
 A0, _ = first_order_derivative(...)
 A1, _ = second_order_derivative(...)
 
@@ -162,7 +162,7 @@ A = (
 
 #### Trotter (Quantum)
 
-```
+```python
 D1 = func1((-abs(l)*dx/2 + nu) * dt / R)
 D2 = func2(-l * dt)
 
@@ -174,21 +174,22 @@ H2.append(D2, ...)
 
 ### Stage 6: Schrödinger Evolution
 
-```
+```python
 u_l = schro(A=A, u0=psi, T=T, ...)
 ```
 
 或
 
-```
+```python
 u_l, qc = schro(u0=psi, H1=H1, H2=H2, Nt=Nt, ...)
 ```
 
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 ------
 
 ### Stage 7: Reconstruction
 
-```
+```python
 v += l * u_l * dl
 v_norm += u_l * dl
 
@@ -199,7 +200,7 @@ u = v / v_norm
 
 ### Stage 8: Visualization
 
-```
+```python
 X, Y = np.meshgrid(x, y)
 ax.plot_surface(X, Y, u.reshape(Nx, Nx))
 ```

@@ -78,7 +78,7 @@ BE_{\text{block}} & B_{\text{block}}
 \end{bmatrix}.
 $$
 
-```
+```python
 # Build block matrix for 1D Maxwell's equations
 E_block = lil_matrix((Ne, Ne))
 EB_block = lil_matrix((Ne, Nb))
@@ -103,7 +103,7 @@ D_B[i,i-1] = -1, \quad D_B[i,i] = 1, \quad i = 1,2,\dots,M_x
 $$
 with electric field updates applied on staggered grid points.
 
-```
+```python
 # Staggered difference for E and B fields
 D_B = lil_matrix((Mx, Mx))
 for i in range(1, Mx):
@@ -121,7 +121,7 @@ $$
 E = u[:N_E], \quad B = u[N_E:]
 $$
 
-```
+```python
 # Schrödingerization solver for Maxwell system
 u = schro(A, u, bE, T=T, R=R, na=na, order=order, point=point, scale=1e-3)
 
@@ -130,6 +130,7 @@ E = u[:len(xE)]
 B = u[len(xE):]
 ```
 
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 ------
 
 ## 5. Boundary & Initial Conditions

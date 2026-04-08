@@ -35,6 +35,7 @@ H = - a \eta^{\otimes 1} + b \eta^{\otimes 2} - c \eta^{\otimes 3} + \dots
 - Source-free case \(f=0\)
 
 ---
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 
 ## 2. Algorithm Steps (Pipeline)
 
@@ -54,7 +55,7 @@ u0 = f0(x)
 
 ### Step 2: Assemble Finite-Difference Operator
 
-```
+```python
 A = ClassicalOperator()
 for k, coeff in derivatives.items():
     if coeff != 0:
@@ -66,13 +67,13 @@ b = eq.get_rhs_1d(x)  # source term
 
 ### Step 3: Schrödingerization Quantum Solver
 
-```
+```python
 u = schro(A, u0, T=T, na=na, R=R, order=order, b=b, scale_b=1.0/T)
 ```
 
 ### Step 4: Trotter Time Splitting (Optional)
 
-```
+```python
 A_trotter = TrotterOperator()
 func1, func2 = A_trotter.data()
 H1 = func1(dt / R)
@@ -82,14 +83,14 @@ u, qc = schro(u0, H1, H2, Nt=Nt, na=na, b=b, theta=dt/T)
 
 ### Step 5: Visualization
 
-```
+```python
 ax.plot(x, u, "b-", linewidth=2)
 ax.fill_between(x, u, alpha=0.3)
 ```
 
 ### Step 6: Quantum Circuit Export
 
-```
+```python
 qc.draw(filename="general_linear_1d_circuit.svg")
 ```
 

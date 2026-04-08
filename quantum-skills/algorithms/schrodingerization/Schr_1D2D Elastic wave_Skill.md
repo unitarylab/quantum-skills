@@ -69,7 +69,7 @@ Nx, Ny = 2**nx, 2**ny
 
 Set velocity and stress initial states.
 
-```
+```python
 v0 = eq.initial.v0(x, y)
 sigma0 = eq.initial.sigma0(x, y)
 ```
@@ -78,7 +78,7 @@ sigma0 = eq.initial.sigma0(x, y)
 
 Construct first-order derivative matrices and system block matrices for velocity-stress form.
 
-```
+```python
 A_x, A_y = first_order_derivative_2D(Nx, Ny, dx, dy, bd)
 zero_block = sp.csc_matrix((Nx*Ny, Nx*Ny))
 # 5x5 block for 2D velocity-stress system
@@ -91,15 +91,16 @@ A = sp.bmat([[zero_block, A_x/rho, A_y/rho],
 
 Perform quantum evolution for the constructed Hamiltonian.
 
-```
+```python
 psi_final = schro(A, initial_state=(v0, sigma0), T=T, na=na, R=R, order=order)
 ```
 
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 ### Step 5: Trotter Quantum Circuit (Optional)
 
 Apply Trotter decomposition for large systems.
 
-```
+```python
 H1, H2 = split_Hamiltonian(A)
 psi_final, qc = schro_trotter(H1, H2, initial_state=(v0, sigma0), Nt=Nt, na=na)
 ```
@@ -108,7 +109,7 @@ psi_final, qc = schro_trotter(H1, H2, initial_state=(v0, sigma0), Nt=Nt, na=na)
 
 Reconstruct displacement/velocity/stress fields and generate plots.
 
-```
+```python
 plot_fields(x, y, psi_final.v, psi_final.sigma)
 export_circuit(qc, filename='elastic_wave_circuit.svg')
 ```

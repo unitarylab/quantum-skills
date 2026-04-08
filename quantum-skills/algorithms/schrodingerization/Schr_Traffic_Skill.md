@@ -75,7 +75,7 @@ Extract PDE configuration, solver type, discretization, and initial condition.
 
 ### Code
 
-```
+```python
 def run(self, params: Optional[str] = None) -> Dict[str, Any]:
     self.logger.info("Stage 1: Parsing equation parameters...")
     eq = parse_equation(params)
@@ -95,7 +95,7 @@ Symbolically compute nonlinear convection speed.
 
 #### Code
 
-```
+```python
 import sympy
 
 u = sympy.symbols('u')
@@ -112,7 +112,7 @@ Create computational grid.
 
 #### Code
 
-```
+```python
 Nx = 2**nx
 dx = L / (Nx + 1)
 x = np.arange(dx, L, dx)
@@ -132,7 +132,7 @@ Lift nonlinear PDE into linear phase-space formulation.
 
 #### Code
 
-```
+```python
 l_vec = np.linspace(-1, 1, nl)
 dl = 1 / (nl - 1)
 
@@ -151,7 +151,7 @@ Ensure numerical stability.
 
 #### Code
 
-```
+```python
 if scheme == 'upwind':
     if fxl > 0:
         scheme = 'forward'
@@ -167,7 +167,7 @@ Build discrete convection operator.
 
 #### Code
 
-```
+```python
 A0, b0 = first_order_derivative(
     N=Nx,
     dx=dx,
@@ -187,7 +187,7 @@ Solve linearized system.
 
 #### Code
 
-```
+```python
 u_l = schro(
     A,
     psi,
@@ -208,7 +208,7 @@ Recover physical solution $u(x,t)$.
 
 #### Code
 
-```
+```python
 v = v + l * u_l * dl
 v_norm = v_norm + u_l * dl
 
@@ -221,9 +221,11 @@ u = v / v_norm
 
 Simulate Hamiltonian via quantum circuits.
 
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
+
 #### Code
 
-```
+```python
 H1 = func1((abs(fxl) * dx / 2) * dt / R)
 H2 = func2(-fxl * dt)
 
@@ -247,7 +249,7 @@ Visualize final result.
 
 #### Code
 
-```
+```python
 fig, ax = plt.subplots()
 
 ax.plot(x, u, "b-", linewidth=2)
@@ -266,7 +268,7 @@ Export circuit representation.
 
 #### Code
 
-```
+```python
 qc.draw(filename=circuit_path1, title=f"{name} (Schro)")
 
 H1.decompose().draw(filename=circuit_path2)

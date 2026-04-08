@@ -95,6 +95,8 @@ $$
 u = \text{schro}(-S, u_0, na, R, T, b=\text{rhs}, \text{scale\_b}=1)
 $$
 
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
+
 ### Step 6: Extract Macro/Micro Solutions
 
 $$
@@ -112,7 +114,7 @@ $$
 
 ### 4.1 Tridiagonal Stiffness Matrix
 
-```
+```python
 def triangle_csc(a,b,c,N=None):
     # Build symmetric tridiagonal FEM matrix
     return sparse_csc(a, range(N), range(N), N) + \
@@ -122,7 +124,7 @@ def triangle_csc(a,b,c,N=None):
 
 ### 4.2 Two-Scale Solution Extraction
 
-```
+```python
 u1, u0 = u[:-Nx].reshape(Nx, Nx), u[-Nx:]
 u0 = get_u0(u0, x)
 u1 = get_u1(u1, x, L)
@@ -130,7 +132,7 @@ u1 = get_u1(u1, x, L)
 
 ### 4.3 Quantum Solver Call
 
-```
+```python
 u = schro(-S, np.zeros_like(rhs), na=na, b=rhs)
 ```
 

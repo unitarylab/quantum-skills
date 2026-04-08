@@ -91,7 +91,7 @@ $$
 x_i \in [L_1, L_2], \quad \Delta x = \frac{L_2 - L_1}{N_x + 1}
 $$
 
-```
+```python
 L1 = np.log(1e-4)
 L2 = np.log(10 * K)
 Nx = 2**nx
@@ -103,13 +103,13 @@ x = np.linspace(L1 + dx, L2 - dx, Nx)
 
 ### 3. Initial Condition & Augmented State
 
-```
+```python
 u0 = f0(x)
 ```
 
 Augmented state for boundary handling:
 
-```
+```python
 scale_b = K * (0.5 * sigma**2 / dx**2 + 0.25 * (-sigma**2 + 2*r) / dx)
 u0 = np.concatenate((u0, np.ones(Nx) * scale_b))
 ```
@@ -123,7 +123,7 @@ Purpose:
 
 ### 4. Operator Construction (Finite Difference)
 
-```
+```python
 A1, b1 = first_order_derivative(N=Nx, dx=dx)
 A2, b2 = second_order_derivative(N=Nx, dx=dx)
 ```
@@ -137,7 +137,7 @@ A =
 r I
 $$
 
-```
+```python
 A = (r - 0.5*sigma**2) * A1 + 0.5*sigma**2 * A2
 A = A - r * eye(2 * Nx)
 ```
@@ -163,11 +163,12 @@ $$
 H = D \otimes H_1 + I \otimes H_2
 $$
 
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 ------
 
 ### 6. Classical Solver
 
-```
+```python
 u = schro(
     A,
     u0,
@@ -180,7 +181,7 @@ u = schro(
 
 Recover option price:
 
-```
+```python
 u = u[:Nx] + np.exp(x)
 ```
 
@@ -193,7 +194,7 @@ $$
 H = H_1 + H_2
 $$
 
-```
+```python
 H1 = GateSequence(nx+1)
 func1 = (sigma**2/2 * TDiff(nx, dx, order=2)).data()[0]
 H1.append(func1(dt/R), target=range(nx), control=nx)
@@ -205,7 +206,7 @@ H2.append(func2(dt), target=range(nx), control=nx)
 
 Time evolution:
 
-```
+```python
 u, qc = schro(u0=u0, H1=H1, H2=H2, Nt=Nt, na=na)
 ```
 
@@ -217,7 +218,7 @@ $$
 S = e^x
 $$
 
-```
+```python
 S = np.exp(x[:end])
 option_price = u[:end]
 ```
@@ -226,7 +227,7 @@ option_price = u[:end]
 
 ### 9. Visualization
 
-```
+```python
 ax.plot(np.exp(x[:end]), u[:end])
 ```
 

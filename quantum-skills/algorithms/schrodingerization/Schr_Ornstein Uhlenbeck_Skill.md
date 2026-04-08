@@ -82,7 +82,7 @@ $$
 
   Extract drift a, volatility r, time step, initial state, qubits.
 
-  ```
+  ```python
   a = eq.get_parameter('a')
   r = eq.get_parameter('r')
   dt = eq.discrete.get_parameter('dt', 0.001)
@@ -96,7 +96,7 @@ $$
 
   ### Step 2: Initialize Fourier & Phase Variables
 
-  ```
+  ```python
   p = np.arange(L, R, dp)
   exp_p = np.exp(-np.abs(p))
   
@@ -108,7 +108,7 @@ $$
 
   ### Step 3: Generate Brownian Motion
 
-  ```
+  ```python
   xi_BM = np.random.randn(NT)
   xi = r * xi_BM / np.sqrt(dt)
   xi_scale = r * xi_BM
@@ -116,7 +116,7 @@ $$
 
   ### Step 4: FFT Preprocessing
 
-  ```
+  ```python
   c0 = A * v0
   c0[0::2] = np.fft.fft(c0[0::2])
   c0[1::2] = np.fft.fft(c0[1::2])
@@ -126,7 +126,7 @@ $$
 
   ### Step 5: Time Evolution with Quantum Hamiltonian
 
-  ```
+  ```python
   for i in range(NT):
       # Build Hermitian parts
       H_1k = np.array([[a, xi_scale[i]/2], [xi_scale[i]/2, 0]])
@@ -143,7 +143,7 @@ $$
 
   ### Step 6: Inverse FFT & Solution Recovery
 
-  ```
+  ```python
   v_odd = M * np.fft.ifft(c[0::2], axis=0)
   v_even = M * np.fft.ifft(c[1::2], axis=0)
   v = A[:,None] * np.vstack([v_odd, v_even])
@@ -156,7 +156,7 @@ $$
 
   
 
-  ```
+  ```python
   # Exact OU solution
   y_expli[0] = x0
   for k in range(NT):
@@ -165,7 +165,7 @@ $$
 
   ### Step 8: Visualization & Quantum Circuit
 
-  ```
+  ```python
   solution_plot_path = self._generate_solution_plot(...)
   circuit_files = self._generate_circuit_plots(...)
   ```
@@ -177,7 +177,7 @@ $$
 
 ### 4.1 Hermitian Hamiltonian Decomposition
 
-```
+```python
 H_1k = np.array([[a, xi_scale[i]/2], [xi_scale[i]/2, 0]])
 H_2k = np.array([[0, -1j*xi_scale[i]/2], [1j*xi_scale[i]/2, 0]])
 ```
@@ -186,15 +186,17 @@ Splits the SDE operator into Hermitian/anti‑Hermitian parts for quantum simula
 
 ### 4.2 Quantum Hamiltonian Construction
 
-```
+```python
 H_k = -1j * (np.kron(Du.toarray(), H_1k) - np.kron(Id.toarray(), H_2k))
 ```
 
 Final Hamiltonian for Schrödingerization of the OU process.
 
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
+
 ### 4.3 Crank–Nicolson Quantum Time Step
 
-```
+```python
 LHS = I - (dt/2)*H_k
 RHS = (I + (dt/2)*H_k) @ c[:,i]
 c[:,i+1] = np.linalg.solve(LHS, RHS)
@@ -204,7 +206,7 @@ Stable implicit time evolution for the quantum system.
 
 ### 4.4 Solution Recovery by Integration
 
-```
+```python
 y_int = np.real(np.sum(v_wave[n_start:n_end], axis=0) * dp / zz)
 ```
 

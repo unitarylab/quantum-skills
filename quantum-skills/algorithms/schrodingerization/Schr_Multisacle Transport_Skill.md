@@ -61,6 +61,8 @@ $$
 H = H_1 \otimes D + H_2 \otimes I
 $$
 
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
+
 ------
 
 ## 2. Supported Features
@@ -83,7 +85,7 @@ $$
 
   Extract ϵ, cross-sections, domain, qubits, and velocity quadrature.
 
-  ```
+  ```python
   L, T, source, nx, na, R, order, f0 = eq.get_common_coefficients()
   
   Nx = 2**nx
@@ -104,7 +106,7 @@ $$
 
   ### Step 2: Initialize Boundary & State Vectors
 
-  ```
+  ```python
   F_L = 0.5 * np.ones((Nv,1))
   F_R = np.zeros((Nv,1))
   r0 = 0.25*(f0+f0)
@@ -117,7 +119,7 @@ $$
 
   Construct Laplacian, advection, and boundary terms.
 
-  ```
+  ```python
   L2 = np.diag(-2*np.ones(Nx)) + np.diag(np.ones(Nx-1),1) + np.diag(np.ones(Nx-1),-1)
   M1 = np.diag(np.zeros(Nx)) + np.diag(np.ones(Nx-1),1) + np.diag(-np.ones(Nx-1),-1)
   
@@ -136,7 +138,7 @@ $$
 
   ### Step 4: Assemble Evolution Operators
 
-  ```
+  ```python
   V = np.diag(gauss_points)
   W = np.kron(np.ones((Nv,1)), gauss_weights.reshape(1,-1))
   I_Nx = sp.eye(Nx)
@@ -152,7 +154,7 @@ $$
 
   ### Step 5: Preconditioning & Scaling
 
-  ```
+  ```python
   Lambda_ = np.diag(gauss_weights**0.5)
   Lambda_inv = np.diag(gauss_weights**-0.5)
   
@@ -164,7 +166,7 @@ $$
 
   ### Step 6: Build Block Dynamical System Matrix
 
-  ```
+  ```python
   C_top = sp.hstack([B2, hA2, hb_j/Nx**0.5, 0])
   C_middle = sp.hstack([hB1, hA1, 0, hb_r/Nx**0.5])
   C_bottom1 = ...
@@ -174,7 +176,7 @@ $$
 
   ### Step 7: Classical Time Integration
 
-  ```
+  ```python
   hy0 = np.vstack([hJ0, hR0, Nx**0.5, Nx**0.5])
   for k in range(...):
       I_mat = np.eye(C.shape[0])
@@ -186,7 +188,7 @@ $$
 
   #### Step 8.1: Fourier & Warped Transformation
 
-  ```
+  ```python
   Np = 2**na
   p = np.linspace(L, R, Np+1)
   Fp = Sp @ QFTmtx(nqp)
@@ -197,7 +199,7 @@ $$
 
   #### Step 8.2: Hamiltonian Construction
 
-  ```
+  ```python
   H = C - sp.eye(C.shape[0])
   H1 = (H + H.conj().T)/2
   H2 = (H - H.conj().T)/(2j)
@@ -207,7 +209,7 @@ $$
 
   #### Step 8.3: Quantum Time Stepping
 
-  ```
+  ```python
   hc = hc0.copy()
   for kk in range(...):
       I_HD = sp.eye(HD.shape[0]) + 1j*dt_a*HD
@@ -216,7 +218,7 @@ $$
 
   ### Step 9: Solution Recovery
 
-  ```
+  ```python
   C_matrix = hc.reshape(len(hy0), Np, order='F')
   W = Fp @ C_matrix
   # Optimal pp selection & density reconstruction
@@ -226,7 +228,7 @@ $$
 
   ### Step 10: Visualization & Circuit Output
 
-  ```
+  ```python
   solution_plot_path = self._generate_solution_plot(...)
   circuit_files = self._generate_circuit_plots(...)
   ```
@@ -238,7 +240,7 @@ $$
 
 ### 4.1 Velocity-Space Gaussian Quadrature
 
-```
+```python
 Nv = 4
 gauss_points = np.array([0.1834..., 0.5255..., 0.7966..., 0.9602...])
 gauss_weights = np.array([0.3626..., 0.3137..., 0.2223..., 0.1012...])
@@ -248,7 +250,7 @@ Discretizes continuous velocity integral into 4-point quadrature.
 
 ### 4.2 Spatial Difference Operators with BC
 
-```
+```python
 Delta_xk[0,0] = (-eps1_vk[i])/eps1_vk_dx[i]
 Delta_xk[Nx-1,Nx-1] = eps1_vk[i]/eps1_vk_dx[i]
 Delta_x[idx,idx] = 1/(2*dx) * Delta_xk
@@ -258,7 +260,7 @@ Enforces **inflow characteristic boundary conditions**.
 
 ### 4.3 Block Dynamical System Matrix
 
-```
+```python
 C = sp.vstack([C_top, C_middle, C_bottom1, C_bottom2])
 ```
 
@@ -266,7 +268,7 @@ Converts transport PDE into a first-order ODE for Schrödingerization.
 
 ### 4.4 Quantum Hamiltonian Assembly
 
-```
+```python
 HD = sp.kron(Dmup, H1) - sp.kron(sp.eye(Np), H2)
 ```
 
@@ -274,7 +276,7 @@ Final Hamiltonian for quantum simulation of multiscale transport.
 
 ### 4.5 Quantum Time Evolution
 
-```
+```python
 I_HD = sp.eye(HD.shape[0]) + 1j*dt_a*HD
 hc = sp.linalg.spsolve(I_HD, hc)
 ```

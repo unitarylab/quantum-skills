@@ -86,7 +86,7 @@ u0 = f0(x)
 
 Load initial condition (sine or discontinuous).
 
-```
+```python
 u0 = f0(x)  # initial temperature distribution
 ```
 
@@ -94,7 +94,7 @@ u0 = f0(x)  # initial temperature distribution
 
 Construct Laplacian and multiply by spatially varying coefficient $a(x)$.
 
-```
+```python
 # Build discrete second-derivative operator
 p2_matrix = generate_compact_p_2_normal(nx, 0, L)
 
@@ -108,27 +108,27 @@ A = ax_matrix @ p2_matrix
 
 ### Step 4: Set Source Term
 
-```
+```python
 b = source(x)
 ```
 
 ### Step 5: Quantum Schrödingerization Solver
 
-```
+```python
 u = schro(A, u0, T=T, na=na, R=R, order=order, b=b)
 qc = circuit_classical(nx, na)
 ```
 
 ### Step 6: Visualization
 
-```
+```python
 ax.plot(x, u, "b-", linewidth=2)
 ax.fill_between(x, u, alpha=0.3)
 ```
 
 ### Step 7: Output Results & Quantum Circuit
 
-```
+```python
 circuit_files = _generate_circuit_plots(name, qc)
 ```
 
@@ -138,14 +138,14 @@ circuit_files = _generate_circuit_plots(name, qc)
 
 ### 4.1 Discrete Laplacian Construction
 
-```
+```python
 # Generate second-order spatial derivative matrix
 p2_matrix = generate_compact_p_2_normal(nx, 0, L)
 ```
 
 ### 4.2 Variable-Coefficient Diagonal Matrix
 
-```
+```python
 # Build a(x) as a diagonal matrix
 ax = 1 + np.cos(2 * np.pi * x / L)
 ax_matrix = np.diag(ax)
@@ -153,18 +153,19 @@ ax_matrix = np.diag(ax)
 
 ### 4.3 Full PDE Operator Assembly
 
-```
+```python
 # Variable-coefficient heat operator: A = a(x)·Δ
 A = ax_matrix @ p2_matrix
 ```
 
 ### 4.4 Quantum Solver Call
 
-```
+```python
 # Core quantum evolution for variable-coefficient PDE
 u = schro(A, u0, T=T, na=na, b=b)
 ```
 
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 ------
 
 ## 5. Boundary & Initial Conditions

@@ -113,7 +113,7 @@ $$
 
 Construct 1D Laplacian:
 
-```
+```python
 A0 = CDiff(
     N=Nx,
     dx=dx,
@@ -144,7 +144,7 @@ $$
 
 Construct derivative operators:
 
-```
+```python
 func1, func2 = TDiff(nx, dx, 2, scheme=scheme, boundary=bd).data()
 ```
 
@@ -179,7 +179,7 @@ $$
 
 #### (A) Classical Solver
 
-```
+```python
 u = schro(
     A,
     u0,
@@ -202,7 +202,7 @@ e^{-iHt}
 \left(e^{-iH_1 \Delta t} e^{-iH_2 \Delta t}\right)^{N_t}
 $$
 
-```
+```python
 u, qc = schro(
     u0=u0,
     H1=H1,
@@ -219,7 +219,7 @@ u, qc = schro(
 
 #### (C) Block Encoding (Extension)
 
-```
+```python
 u = backHeatEquationAlgorithm._solve_block(eq)
 ```
 
@@ -232,7 +232,7 @@ $$
 \mathbf{u} \rightarrow u(x,y)
 $$
 
-```
+```python
 u = u.reshape((Nx, Nx))
 ```
 
@@ -242,7 +242,7 @@ u = u.reshape((Nx, Nx))
 
 #### 3D Surface Plot
 
-```
+```python
 fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
 X, Y = np.meshgrid(x, y)
 ax.plot_surface(X, Y, u)
@@ -253,7 +253,7 @@ fig.savefig("solution.svg")
 
 ### 9. Quantum Circuit Output
 
-```
+```python
 qc.draw(filename="circuit_full.svg")
 H1.decompose().draw(filename="circuit_H1.svg")
 H2.decompose().draw(filename="circuit_H2.svg")
@@ -268,6 +268,9 @@ H2.decompose().draw(filename="circuit_H2.svg")
 3. Construct 2D grid
 4. Build spatial operators
 5. Apply Schrödingerization
+
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
+
 6. Select solver:
    - Classical
    - Trotter

@@ -71,7 +71,7 @@ x_i = i\Delta x, \quad \Delta x = \frac{L}{N}
 $$
 Construct Laplacian operator (via finite difference):
 
-```
+```python
 A = -a * CDiff(
     N=Nx,
     dx=dx,
@@ -102,12 +102,13 @@ H = D \otimes H_1 + I \otimes H_2
 $$
 
 ------
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 
 ### 4. Classical Solver (Matrix Exponentiation)
 
 Use Schrödingerization-based classical solver:
 
-```
+```python
 u = schro_classical(
     A,
     u0,
@@ -142,7 +143,7 @@ e^{-iHt}
 \left(e^{-iH_1 \Delta t} e^{-iH_2 \Delta t}\right)^{N_t}
 $$
 
-```
+```python
 func1, func2 = (a * TDiff(nx, dx, 2, scheme=scheme, boundary=bd)).data()
 
 H1 = func1(dt / R)
@@ -167,7 +168,7 @@ u, qc = schro_trotter(
 - Reserved for quantum linear algebra methods
 - Currently fallback to classical solver
 
-```
+```python
 u = backHeatEquationAlgorithm._solve_block(eq)
 ```
 
@@ -194,7 +195,7 @@ Agent supports:
 
 Implementation:
 
-```
+```python
 if bd == "periodic":
     x = np.arange(0, L, dx)
 elif bd == "neumann":
@@ -210,7 +211,7 @@ $$
 u(t) = e^{p} w(t,p)
 $$
 
-```
+```python
 w0 = np.exp(-p) * u0
 u_t = np.exp(p) * w_t
 ```
@@ -221,7 +222,7 @@ u_t = np.exp(p) * w_t
 
 #### Solution Plot
 
-```
+```python
 fig, ax = plt.subplots()
 ax.plot(x, u)
 ax.set_title("Backward Heat Solution")
@@ -230,7 +231,7 @@ fig.savefig("solution.svg")
 
 #### Quantum Circuit Visualization
 
-```
+```python
 qc.draw(filename="circuit_full.svg")
 H1.decompose().draw(filename="circuit_H1.svg")
 H2.decompose().draw(filename="circuit_H2.svg")

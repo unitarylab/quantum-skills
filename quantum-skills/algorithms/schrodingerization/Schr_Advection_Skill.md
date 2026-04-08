@@ -66,7 +66,7 @@ x_i = i \Delta x, \quad \Delta x = \frac{L}{N}
 $$
 Build first-order derivative operator:
 
-```
+```python
 A0, b0 = first_order_derivative(
     N=Nx,
     dx=dx,
@@ -161,7 +161,7 @@ Final Hamiltonian:
 $$
 H = D \otimes H_1 + I \otimes H_2
 $$
-The Schrödingerization framework can be referred to in ～/Schr_skills.markdown.
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 
 ------
 
@@ -169,7 +169,7 @@ The Schrödingerization framework can be referred to in ～/Schr_skills.markdown
 
 #### (A) Classical Schrödinger Solver
 
-```
+```python
 u = schro(
     A,
     u0,
@@ -197,7 +197,7 @@ e^{-iHt}
 \left(e^{-iH_1 \Delta t} e^{-iH_2 \Delta t}\right)^{N_t}
 $$
 
-```
+```python
 u, qc = schro(
     u0=u0,
     H1=H1,
@@ -259,7 +259,7 @@ Agent must return:
 
 ## Usage Interface
 
-```
+```python
 algo = AdvectionEquationAlgorithm()
 result = algo.run(params)
 ```

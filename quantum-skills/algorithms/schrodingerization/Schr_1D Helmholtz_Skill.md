@@ -93,7 +93,7 @@ x = np.linspace(0, L, Nx)
 
 Central difference with radiation boundary:
 
-```
+```python
 A0 = np.zeros((Nx, Nx), dtype=complex)
 for i in range(1, Nx-1):
     A0[i, i-1] = -1
@@ -117,7 +117,7 @@ $$
 
 ### Step 3: Construct Source Term & Preconditioning
 
-```
+```python
 b0 = dx**2 * source(x)
 b0[0] = 0
 b0[-1] = 0
@@ -131,7 +131,7 @@ b0 = P @ b0
 
 ### Step 4: Form Damped Dynamical System Matrix
 
-```
+```python
 gam = 2 * m
 b = np.concatenate((np.zeros(Nx), -b0))
 A = np.block([
@@ -142,16 +142,18 @@ A = np.block([
 
 ### Step 5: Quantum Schrödingerization Solver
 
-```
+```python
 u0 = np.zeros_like(b)
 u = schro(A, u0, T=T, na=na, b=b, scale_b=1/T)
 u = u[:Nx]  # extract physical solution
 qc = circuit_classical(nx, na)
 ```
 
+The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
+
 ### Step 6: Visualize Real & Imaginary Parts
 
-```
+```python
 ax.plot(x, np.real(u), "b-", label="Re(u)")
 ax.plot(x, np.imag(u), "r--", label="Im(u)")
 ```

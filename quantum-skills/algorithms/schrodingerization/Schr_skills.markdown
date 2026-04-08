@@ -180,7 +180,7 @@ Agent must analyze:
 
 ### Classical Solver Interface
 
-```
+```python
 from engine.library import schro_classical as schro
 u = schro(A, u0, T=T, na=na, R=R, order=order, point=point, b=b)
 ```
@@ -200,7 +200,7 @@ u = schro(A, u0, T=T, na=na, R=R, order=order, point=point, b=b)
 
 ### Quantum (Trotter) Interface
 
-```
+```python
 from engine.library import schro_trotter as schro
 u, qc = schro(u0=u0, H1=H1, H2=H2, Nt=Nt, na=na, R=R, order=order, point=point, b=b, theta=theta * dt)
 ```
