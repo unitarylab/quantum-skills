@@ -1,4 +1,4 @@
-----
+---
 name: traffic-flow-schrodingerization-solver
 description: This skill enables the AI agent to solve the 1D Traffic Flow Equation (LWR model) using the Schrödingerization framework, which transforms a nonlinear conservation law into a linear unitary evolution problem suitable for both classical and quantum simulation.
 ----
