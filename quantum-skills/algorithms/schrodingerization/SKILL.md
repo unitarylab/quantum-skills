@@ -5,53 +5,61 @@ description: A quantum algorithm for simulating the time evolution of quantum sy
 
 # Schrodingerization Method for Quantum PDE Simulation
 
+## References
+
 ## Schrodingerization method
-See reference: `./Schr_Skills.markdown`
+See reference: `./schrodingerization/SKILL.md`
 
 ## Schrodingerization for 1D Backward Heat Equation
-See reference: `./Schr_1D Backward Heat_Skill.md`
+See reference: `./backward-heat-1d-schrodingerization/SKILL.md`
 
 ## Schrodingerization for 2D Backward Heat Equation
-See reference: `./Schr_2D Backward Heat_Skill.md`
+See reference: `./backward-heat-2d-schrodingerization/SKILL.md`
 
 ## Schrodingerization for 1D Advection Equation
-See reference: `./Schr_Advection_Skill.md`
+See reference: `./advection-schrodingerization/SKILL.md`
 
 ## Schrodingerization for 1D&2D Elastic Wave Equation
-See reference: `./Schr_1D2D Elastic wave_Skill.md`
+See reference: `./elastic-wave-schrodingerization/SKILL.md`
 
 ## Schrodingerization for 1D Burgers' Equation
-See reference: `./Schr_1D Burgers_Skill.md`
+See reference: `./burgers-1d-schrodingerization/SKILL.md`
 
 ## Schrodingerization for 1D Black Scholes Equation
-See reference: `./Schr_Black-Scholes_Skill.md`
+See reference: `./black-scholes-schrodingerization/SKILL.md`
 
 ## Schrodingerization for 1D General Linear PDEs Equation
-See reference: `./Schr_1D General PDEs_Skill.md`
+See reference: `./quantum-general-linear-1d/SKILL.md`
 
 ## Schrodingerization for 1D Heat Equation
-See reference: `./Schr_1D Heat_Skill.md`
+See reference: `./heat-1d-schrodingerization/SKILL.md`
 
 ## Schrodingerization for 2D Heat Equation
-See reference: `./Schr_2D Heat_Skill.md`
+See reference: `./heat-2d-schrodingerization/SKILL.md`
 
 ## Schrodingerization for 1D Variational Coefficient Heat Equation
-See reference: `./Schr_1D Variational Coefficient Heat_Skill.md`
+See reference: `./heat-var-coeff-1d-schrodingerization/SKILL.md`
 
 ## Schrodingerization for 1D Helmholtz Equation
-See reference: `./Schr_1D Helmholtz_Skill.md` 
+See reference: `./helmholtz-1d-schrodingerization/SKILL.md` 
 
 ## Schrodingerization for Maxwell Equation
-See reference: `./Schr_Maxwell_Skill.md`
+See reference: `./maxwell-1d-schrodingerization/SKILL.md`
 
 ## Schrodingerization for Multiscale Elliptic Equation
-See reference: `./Schr_Multiscale Elliptic_Skill.md`
+See reference: `./quantum-multiscale-elliptic/SKILL.md`
 
 ## Schrodingerization for Multiscale Transport Equation
-See reference: `./Schr_Multiscale Transport_Skill.md` 
+See reference: `./quantum-multiscale-transport-1d/SKILL.md` 
 
 ## Schrodingerization for Ornstein Uhlenbeck Process
-See reference: `./Schr_Ornstein Uhlenbeck_Skill.md`
+See reference: `./quantum-ou-process-1d/SKILL.md`
 
 ## Schrodingerization for Artificial Boundary Conditions
-See reference: `./Schr_Artificial Boundary Conditions_Skill.md`
+See reference: `./quantum-schrodinger-abc-simulation/SKILL.md`
+
+## Schrodingerization for 2D Burgers' Equation
+See reference: `./burgers2d-schrodingerization-agent/SKILL.md`
+
+## Schrodingerization for Traffic Flow Equation
+See reference: `./traffic-flow-schrodingerization-solver/SKILL.md`

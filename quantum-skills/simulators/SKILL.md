@@ -4,81 +4,45 @@ description: A collection of quantum simulators for quantum program development,
 ---
 # Quantum Simulators
 
----
+Use this guide to choose a simulator quickly and consistently.
 
-## 2.1 UnitaryLab (Recommended)
+## Selection Rule
+- Default: UnitaryLab.
+- If UnitaryLab is unavailable: Qiskit.
+- If the task is differentiable hybrid optimization: PennyLane.
 
-See reference: `./unitarylab/SKILL.md`
+## UnitaryLab (Recommended)
+Reference: ./unitarylab/SKILL.md
 
-- **Core Features**
-  - Efficient quantum circuit construction
-  - Specialized differential equation solver
-  - Optimized algorithm library
+Best when:
+- Learning and teaching quantum fundamentals.
+- Building small to medium algorithm demos quickly.
+- Working on PDE and Schrodingerization style workflows.
 
-- **Best For**
-  - Quantum algorithm development
-  - Differential equation solving
-  - General quantum computing
-  - Educational and research purposes
+Strengths:
+- Simple circuit interface.
+- Lightweight local workflow.
+- Good fit for educational and algorithm prototypes.
 
-- **Main Modules**
-  - Core quantum circuit module
-  - Differential equation solver
-  - Algorithm library
+## Qiskit
+Reference: ./qiskit/SKILL.md
 
-**Why UnitaryLab First?**
-- Lightweight and optimized for education
-- Excellent for learning quantum computing basics
-- Specialized solver for quantum-inspired algorithms
-- Simplified interface for quick prototyping
+Best when:
+- You need richer ecosystem features or noise models.
+- You plan to move toward IBM hardware workflows.
+- UnitaryLab is not installed in the current environment.
 
----
+## PennyLane
+Reference: ./pennylane/SKILL.md
 
-## 2.2 Qiskit
+Best when:
+- You need differentiable circuits.
+- You are implementing VQE, QAOA, or QML pipelines.
+- You need tight integration with PyTorch or TensorFlow.
 
-See reference: `./qiskit/SKILL.md`
-
-
-- **Core Features**
-  - Comprehensive quantum circuit design
-  - Multiple simulation backends (Aer)
-  - Real quantum hardware access (IBM Quantum)
-  - Advanced noise simulation
-
-- **Use Cases**
-  - When UnitaryLab is not available/installed
-  - Quantum algorithm development requiring advanced features
-  - Quantum hardware experimentation on IBM quantum processors
-  - Production-grade quantum applications
-  - Complex noise modeling
-
-- **Main Modules**
-  - Quantum circuit module
-  - Simulation backends (Aer)
-  - IBM Quantum hardware access (IBMQ)
-  - Noise models and error simulation
-
----
-
-## 2.3 PennyLane
-
-See reference: `./pennylane/SKILL.md`
-
-- **Core Features**
-  - Hybrid quantum-classical computing
-  - Differentiable quantum circuits
-  - Plugin system for multiple backends
-  - Automatic differentiation support
-
-- **Use Cases**
-  - When UnitaryLab and Qiskit are both unavailable
-  - Variational quantum algorithms (VQE, QAOA)
-  - Quantum machine learning applications
-  - Hybrid quantum-classical optimization
-
-- **Integration Options**
-  - Can use Qiskit as a backend (if available)
-  - Supports multiple quantum hardware providers
-  - PyTorch and TensorFlow integration
-
----
+## Required Practice for Algorithm Examples
+- Always run on a simulator, not only circuit construction.
+- Always report at least one validation signal:
+  - statevector or measurement probabilities,
+  - comparison against a classical/theoretical expectation.
+- Keep first examples minimal and executable.

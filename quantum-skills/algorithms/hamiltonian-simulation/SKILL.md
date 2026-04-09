@@ -1,9 +1,24 @@
 ---
-name: hamiltonian-simulation-interface
+name: hamiltonian-simulation
 description: "Use when: you need the unified hamiltonian_simulation interface, method dispatch behavior, parameter constraints, and result-object semantics across trotter, qdrift, taylor, and qsp."
 ---
 
 # Hamiltonian Simulation Interface Skill Guide
+
+## References
+
+### qdrift
+See reference: `./qdrift/SKILL.md`
+
+### trotter
+See reference: `./trotter/SKILL.md`
+
+### taylor
+See reference: `./taylor/SKILL.md`
+
+### qsp
+See reference: `./qsp/SKILL.md`
+
 
 ## Overview
 

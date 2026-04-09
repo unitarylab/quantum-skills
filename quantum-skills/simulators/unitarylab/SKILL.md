@@ -1,68 +1,64 @@
 ---
 name: unitarylab
 description: UnitaryLab is a quantum computing framework for education and research. It offers a simple interface for building and simulating quantum circuits, making it suitable for learning, teaching, and experimenting with quantum algorithms.
-license: XXXX 
-metadata:
-    skill-author: XXXXXXXX
 ---
 
+# UnitaryLab
 
-# Unitarylab 
+## Purpose
+Use UnitaryLab as the default local simulator for quantum skill tasks.
 
-## Overview
+Choose it when you need:
+- Fast circuit prototyping.
+- Educational algorithm demonstrations.
+- Small, runnable examples with clear outputs.
 
-Unitarylab is a quantum computing framework designed for educational purposes and research in quantum algorithms. It provides a user-friendly interface for building and simulating quantum circuits, making it ideal for students, educators, and researchers who want to explore quantum computing concepts without the complexity of more advanced frameworks. Unitarylab is best suited for learning and experimentation in quantum computing, especially for those new to the field or looking for a simplified environment to test quantum algorithms.
+## Quick Start
 
-To start using Unitarylab, use the installation files provided in the `dist` directory **in this skill**. Follow the installation steps to set up your Python environment and install Unitarylab, then you can begin building and simulating quantum circuits with ease.
-## Quick Start 
+1. Create and activate Python 3.11 environment.
+2. Choose the corresponding wheel and install it from this skill folder.
+3. Run a minimal circuit and verify output.
 
-### Installation Steps
+Example commands:
+
 ```bash
 conda create -n unitarylab-env python=3.11
 conda activate unitarylab-env
-python -m pip install /unitarylab/dist/unitarylab_engine-*.whl
+python -m pip install ./dist/unitarylab_engine-*.whl
 ```
 
-### First Quantum Circuit
+## Minimal Executable Example
 
 ```python
+import numpy as np
 from engine import GateSequence
-# Create a quantum circuit with 2 qubits
-qc = GateSequence(2)  
 
-# Apply a Hadamard gate to the first qubit
-qc.h(0) 
+qc = GateSequence(2)
+qc.h(0)
+qc.cx(0, 1)
+
+initial_state = np.array([1.0, 0.0, 0.0, 0.0], dtype=complex)
+final_state = qc.execute(initial_state.copy())
+probs = np.abs(final_state) ** 2
+print(final_state)
+print(probs)  # expected: [0.5, 0.0, 0.0, 0.5]
 ```
 
-## Core Capabilities
+## Working Standard for Future Examples
+- Do not stop at circuit construction; execute the circuit.
+- Print at least one validation artifact:
+    - final statevector, or
+    - measurement probabilities.
+- Include expected behavior in one line.
 
-### 1. Setup and Installation
-For detailed installation, authentication, and IBM Quantum account setup:
+## Common Pitfalls
+- ModuleNotFoundError: engine
+    - Cause: UnitaryLab wheel not installed in active environment.
+    - Fix: install wheel in the same interpreter used to run script.
 
+- Wheel is not supported on this platform
+    - Cause: wheel tag does not match Python version, OS, or architecture.
+    - Fix: use a compatible wheel for your environment.
 
-Topics covered:
-- Installation with pip
-- Python environment setup
-
-
-### 2. Building Quantum Circuits
-For constructing quantum circuits with gates, measurements, and composition:
-- **See `./references/circuitsbuild.md`**
-
-Topics covered:
-- Creating circuits with QuantumCircuit
-- Single-qubit gates (H, X, Y, Z, rotations, phase gates)
-- Multi-qubit gates (CNOT, SWAP, Toffoli)
-- Measurements and barriers
-- Circuit composition and properties
-- Parameterized circuits for variational algorithms
-
-### 3. Analyzing Quantum Circuits
-For analyzing circuit structure, gate counts, qubit usage, and parameters:
-- **See `./references/CircuitInfo.md`**
-
-Topics covered:
-- Circuit structure visualization
-- Gate counts and types
-- Qubit usage and connectivity
-- Parameter inspection for variational algorithms
+## Reference
+- Circuit building details: ./references/circuitsbuild.md
