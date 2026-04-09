@@ -62,3 +62,4 @@ print(probs)  # expected: [0.5, 0.0, 0.0, 0.5]
 
 ## Reference
 - Circuit building details: ./references/circuitsbuild.md
+- Engine API reference: ./references/api-reference.md
