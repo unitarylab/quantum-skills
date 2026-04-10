@@ -170,7 +170,8 @@ The Schrödingerization framework can be referred to in './Schr_skills.markdown'
 #### (A) Classical Schrödinger Solver
 
 ```python
-u = schro(
+from engine.library import schro_classical
+u = schro_classical(
     A,
     u0,
     T=T,
@@ -198,6 +199,7 @@ e^{-iHt}
 $$
 
 ```python
+from engine.library import schro_trotter
 u, qc = schro(
     u0=u0,
     H1=H1,

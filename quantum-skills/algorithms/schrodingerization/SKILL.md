@@ -7,6 +7,7 @@ description: A quantum algorithm for simulating the time evolution of quantum sy
 
 ## References
 
+Read this first when approaching the schrodingerization method:
 ## Schrodingerization method
 See reference: `./schrodingerization/SKILL.md`
 

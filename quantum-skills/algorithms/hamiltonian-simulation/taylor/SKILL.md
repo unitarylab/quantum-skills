@@ -68,7 +68,7 @@ After using this skill, you should be able to:
 
 ```python
 import numpy as np
-from algorithms.taylor import Taylor
+from engine.algorithms.taylor import Taylor
 
 H = np.array([
     [1.0, 0.4],
@@ -232,7 +232,7 @@ Compare truncation settings under fixed time.
 
 ```python
 import numpy as np
-from algorithms.taylor import Taylor
+from engine.algorithms.taylor import Taylor
 
 H = np.array([
     [0.9, 0.2, 0.0, 0.0],

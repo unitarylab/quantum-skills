@@ -3,9 +3,14 @@ name: qsvt-qlsa
 description: A quantum algorithm for solving linear systems of equations using Quantum Singular Value Transformation (QSVT), providing exponential speedup over classical methods for certain types of problems. This skill includes efficient implementations and educational resources for understanding and utilizing QSVT-based quantum linear systems algorithms in various applications.
 ---
 
+# One Step to Run QSVT Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Quantum Singular Value Transformation Linear Systems Algorithm (QSVT-QLSA) Skill Guide
 
-## 📚 Overview
+## Overview
 
 **Quantum Singular Value Transformation (QSVT)** is a cutting-edge quantum algorithm that solves linear systems of equations $Ax = b$ by applying polynomial functions directly to singular values. Given an $N \times N$ matrix $A$ with condition number $\kappa$, QSVT:
 
@@ -41,24 +46,24 @@ This enables:
 
 ---
 
-## 🎯 Learning Objectives
+## Learning Objectives
 
 After mastering this skill, you will be able to:
 
-1. ✅ Understand singular value transformation vs. eigenvalue-based methods
-2. ✅ Grasp Chebyshev polynomial approximation of $f(x) = 1/x$
-3. ✅ Understand Quantum Signal Processing (QSP) phase sequences
-4. ✅ Explain block-encoding and polynomial scaling
-5. ✅ Use `QSVTLinearSolverAlgorithm` class effectively
-6. ✅ Calculate required polynomial degree and approximation error
-7. ✅ Implement core components (Chebyshev coefficients, QSP phases)
-8. ✅ Analyze complexity and compare with HHL algorithm
-9. ✅ Apply QSVT to non-symmetric matrices
-10. ✅ Understand QSP theorem and its quantum circuit realization
+1. Understand singular value transformation vs. eigenvalue-based methods
+2. Grasp Chebyshev polynomial approximation of $f(x) = 1/x$
+3. Understand Quantum Signal Processing (QSP) phase sequences
+4. Explain block-encoding and polynomial scaling
+5. Use `QSVTLinearSolverAlgorithm` class effectively
+6. Calculate required polynomial degree and approximation error
+7. Implement core components (Chebyshev coefficients, QSP phases)
+8. Analyze complexity and compare with HHL algorithm
+9. Apply QSVT to non-symmetric matrices
+10. Understand QSP theorem and its quantum circuit realization
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 - **Essential knowledge**:
   - Linear algebra: SVD, matrix norms, condition numbers
@@ -71,7 +76,7 @@ After mastering this skill, you will be able to:
 
 ---
 
-## 🚀 Using the Provided Implementation
+## Using the Provided Implementation
 
 ### Quick Start Example
 
@@ -151,7 +156,7 @@ algo.run(
 
 ---
 
-## 🔧 Understanding the Core Components
+## Understanding the Core Components
 
 ### 1. The Five-Step QSVT Pipeline
 
@@ -384,7 +389,7 @@ def extract_solution_from_qsvt(state_array: np.ndarray, n_sys: int,
 
 ---
 
-## 💡 Hands-On Example: 2×2 System
+## Hands-On Example: 2×2 System
 
 Let's solve a simple $2 \times 2$ system:
 
@@ -455,7 +460,7 @@ print(f"\nClassical solution: {x_classical}")
 
 ---
 
-## 🎓 Implementing Core Components from Scratch
+## Implementing Core Components from Scratch
 
 ### Complete QSVT Implementation Template
 
@@ -635,7 +640,7 @@ class MyQSVTSolver:
 
 ---
 
-## 📊 Mathematical Deep Dive
+## Mathematical Deep Dive
 
 ### Singular Value Transformation
 
@@ -680,7 +685,7 @@ Can be improved to $\Omega(1)$ using amplitude amplification.
 
 ---
 
-## 🔍 Debugging Tips
+## Debugging Tips
 
 1. **Chebyshev coefficients diverging?**
    - Check polynomial order: b ≥ (κα)² log(κα/ε)

@@ -124,6 +124,7 @@ Purpose:
 ### 4. Operator Construction (Finite Difference)
 
 ```python
+from engine.library.differential_operator.classical_matrices import first_order_derivative, second_order_derivative
 A1, b1 = first_order_derivative(N=Nx, dx=dx)
 A2, b2 = second_order_derivative(N=Nx, dx=dx)
 ```
@@ -169,7 +170,8 @@ The Schrödingerization framework can be referred to in './Schr_skills.markdown'
 ### 6. Classical Solver
 
 ```python
-u = schro(
+from engine.library import schro_classical
+u = schro_classical(
     A,
     u0,
     T=T,
@@ -195,6 +197,7 @@ H = H_1 + H_2
 $$
 
 ```python
+from engine import GateSequence
 H1 = GateSequence(nx+1)
 func1 = (sigma**2/2 * TDiff(nx, dx, order=2)).data()[0]
 H1.append(func1(dt/R), target=range(nx), control=nx)
@@ -207,7 +210,8 @@ H2.append(func2(dt), target=range(nx), control=nx)
 Time evolution:
 
 ```python
-u, qc = schro(u0=u0, H1=H1, H2=H2, Nt=Nt, na=na)
+from engine.library import schro_trotter
+u, qc = schro_trotter(u0=u0, H1=H1, H2=H2, Nt=Nt, na=na)
 ```
 
 ------

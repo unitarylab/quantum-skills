@@ -3,9 +3,14 @@ name: amplitude-estimation
 description: A quantum algorithm for estimating the amplitude of a specific state in a quantum superposition, which can be used for various applications such as Monte Carlo simulations and optimization problems. Provides efficient implementations and educational resources for understanding and utilizing amplitude estimation in quantum algorithm development.
 ---
 
+# One Step to Run Amplitude Estimation Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Amplitude Estimation Algorithm Skill Guide
 
-## 📚 Overview
+## Overview
 
 **Amplitude Estimation** (also called Quantum Amplitude Estimation or QAE) is a powerful quantum algorithm that estimates the success probability of a quantum state with **quadratic speedup** over classical methods.
 
@@ -27,21 +32,21 @@ where $p$ is the unknown **success probability** we want to estimate. Classical 
 
 ---
 
-## 🎯 Learning Objectives
+## Learning Objectives
 
 After mastering this skill, you will be able to:
 
-1. ✅ Understand the mathematical connection between amplitudes and phases
-2. ✅ Use the provided `AmplitudeEstimationAlgorithm` class effectively
-3. ✅ Design oracle operators for custom success predicates
-4. ✅ Implement and apply Quantum Phase Estimation (QPE)
-5. ✅ Analyze phase histograms to extract amplitude estimates
-6. ✅ Implement amplitude estimation from scratch
-7. ✅ Apply to real-world problems (Monte Carlo, option pricing)
+1. Understand the mathematical connection between amplitudes and phases
+2. Use the provided `AmplitudeEstimationAlgorithm` class effectively
+3. Design oracle operators for custom success predicates
+4. Implement and apply Quantum Phase Estimation (QPE)
+5. Analyze phase histograms to extract amplitude estimates
+6. Implement amplitude estimation from scratch
+7. Apply to real-world problems (Monte Carlo, option pricing)
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 - **Strong prerequisites**: 
   - Grover's algorithm and amplitude amplification fundamentals
@@ -52,12 +57,12 @@ After mastering this skill, you will be able to:
 
 ---
 
-## 🚀 Using the Provided Implementation
+## Using the Provided Implementation
 
 ### Quick Start Example
 
 ```python
-from algorithm import AmplitudeEstimationAlgorithm
+from engine.algorithms import AmplitudeEstimationAlgorithm
 from engine import GateSequence
 
 # Step 1: Create a state preparation circuit
@@ -120,7 +125,7 @@ The `histogram` shows all measured phases ranked by probability. The **peak corr
 
 ---
 
-## 🔧 Understanding the Core Components
+## Understanding the Core Components
 
 ### 1. Grover Operator (Amplitude Amplification)
 
@@ -268,7 +273,7 @@ def _phase_histogram(self, statevector: np.ndarray, d: int) -> dict[str, float]:
 
 ---
 
-## 💡 Hands-On Example: Estimating Custom Success Probability
+## Hands-On Example: Estimating Custom Success Probability
 
 Let's estimate the success probability for a 1-qubit state with controlled amplitude:
 
@@ -310,7 +315,7 @@ for bits, prob in list(result['histogram'].items())[:3]:
 
 ---
 
-## 🎓 Implementing Your Own Amplitude Estimation
+## Implementing Your Own Amplitude Estimation
 
 ### Complete Implementation Template
 
@@ -439,7 +444,7 @@ class MyAmplitudeEstimation:
 
 ---
 
-## 📊 Mathematical Deep Dive
+## Mathematical Deep Dive
 
 ### State Preparation and Setup
 
@@ -489,7 +494,7 @@ $$\hat{p} = \sin^2(\theta) = \sin^2(\pi \cdot \phi)$$
 
 ---
 
-## 🔍 Debugging Tips
+## Debugging Tips
 
 1. **Phase doesn't match theory?**
    - Check if `good_zero_qubits` matches your intended "good" state

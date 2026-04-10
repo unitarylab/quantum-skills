@@ -100,6 +100,7 @@ $$
 $$
 
 ```python
+from engine.library.differential_operator.classical_matrices import second_order_derivative
 A0, b0 = second_order_derivative(N=Nx, dx=dx, boundary_condition=bd)
 A = A0 * nu
 b = b0 * nu
@@ -108,7 +109,8 @@ b = b0 * nu
 ### Step 4: Quantum Schrödingerization Solver
 
 ```python
-phi = schro(A, phi0, T=T, na=na, R=R, order=order, b=b)
+from engine.library import schro_classical
+phi = schro_classical(A, phi0, T=T, na=na, R=R, order=order, b=b)
 qc = circuit_classical(nx, na)
 ```
 The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
@@ -127,9 +129,10 @@ u = -2.0 * nu * phi_x_over_phi
 ### Step 6: Optional Trotter Quantum Circuit
 
 ```python
+from engine.library import schro_trotter
 func1, func2 = (nu * TDiff(nx, dx, 2, boundary=bd)).data()
 H1 = func1(dt / R)
-phi, qc = schro(u0=phi0, H1=H1, H2=None, Nt=Nt, na=na)
+phi, qc = schro_trotter(u0=phi0, H1=H1, H2=None, Nt=Nt, na=na)
 ```
 
 ### Step 7: Visualization

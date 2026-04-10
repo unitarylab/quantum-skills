@@ -49,7 +49,16 @@ where $E(x,t)$ is the electric field, $B(x,t)$ is the magnetic field, $D = \epsi
 ------
 
 ## 3. Algorithm Pipeline (Conceptual)
+### Step 0: Import Libraries
+Import necessary modules for parsing, solvers, operators, and circuit generation:
+```python
+# import parser
+from engine.library import parse_equation
 
+# import solvers
+from engine.library import schro_classical
+
+```
 1. **Parameter Parsing**: wave speed, boundary type, initial fields, qubit numbers
 2. **Matrix Construction**: staggered-grid differential matrices and Hamiltonian
 3. **Quantum Evolution**: Schrödingerization solver with source term $J$
@@ -123,7 +132,7 @@ $$
 
 ```python
 # Schrödingerization solver for Maxwell system
-u = schro(A, u, bE, T=T, R=R, na=na, order=order, point=point, scale=1e-3)
+u = schro_classical(A, u, bE, T=T, R=R, na=na, order=order, point=point, scale=1e-3)
 
 # Extract electric and magnetic fields
 E = u[:len(xE)]

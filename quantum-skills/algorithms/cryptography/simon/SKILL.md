@@ -90,13 +90,13 @@ total_qubits = 2 * n
 You can import Simon from:
 
 ```python
-from algorithms.cryptology import SimonAlgorithm
+from engine.algorithms import SimonAlgorithm
 ```
 
 ### Quickstart
 
 ```python
-from algorithms.cryptology import SimonAlgorithm
+from engine.algorithms import SimonAlgorithm
 
 simon = SimonAlgorithm()
 
@@ -118,7 +118,7 @@ print(result['plot'])
 Start with a short nonzero secret string such as `1010` or `1101`.
 
 ```python
-from algorithms.cryptology import SimonAlgorithm
+from engine.algorithms import SimonAlgorithm
 
 simon = SimonAlgorithm()
 result = simon.run(s_target='1101', backend='torch')

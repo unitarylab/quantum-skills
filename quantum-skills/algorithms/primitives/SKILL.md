@@ -15,3 +15,6 @@ See reference: `./hadamard-test/SKILL.md`
 
 ## 4. hadamard transform
 See reference: `./hadamard-transform/SKILL.md`
+
+## 5. Amplitude Amplification 
+See reference: `./amplitude-amplification/SKILL.md`

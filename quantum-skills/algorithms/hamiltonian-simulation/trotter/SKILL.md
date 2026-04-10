@@ -58,19 +58,13 @@ After using this skill, you should be able to:
 2. Exponential of operators and series intuition.
 3. Asymptotic error behavior with step refinement.
 
-### Recommended:
-
-1. Read `algorithms/__init__.py` for the shared `HamiltonianSimulationResult` base behavior.
-2. Know that `_pauli_decompose` delegates to functions from `core.pauli_string_decomposition`.
-3. Use small matrices first to validate settings before scaling qubit count.
-
 ## Using the Provided Implementation
 
 ### Quick Start Example
 
 ```python
 import numpy as np
-from algorithms.trotter import Trotter
+from engine.algorithms.trotter import Trotter
 
 # Example 2x2 Hermitian Hamiltonian
 H = np.array([

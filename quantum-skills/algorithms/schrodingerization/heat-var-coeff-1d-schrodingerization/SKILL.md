@@ -67,6 +67,19 @@ Valid for:
 
 ## 3. Full Algorithm Pipeline (Step-by-Step)
 
+### Step 0: Import Libraries
+Import necessary modules for parsing, solvers, operators, and circuit generation:
+```python
+# import parser
+from engine.library import parse_equation
+
+# import solvers
+from engine.library import schro_classical, schro_trotter
+from engine.library.differential_operator.classical_matrices import first_order_derivative, second_order_derivative
+from engine.library.schrodingerization.classical import circuit_classical
+from scipy.integrate import cumulative_trapezoid
+```
+
 ### Step 1: Parse Domain & Physical Parameters
 
 Extract domain length, time, qubits, and boundary type.
@@ -115,7 +128,7 @@ b = source(x)
 ### Step 5: Quantum Schrödingerization Solver
 
 ```python
-u = schro(A, u0, T=T, na=na, R=R, order=order, b=b)
+u = schro_classical(A, u0, T=T, na=na, R=R, order=order, b=b)
 qc = circuit_classical(nx, na)
 ```
 
@@ -162,7 +175,7 @@ A = ax_matrix @ p2_matrix
 
 ```python
 # Core quantum evolution for variable-coefficient PDE
-u = schro(A, u0, T=T, na=na, b=b)
+u = schro_trotter(A, u0, T=T, na=na, b=b)
 ```
 
 The Schrödingerization framework can be referred to in './Schr_skills.markdown'.

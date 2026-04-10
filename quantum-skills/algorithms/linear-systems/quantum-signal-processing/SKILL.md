@@ -3,9 +3,14 @@ name: quantum-signal-processing
 description: A quantum algorithm for signal processing tasks, leveraging quantum phase estimation and amplitude amplification techniques to achieve efficient signal analysis and transformation. This skill includes implementations and educational resources for understanding and utilizing quantum signal processing algorithms in various applications.
 ---
 
+# One Step to Run QSP Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Quantum Signal Processing (QSP) Skill Guide
 
-## 📚 Overview
+## Overview
 
 **Quantum Signal Processing (QSP)** is a powerful framework that applies arbitrary polynomial functions to quantum signals using phase sequences and controlled signal operators. Given a target function $P(x)$, QSP constructs a quantum circuit that:
 
@@ -48,24 +53,24 @@ where:
 
 ---
 
-## 🎯 Learning Objectives
+## Learning Objectives
 
 After mastering this skill, you will be able to:
 
-1. ✅ Understand the QSP theorem and its mathematical foundations
-2. ✅ Explain signal operators $W(x)$ and their role in encoding information
-3. ✅ Understand how phase sequences implement polynomial transformations
-4. ✅ Optimize phase sequences for target polynomials
-5. ✅ Use the provided `QSPAlgorithm` class for Hamiltonian simulation
-6. ✅ Construct quantum circuits for polynomial approximation
-7. ✅ Analyze approximation error and convergence
-8. ✅ Implement QSP from scratch
-9. ✅ Apply QSP to various polynomial functions
-10. ✅ Compare with classical Fourier-based signal processing
+1. Understand the QSP theorem and its mathematical foundations
+2. Explain signal operators $W(x)$ and their role in encoding information
+3. Understand how phase sequences implement polynomial transformations
+4. Optimize phase sequences for target polynomials
+5. Use the provided `QSPAlgorithm` class for Hamiltonian simulation
+6. Construct quantum circuits for polynomial approximation
+7. Analyze approximation error and convergence
+8. Implement QSP from scratch
+9. Apply QSP to various polynomial functions
+10. Compare with classical Fourier-based signal processing
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 - **Essential knowledge**:
   - Quantum gates and circuit construction
@@ -73,12 +78,10 @@ After mastering this skill, you will be able to:
   - Matrix algebra and eigenvalues
   - Polynomial approximation theory
   - Basic optimization (gradient descent, L-BFGS)
-- **Recommended**: [Quantum Phase Estimation](../quantum-phase-estimation/SKILL.md) for comparison
-- **Mathematical comfort**: Polynomial analysis, numerical optimization
 
 ---
 
-## 🚀 Using the Provided Implementation
+## Using the Provided Implementation
 
 ### Quick Start Example
 
@@ -139,7 +142,7 @@ For approximating $e^{-i\tau x}$ using degree-$d$ polynomial:
 
 ---
 
-## 🔧 Understanding the Core Components
+## Understanding the Core Components
 
 ### 1. The Five-Step QSP Pipeline
 
@@ -370,7 +373,7 @@ def build_qsp_circuit(self, phases: np.ndarray, x_value: float,
 
 ---
 
-## 💡 Hands-On Example: Approximating exp(-iτx)
+## Hands-On Example: Approximating exp(-iτx)
 
 Let's implement QSP for Hamiltonian simulation:
 
@@ -438,7 +441,7 @@ for i in range(1, len(errors)):
 
 ---
 
-## 🎓 Implementing QSP From Scratch
+## Implementing QSP From Scratch
 
 ### Complete Implementation Template
 
@@ -577,7 +580,7 @@ class MyQSP:
 
 ---
 
-## 📊 Mathematical Deep Dive
+## Mathematical Deep Dive
 
 ### QSP Theorem
 

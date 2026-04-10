@@ -3,9 +3,14 @@ name: quantum-phase-estimation
 description: A quantum phase estimation algorithm that can estimate the eigenvalues of a unitary operator with high precision, which is a fundamental component in many quantum algorithms such as Shor's algorithm and quantum simulation.
 ---
 
+# One Step to Run QPE Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Quantum Phase Estimation (QPE) Algorithm Skill Guide
 
-## 📚 Overview
+## Overview
 
 **Quantum Phase Estimation** (QPE) is one of the **most important algorithms in quantum computing**. It solves the following problem:
 
@@ -32,23 +37,23 @@ Convert the phase information (encoded in eigenvalues) into a **quantum superpos
 
 ---
 
-## 🎯 Learning Objectives
+## Learning Objectives
 
 After mastering this skill, you will be able to:
 
-1. ✅ Understand the mathematical principle of QPE
-2. ✅ Explain how eigenvalues encode into phases
-3. ✅ Understand Quantum Fourier Transform (QFT) and its inverse
-4. ✅ Build controlled-unitary ($cU^{2^k}$) sequences
-5. ✅ Use the provided `QPEAlgorithm` class effectively
-6. ✅ Interpret measurement results and phase histograms
-7. ✅ Apply QPE to estimate eigenvalues
-8. ✅ Implement QPE from scratch
-9. ✅ Extend to advanced applications (HHL, Shor's algorithm)
+1. Understand the mathematical principle of QPE
+2. Explain how eigenvalues encode into phases
+3. Understand Quantum Fourier Transform (QFT) and its inverse
+4. Build controlled-unitary ($cU^{2^k}$) sequences
+5. Use the provided `QPEAlgorithm` class effectively
+6. Interpret measurement results and phase histograms
+7. Apply QPE to estimate eigenvalues
+8. Implement QPE from scratch
+9. Extend to advanced applications (HHL, Shor's algorithm)
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 - **Essential knowledge**:
   - Complex numbers and polar form ($e^{i\theta}$)
@@ -61,7 +66,7 @@ After mastering this skill, you will be able to:
 
 ---
 
-## 🚀 Using the Provided Implementation
+## Using the Provided Implementation
 
 ### Quick Start Example
 
@@ -123,7 +128,7 @@ algo.run(
 
 ---
 
-## 🔧 Understanding the Core Components
+## Understanding the Core Components
 
 ### 1. Circuit Architecture
 
@@ -266,7 +271,7 @@ def extract_phase(phase_qubits: List[int], state_obj: State, d: int) -> float:
 
 ---
 
-## 💡 Hands-On Example: Estimating T-Gate Phase
+## Hands-On Example: Estimating T-Gate Phase
 
 Let's estimate the eigenphase of the T gate where $T = P(\pi/4) = e^{i\pi/4}$:
 
@@ -312,7 +317,7 @@ Notice how increasing $d$ narrows the uncertainty range!
 
 ---
 
-## 🎓 Implementing Your Own QPE
+## Implementing Your Own QPE
 
 ### Complete Implementation Template
 
@@ -452,7 +457,7 @@ class MyQuantumPhaseEstimation:
 
 ---
 
-## 📊 Mathematical Deep Dive
+## Mathematical Deep Dive
 
 ### Initial State Preparation
 
@@ -498,7 +503,7 @@ $$P(k) = \frac{1}{2^{2d}}\frac{\sin^2(2^d(\phi - k/2^d))}{\sin^2(\phi - k/2^d)}$
 
 ---
 
-## 🔍 Debugging Tips
+## Debugging Tips
 
 1. **Estimated phase looks random?**
    - Verify target qubits have correct order in circuit
@@ -527,7 +532,7 @@ $$P(k) = \frac{1}{2^{2d}}\frac{\sin^2(2^d(\phi - k/2^d))}{\sin^2(\phi - k/2^d)}$
 
 ---
 
-## 📖 Further Learning
+## Further Learning
 
 - **Related Algorithms**:
   - **Shor's Algorithm**: Uses QPE for order-finding (integer factorization)
@@ -539,7 +544,7 @@ $$P(k) = \frac{1}{2^{2d}}\frac{\sin^2(2^d(\phi - k/2^d))}{\sin^2(\phi - k/2^d)}$
 
 ---
 
-## 🎯 Summary Checklist
+## Summary Checklist
 
 Before considering yourself proficient, ensure you can:
 
@@ -559,7 +564,7 @@ Before considering yourself proficient, ensure you can:
 
 ---
 
-## 🎓 Real-World Impact: Why QPE Changes Everything
+## Real-World Impact: Why QPE Changes Everything
 
 ### Shor's Algorithm (Factoring)
 
@@ -587,4 +592,4 @@ Both algorithms follow the same QPE pattern: **Estimate eigenvalues → Process 
 
 ---
 
-*Master Quantum Phase Estimation to unlock the full power of hybrid quantum-classical computing!* 🚀
+Master Quantum Phase Estimation to unlock the full power of hybrid quantum-classical computing!

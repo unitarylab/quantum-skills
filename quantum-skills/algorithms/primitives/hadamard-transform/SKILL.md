@@ -3,9 +3,13 @@ name: hadamard-transform
 description: A quantum algorithm for performing the Hadamard transform, which is a fundamental operation in quantum computing that creates superposition states. This skill includes efficient implementations and educational resources for understanding and utilizing the Hadamard transform in various quantum algorithms and applications.
 --- 
 
+# One Step to Run Hadamard Transform Example
+```bash
+python ./scripts/algorithm.py
+```
 # Hadamard Transform Skill Guide
 
-## 📚 Overview
+## Overview
 
 **The Hadamard Transform** is one of the most fundamental and widely-used quantum gates. It:
 
@@ -51,24 +55,24 @@ This creates a **uniform superposition** of all possible $n$-qubit basis states 
 
 ---
 
-## 🎯 Learning Objectives
+## Learning Objectives
 
 After mastering this skill, you will be able to:
 
-1. ✅ Understand single-qubit Hadamard gate and its matrix form
-2. ✅ Explain superposition creation: $|+\rangle, |-\rangle$ states
-3. ✅ Understand multi-qubit Hadamard transform $H^{\otimes n}$
-4. ✅ Grasp the self-inverse property: $H^2 = I$
-5. ✅ Create uniform superposition of all basis states
-6. ✅ Use the provided `HadamardTransformAlgorithm` class
-7. ✅ Verify property-based testing (reflexive property)
-8. ✅ Implement Hadamard from scratch
-9. ✅ Understand amplitude relationships and phase patterns
-10. ✅ Apply Hadamard in quantum algorithm design
+1. Understand single-qubit Hadamard gate and its matrix form
+2. Explain superposition creation: $|+\rangle, |-\rangle$ states
+3. Understand multi-qubit Hadamard transform $H^{\otimes n}$
+4. Grasp the self-inverse property: $H^2 = I$
+5. Create uniform superposition of all basis states
+6. Use the provided `HadamardTransformAlgorithm` class
+7. Verify property-based testing (reflexive property)
+8. Implement Hadamard from scratch
+9. Understand amplitude relationships and phase patterns
+10. Apply Hadamard in quantum algorithm design
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 - **Essential knowledge**:
   - Basic quantum mechanics (kets, bras, superposition)
@@ -80,12 +84,12 @@ After mastering this skill, you will be able to:
 
 ---
 
-## 🚀 Using the Provided Implementation
+## Using the Provided Implementation
 
 ### Quick Start Example
 
 ```python
-from algorithm import HadamardTransformAlgorithm
+from engine.algorithms import HadamardTransformAlgorithm
 import numpy as np
 
 # Step 1: Create Hadamard Transform solver
@@ -140,7 +144,7 @@ algo.run(
 
 ---
 
-## 🔧 Understanding the Core Components
+## Understanding the Core Components
 
 ### 1. Single-Qubit Hadamard Gate
 
@@ -336,7 +340,7 @@ def verify_hadamard_involution(n_qubits: int,
 
 ---
 
-## 💡 Hands-On Examples
+## Hands-On Examples
 
 ### Example 1: Creating Single-Qubit Superposition
 
@@ -419,7 +423,7 @@ for n in [1, 2, 3, 4]:
 
 ---
 
-## 🎓 Implementing Hadamard From Scratch
+## Implementing Hadamard From Scratch
 
 ### Complete Implementation Template
 
@@ -594,7 +598,7 @@ class MyHadamardTransform:
 
 ---
 
-## 📊 Mathematical Properties
+## Mathematical Properties
 
 ### The Hadamard Matrix Properties
 
@@ -623,7 +627,7 @@ $$H^{\otimes n} = \bigotimes_{i=1}^{n} H = \underbrace{H \otimes H \otimes \cdot
 
 ---
 
-## 🔍 Debugging Tips
+## Debugging Tips
 
 1. **Superposition not uniform?**
    - Check all qubits get Hadamard applied

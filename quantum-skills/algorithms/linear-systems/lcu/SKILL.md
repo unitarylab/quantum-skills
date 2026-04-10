@@ -3,9 +3,14 @@ name: lcu
 description: A quantum algorithm for solving linear systems of equations using the Linear Combination of Unitaries (LCU) method, providing exponential speedup over classical methods for certain types of problems. This skill includes efficient implementations and educational resources for understanding and utilizing the LCU algorithm in various applications.
 ---
 
+# One Step to Run LCU Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Linear Combination of Unitaries (LCU) Algorithm Skill Guide
 
-## 📚 Overview
+## Overview
 
 **Linear Combination of Unitaries (LCU)** is a fundamental quantum subroutine that implements a **non-unitary matrix** as a linear combination of unitary matrices. Given:
 
@@ -39,23 +44,23 @@ Instead of directly implementing the non-unitary $M$ (which is impossible), LCU:
 
 ---
 
-## 🎯 Learning Objectives
+## Learning Objectives
 
 After mastering this skill, you will be able to:
 
-1. ✅ Understand why non-unitary matrices require probabilistic implementation
-2. ✅ Grasp the LCU three-step procedure (V → SELECT → V†)
-3. ✅ Explain auxiliary qubit role in coefficient encoding
-4. ✅ Understand the SELECT operator (multi-controlled unitaries)
-5. ✅ Use the provided `LCUAlgorithm` class effectively
-6. ✅ Calculate success probability and post-selection requirements
-7. ✅ Implement LCU from scratch
-8. ✅ Apply to Hamiltonian simulation and other problems
-9. ✅ Combine with amplitude amplification for improved success rate
+1. Understand why non-unitary matrices require probabilistic implementation
+2. Grasp the LCU three-step procedure (V → SELECT → V†)
+3. Explain auxiliary qubit role in coefficient encoding
+4. Understand the SELECT operator (multi-controlled unitaries)
+5. Use the provided `LCUAlgorithm` class effectively
+6. Calculate success probability and post-selection requirements
+7. Implement LCU from scratch
+8. Apply to Hamiltonian simulation and other problems
+9. Combine with amplitude amplification for improved success rate
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 - **Essential knowledge**:
   - Quantum superposition and entanglement
@@ -68,7 +73,7 @@ After mastering this skill, you will be able to:
 
 ---
 
-## 🚀 Using the Provided Implementation
+## Using the Provided Implementation
 
 ### Quick Start Example
 
@@ -137,7 +142,7 @@ $$P_{\text{success}} = \frac{\|M|\psi\rangle\|^2}{s^2} \text{ where } s = \sum_{
 
 ---
 
-## 🔧 Understanding the Core Components
+## Understanding the Core Components
 
 ### 1. The Three-Step LCU Pipeline
 
@@ -293,7 +298,7 @@ def extract_solution_via_postselection(state, n_anc, n_sys):
 
 ---
 
-## 💡 Hands-On Example: Pauli Combination
+## Hands-On Example: Pauli Combination
 
 Let's implement $M = 0.5Z + 0.3X$ on a single qubit:
 
@@ -341,7 +346,7 @@ print(f"Expected: ~0.53")
 
 ---
 
-## 🎓 Implementing Your Own LCU
+## Implementing Your Own LCU
 
 ### Complete Implementation Template
 
@@ -542,7 +547,7 @@ class MyLCU:
 
 ---
 
-## 📊 Mathematical Deep Dive
+## Mathematical Deep Dive
 
 ### Coefficient Superposition
 
@@ -576,7 +581,7 @@ $$= \frac{\|M|\psi\rangle\|^2}{s^2}$$
 
 ---
 
-## 🔍 Debugging Tips
+## Debugging Tips
 
 1. **Success probability is zero?**
    - Check if coefficients sum to zero

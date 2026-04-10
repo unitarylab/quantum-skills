@@ -77,6 +77,19 @@ $$
 
 ## 3. Full Algorithm Pipeline (Step-by-Step)
 
+### Step 0: Import Libraries
+Import necessary modules for parsing, solvers, operators, and circuit generation:
+```python
+# import parser
+from engine.library import parse_equation
+
+# import solvers
+from engine.library import schro_classical, schro_trotter
+from engine.library.differential_operator.classical_matrices import first_order_derivative, second_order_derivative
+from engine.library.schrodingerization.classical import circuit_classical
+from scipy.integrate import cumulative_trapezoid
+```
+
 ### Step 1: Parse Wave & Domain Parameters
 
 ```python
@@ -144,7 +157,7 @@ A = np.block([
 
 ```python
 u0 = np.zeros_like(b)
-u = schro(A, u0, T=T, na=na, b=b, scale_b=1/T)
+u = schro_classical(A, u0, T=T, na=na, b=b, scale_b=1/T)
 u = u[:Nx]  # extract physical solution
 qc = circuit_classical(nx, na)
 ```

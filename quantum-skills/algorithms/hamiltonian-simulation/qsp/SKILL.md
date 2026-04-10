@@ -68,7 +68,7 @@ After using this skill, you should be able to:
 
 ```python
 import numpy as np
-from algorithms.qsp import QSP
+from engine.algorithms.qsp import QSP
 
 H = np.array([
     [0.8, 0.2],
@@ -256,7 +256,7 @@ Sweep beta and target error to inspect behavior.
 
 ```python
 import numpy as np
-from algorithms.qsp import QSP
+from engine.algorithms.qsp import QSP
 
 H = np.array([
     [1.0, 0.15],

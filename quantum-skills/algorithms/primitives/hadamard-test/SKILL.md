@@ -3,9 +3,14 @@ name: hadamard-test
 description: A quantum algorithm that uses the Hadamard test to estimate the expectation value of a unitary operator with respect to a given quantum state. This algorithm is fundamental in quantum computing and has applications in various quantum algorithms, including quantum phase estimation and variational quantum algorithms.
 ---
 
+# One Step to Run Hadamard Test Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Hadamard Test Algorithm Skill Guide
 
-## 📚 Overview
+## Overview
 
 **Hadamard Test** is a fundamental quantum algorithm that uses a single **ancilla (auxiliary) qubit** to estimate the complex expectation value of a unitary operator $U$ with respect to a quantum state $|\psi\rangle$:
 
@@ -30,22 +35,22 @@ Instead of measuring the target qubits directly, we measure the ancilla qubit wh
 
 ---
 
-## 🎯 Learning Objectives
+## Learning Objectives
 
 After mastering this skill, you will be able to:
 
-1. ✅ Understand the mathematical principle of Hadamard test
-2. ✅ Build Hadamard test circuits for real and imaginary parts
-3. ✅ Use the provided `HadamardTestAlgorithm` class effectively
-4. ✅ Implement state overlap (swap test) measurements
-5. ✅ Extract eigenphases from unitaries
-6. ✅ Handle shot noise and statistical sampling
-7. ✅ Apply to real quantum algorithm problems
-8. ✅ Implement Hadamard test from scratch
+1. Understand the mathematical principle of Hadamard test
+2. Build Hadamard test circuits for real and imaginary parts
+3. Use the provided `HadamardTestAlgorithm` class effectively
+4. Implement state overlap (swap test) measurements
+5. Extract eigenphases from unitaries
+6. Handle shot noise and statistical sampling
+7. Apply to real quantum algorithm problems
+8. Implement Hadamard test from scratch
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 - **Essential knowledge**:
   - Hadamard gate and its properties
@@ -57,12 +62,12 @@ After mastering this skill, you will be able to:
 
 ---
 
-## 🚀 Using the Provided Implementation
+## Using the Provided Implementation
 
 ### Quick Start Example
 
 ```python
-from algorithm import HadamardTestAlgorithm
+from engine.algorithms import HadamardTestAlgorithm
 from engine.core import GateSequence
 
 # Step 1: Create a unitary U to evaluate
@@ -129,7 +134,7 @@ algo.run(
 
 ---
 
-## 🔧 Understanding the Core Components
+## Understanding the Core Components
 
 ### 1. Hadamard Test Circuit (Real Part)
 
@@ -284,7 +289,7 @@ def _estimate_phi_from_real_imag(self, cos_est: float, sin_est: float) -> float:
 
 ---
 
-## 💡 Hands-On Example: Evaluating a Rotation Operator
+## Hands-On Example: Evaluating a Rotation Operator
 
 Let's estimate $\langle+|RZ(0.8)|+\rangle$ where $|+\rangle = H|0\rangle$ and $RZ(\theta) = e^{-i\theta Z/2}$:
 
@@ -338,7 +343,7 @@ print(f"Full expectation: {re_est:.6f} + {im_est:.6f}i")
 
 ---
 
-## 🎓 Implementing Your Own Hadamard Test
+## Implementing Your Own Hadamard Test
 
 ### Complete Implementation Template
 
@@ -476,7 +481,7 @@ class MyHadamardTest:
 
 ---
 
-## 📊 Mathematical Deep Dive
+## Mathematical Deep Dive
 
 ### Basic Hadamard Test Principle
 
@@ -524,7 +529,7 @@ $$|\langle\phi|\psi\rangle|^2 = \frac{1 + \langle Z \rangle}{2}$$
 
 ---
 
-## 🔍 Debugging Tips
+## Debugging Tips
 
 1. **Expectation value suspicious?**
    - Verify ancilla qubit is index 0

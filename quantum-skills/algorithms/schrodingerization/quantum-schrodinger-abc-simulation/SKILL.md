@@ -74,8 +74,9 @@ A = H0 * 1j - H1
 ### Step 3: Schrödingerization Quantum Solver
 
 ```python
+from engine.library import schro_classical
 # Solve 2D Schrödinger with ABC
-u = schro(A, u0, T=T, na=na, R=R, order=order, point=point)
+u = schro_classical(A, u0, T=T, na=na, R=R, order=order, point=point)
 u = u.reshape(Nx, Nx)
 ```
 

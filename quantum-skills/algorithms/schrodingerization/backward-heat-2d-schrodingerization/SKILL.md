@@ -180,7 +180,8 @@ $$
 #### (A) Classical Solver
 
 ```python
-u = schro(
+from engine.library import schro_classical
+u = schro_classical(
     A,
     u0,
     T=T,
@@ -203,7 +204,8 @@ e^{-iHt}
 $$
 
 ```python
-u, qc = schro(
+from engine.library import schro_trotter
+u, qc = schro_trotter(
     u0=u0,
     H1=H1,
     H2=H2,

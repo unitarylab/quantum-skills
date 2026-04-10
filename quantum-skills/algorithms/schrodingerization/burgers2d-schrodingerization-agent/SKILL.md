@@ -94,6 +94,18 @@ u = \frac{\int \ell \, u_\ell d\ell}{\int u_\ell d\ell}
 
 ## Algorithm Workflow
 
+### Stage 0: Import Libraries
+```python
+# import parser
+from engine.library import parse_equation
+
+# import solvers
+from engine.library import schro_classical, schro_trotter
+from engine.library.differential_operator.classical_matrices import first_order_derivative, second_order_derivative
+from engine.library.schrodingerization.classical import circuit_classical
+from scipy.integrate import cumulative_trapezoid
+```
+
 ### Stage 1: Parse Parameters
 
 ```python

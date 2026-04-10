@@ -38,7 +38,18 @@ H = - a \eta^{\otimes 1} + b \eta^{\otimes 2} - c \eta^{\otimes 3} + \dots
 The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 
 ## 2. Algorithm Steps (Pipeline)
+### Step 0: Import Libraries
+Import necessary modules for parsing, solvers, operators, and circuit generation:
+```python
+# import parser
+from engine.library import parse_equation
 
+# import solvers
+from engine.library import schro_classical, schro_trotter
+from engine.library.differential_operator.classical_matrices import first_order_derivative, second_order_derivative
+from engine.library.schrodingerization.classical import circuit_classical
+from scipy.integrate import cumulative_trapezoid
+```
 ### Step 1: Parse Parameters
 
 ```python
@@ -68,7 +79,7 @@ b = eq.get_rhs_1d(x)  # source term
 ### Step 3: Schrödingerization Quantum Solver
 
 ```python
-u = schro(A, u0, T=T, na=na, R=R, order=order, b=b, scale_b=1.0/T)
+u = schro_classical(A, u0, T=T, na=na, R=R, order=order, b=b, scale_b=1.0/T)
 ```
 
 ### Step 4: Trotter Time Splitting (Optional)
@@ -78,7 +89,7 @@ A_trotter = TrotterOperator()
 func1, func2 = A_trotter.data()
 H1 = func1(dt / R)
 H2 = func2(dt)
-u, qc = schro(u0, H1, H2, Nt=Nt, na=na, b=b, theta=dt/T)
+u, qc = schro_trotter(u0, H1, H2, Nt=Nt, na=na, b=b, theta=dt/T)
 ```
 
 ### Step 5: Visualization

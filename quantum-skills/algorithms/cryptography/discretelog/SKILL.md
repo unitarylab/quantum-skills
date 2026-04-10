@@ -65,7 +65,7 @@ After measuring $(u, v)$:
 ### Basic Usage
 
 ```python
-from algorithms.cryptology import DiscreteLogAlgorithm
+from engine.algorithms import DiscreteLogAlgorithm
 
 dlg = DiscreteLogAlgorithm()
 result = dlg.run(g=3, y=6, P=7, backend='torch')
@@ -300,7 +300,7 @@ def format_result_ascii(self) -> str:
 ## Example
 
 ```python
-from algorithms.cryptology import DiscreteLogAlgorithm
+from engine.algorithms import DiscreteLogAlgorithm
 
 dlg = DiscreteLogAlgorithm()
 result = dlg.run(g=3, y=5, P=11, backend='torch')

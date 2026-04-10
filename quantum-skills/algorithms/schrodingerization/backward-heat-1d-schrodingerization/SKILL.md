@@ -109,6 +109,7 @@ The Schrödingerization framework can be referred to in './Schr_skills.markdown'
 Use Schrödingerization-based classical solver:
 
 ```python
+from engine.library import schro_classical
 u = schro_classical(
     A,
     u0,
@@ -149,6 +150,7 @@ func1, func2 = (a * TDiff(nx, dx, 2, scheme=scheme, boundary=bd)).data()
 H1 = func1(dt / R)
 H2 = func2(dt)
 
+from engine.library import schro_trotter
 u, qc = schro_trotter(
     u0=u0,
     H1=H1,

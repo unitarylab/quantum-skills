@@ -80,13 +80,13 @@ total_qubits = n_count + n_work_actual
 You can import Shor from either of these paths:
 
 ```python
-from algorithms.cryptology import ShorAlgorithm
+from engine.algorithms import ShorAlgorithm
 ```
 
 ### Quickstart
 
 ```python
-from algorithms.cryptology import ShorAlgorithm
+from engine.algorithms import ShorAlgorithm
 
 shor = ShorAlgorithm()
 
@@ -111,7 +111,7 @@ print(result['plot'])
 Use `N = 15` first. It is small, standard for demos, and aligns with the existing module default example.
 
 ```python
-from algorithms.cryptology import ShorAlgorithm
+from engine.algorithms import ShorAlgorithm
 
 shor = ShorAlgorithm()
 result = shor.run(15, method='matrix', backend='torch')

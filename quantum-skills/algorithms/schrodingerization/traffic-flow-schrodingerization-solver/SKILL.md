@@ -185,7 +185,8 @@ Solve linearized system.
 #### Code
 
 ```python
-u_l = schro(
+from engine.library import schro_classical
+u_l = schro_classical(
     A,
     psi,
     T=T,
@@ -223,10 +224,11 @@ The Schrödingerization framework can be referred to in './Schr_skills.markdown'
 #### Code
 
 ```python
+from engine.library import schro_trotter
 H1 = func1((abs(fxl) * dx / 2) * dt / R)
 H2 = func2(-fxl * dt)
 
-u_l, qc = schro(
+u_l, qc = schro_trotter(
     u0=psi,
     H1=H1,
     H2=H2,

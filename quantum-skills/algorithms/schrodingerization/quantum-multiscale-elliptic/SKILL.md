@@ -133,7 +133,8 @@ u1 = get_u1(u1, x, L)
 ### 4.3 Quantum Solver Call
 
 ```python
-u = schro(-S, np.zeros_like(rhs), na=na, b=rhs)
+from engine.library import schro_classical
+u = schro_classical(-S, np.zeros_like(rhs), na=na, b=rhs)
 ```
 
 ------

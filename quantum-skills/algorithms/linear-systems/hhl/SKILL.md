@@ -3,9 +3,14 @@ name: hhl
 description: A quantum algorithm for solving linear systems of equations, providing exponential speedup over classical methods for certain types of problems. This skill includes efficient implementations and educational resources for understanding and utilizing quantum linear systems algorithms in various applications.
 ---
 
+# One Step to Run HHL Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # HHL Algorithm (Harrow-Hassidim-Lloyd) Skill Guide
 
-## 📚 Overview
+## Overview
 
 **HHL Algorithm** is one of the most important quantum algorithms, solving the fundamental problem of **linear equations**: given a Hermitian matrix $A$ and vector $\mathbf{b}$, solve:
 
@@ -33,23 +38,8 @@ When $\kappa$ and $1/\epsilon$ are poly-logarithmic in $N$, quantum gives **expo
 
 ---
 
-## 🎯 Learning Objectives
 
-After mastering this skill, you will be able to:
-
-1. ✅ Understand the quantum advantage in solving linear systems
-2. ✅ Grasp the connection between linear systems and quantum eigenvector problems
-3. ✅ Explain the role of QPE in HHL
-4. ✅ Understand the controlled reciprocal rotation (the "secret sauce")
-5. ✅ Use the provided `HHLAlgorithm` class for various systems
-6. ✅ Interpret post-selection and success probability
-7. ✅ Handle hermiticity constraints and spectral properties
-8. ✅ Implement HHL from scratch
-9. ✅ Apply to real computational problems
-
----
-
-## 📋 Prerequisites
+## Prerequisites
 
 - **Essential knowledge**:
   - Quantum Phase Estimation (QPE) - required!
@@ -58,11 +48,9 @@ After mastering this skill, you will be able to:
   - Controlled rotations and ancilla qubits
   - Post-selection and conditional measurement
 - **Mathematical background**: Linear algebra, complex numbers, eigenvalue decomposition
-- **Recommended**: Complete [QPE Skill](../primitives/quantum-phase-estimation/SKILL.md) first
-
 ---
 
-## 🚀 Using the Provided Implementation
+## Using the Provided Implementation
 
 ### Quick Start Example
 
@@ -124,7 +112,7 @@ algo.run(
 
 ---
 
-## 🔧 Understanding the Core Components
+## Understanding the Core Components
 
 ### 1. Problem Setup and Spectral Decomposition
 
@@ -298,7 +286,7 @@ def _postselect_solution_state(self, state, scale_factor, d, n_sys):
 
 ---
 
-## 💡 Hands-On Example: Small Tridiagonal System
+## Hands-On Example: Small Tridiagonal System
 
 Let's solve a 4x4 tridiagonal system:
 
@@ -337,7 +325,7 @@ print(f"Success probability: {result['post_selection_prob']:.6f}")
 
 ---
 
-## 🎓 Implementing Your Own HHL
+## Implementing Your Own HHL
 
 ### Complete Implementation Template
 
@@ -472,7 +460,7 @@ class MyHHL:
 
 ---
 
-## 📊 Mathematical Deep Dive
+## Mathematical Deep Dive
 
 ### Hermitian Encoding
 
@@ -518,7 +506,7 @@ When $\kappa, 1/\epsilon = \text{poly}\log(N)$: **Exponential speedup!**
 
 ---
 
-## 🔍 Debugging Tips
+## Debugging Tips
 
 1. **Non-Hermitian matrix error?**
    - Use block embedding: $\tilde{A} = \begin{pmatrix} 0 & A \\ A^\dagger & 0 \end{pmatrix}$

@@ -56,19 +56,13 @@ After using this skill, you should be able to:
 2. Norm-based approximation error metrics.
 3. Scaling intuition with sample count.
 
-### Recommended:
-
-1. Read `algorithms/__init__.py` to understand lazy `total_error` computation.
-2. Know `pauli_string_evolution` converts sampled terms to executable gates.
-3. Use repeated independent trials for robust conclusions.
-
 ## Using the Provided Implementation
 
 ### Quick Start Example
 
 ```python
 import numpy as np
-from algorithms.qdrift import QDrift
+from engine.algorithms.qdrift import QDrift
 
 # Reproducibility for sampling
 np.random.seed(1234)

@@ -3,9 +3,14 @@ name: amplitude-amplification
 description: A quantum algorithm that generalizes Grover's search algorithm, allowing for the amplification of the probability of desired outcomes in a quantum state. It is used to find marked items in an unsorted database with quadratic speedup compared to classical algorithms. This skill provides a comprehensive guide to understanding, implementing (using UnitaryLab's quantum simulator), and utilizing amplitude amplification in quantum computing applications.
 ---
 
+# One Step to Run Amplitude Amplification Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Amplitude Amplification Algorithm Skill Guide
 
-## 📚 Overview
+## Overview
 
 **Amplitude Amplification** is a powerful quantum algorithm that generalizes Grover's search algorithm. It solves the following problem:
 
@@ -21,19 +26,19 @@ where $p_0$ is the initial success probability, the goal is to amplify the proba
 
 ---
 
-## 🎯 Learning Objectives
+## Learning Objectives
 
 After mastering this skill, you will be able to:
 
-1. ✅ Understand the mathematical foundations of amplitude amplification
-2. ✅ Use the provided `AmplitudeAmplificationAlgorithm` class to amplify probabilities
-3. ✅ Implement the oracle and diffuser operators
-4. ✅ Calculate optimal iteration counts
-5. ✅ Write your own amplitude amplification implementation from scratch
+1. Understand the mathematical foundations of amplitude amplification
+2. Use the provided `AmplitudeAmplificationAlgorithm` class to amplify probabilities
+3. Implement the oracle and diffuser operators
+4. Calculate optimal iteration counts
+5. Write your own amplitude amplification implementation from scratch
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 - Basic understanding of quantum gates (H, X, Z, CX, MCX)
 - Familiarity with quantum state preparation
@@ -43,12 +48,12 @@ After mastering this skill, you will be able to:
 
 ---
 
-## 🚀 Using the Provided Implementation
+## Using the Provided Implementation
 
 ### Quick Start Example
 
 ```python
-from engine.algorithms.fundamental_algorithm import AmplitudeAmplificationAlgorithm
+from engine.algorithms import AmplitudeAmplificationAlgorithm
 from engine import GateSequence
 
 # Step 1: Create the state preparation unitary U
@@ -102,7 +107,7 @@ algo.run(
 
 ---
 
-## 🔧 Understanding the Key Components
+## Understanding the Key Components
 
 ### 1. Oracle Construction
 
@@ -175,7 +180,7 @@ def _get_optimal_iterations(self, p: float) -> int:
 
 ---
 
-## 💡 Hands-On Example: Amplify Specific State Probability
+## Hands-On Example: Amplify Specific State Probability
 
 Let's amplify the probability of finding state |101⟩ in a 3-qubit superposition:
 
@@ -209,7 +214,7 @@ print(f"Circuit saved: {result['circuit_path']}")
 
 ---
 
-## 🎓 Implementing Your Own Amplitude Amplification
+## Implementing Your Own Amplitude Amplification
 
 ### Full Implementation Template
 
@@ -323,7 +328,7 @@ class MyAmplitudeAmplification:
 
 ---
 
-## 📊 Mathematical Deep Dive
+## Mathematical Deep Dive
 
 ### Iteration Count Formula
 
@@ -348,7 +353,7 @@ where:
 
 ---
 
-## 🔍 Debugging Tips
+## Debugging Tips
 
 1. **Probability not increasing?**
    - Verify that `p` accurately represents the initial probability
@@ -365,14 +370,14 @@ where:
 
 ---
 
-## 📖 Further Learning
+## Further Learning
 
 - **Related Topics**: Grover's Algorithm, Quantum Phase Estimation, Quantum Optimization
 - **Papers**: Original Grover paper (1996), Amplitude Amplification generalizations
 
 ---
 
-## 🎯 Summary Checklist
+## Summary Checklist
 
 Before considering yourself proficient, ensure you can:
 
