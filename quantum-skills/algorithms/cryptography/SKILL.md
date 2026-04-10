@@ -7,7 +7,7 @@ description: Comprehensive quantum cryptography and quantum algorithm attacks im
 
 ## Discrete Logarithm Problem (DLP) Solver
    - Overview: A quantum algorithm for solving the discrete logarithm problem, breaking cryptographic protocols based on its hardness.
-   - Path reference: `./discrete_log/SKILL.md`
+   - Path reference: `./discretelog/SKILL.md`
 
 ## Shor's Algorithm
    - Overview: A quantum algorithm for integer factorization, breaking RSA and other public-key cryptosystems.

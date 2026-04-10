@@ -1,596 +1,424 @@
 ---
 name: simon
-description: Simon's algorithm - a quantum algorithm to discover hidden periodic structures in functions. Efficiently finds the hidden period string s such that f(x) = f(x⊕s) for given function f.
-requirements:
-  - quantum computing framework (GateSequence, Register, State, ClassicalRegister)
-  - numpy for numerical operations
-  - linear algebra over GF(2) for equation solving
-  - simulation backend (torch or similar)
+description: Simon hidden-string algorithm guide for running the quantum simulator implementation and for writing a compatible implementation from scratch
 ---
 
-# Simon's Algorithm - Hidden Subgroup Problem Skill
+# Simon Hidden-String Guide
 
-## Overview
-**Simon's Algorithm** is a fundamental quantum algorithm that discovers hidden periodic structures in boolean functions. Given a function f: {0,1}^n → {0,1}^n that is 2-to-1 with period s (meaning f(x) = f(x⊕s) for all x), the algorithm finds s exponentially faster than classical algorithms.
+## What It Does
 
-### Why Simon's Algorithm Matters
-- **Pedagogical**: Demonstrates quantum parallelism without phase estimation
-- **Complexity**: O(n) quantum queries vs Ω(2^(n/2)) classical queries (exponential speedup)
-- **Cryptographic**: Applications to hidden symmetries and symmetric-key cryptanalysis
-- **Foundational**: Building block for understanding hidden subgroup problems
+This module implements Simon's algorithm for recovering a hidden nonzero bit string $s$ from a black-box function with the promise:
 
-## Mathematical Background
+$$
+f(x) = f(y) \iff x \oplus y = s
+$$
 
-### The Hidden Period Problem (Simon's Problem)
-- **Input**: Oracle access to function f: {0,1}^n → {0,1}^m
-- **Promise**: ∃s ∈ {0,1}^n \ {0^n} such that f(x) = f(x⊕s) for all x ∈ {0,1}^n
-- **Goal**: Find the hidden period string s
-- **Structure**: f is exactly 2-to-1 with this period (f(x) and f(x⊕s) are the only preimages)
+Given a target secret string such as `1010`, the implementation:
 
-### Mathematical Definition
-```
-Function f: {0,1}^n → {0,1}^m is σ-periodic if:
-  ∀x ∈ {0,1}^n: f(x) = f(x ⊕ σ)
+- builds a Simon circuit with two quantum registers,
+- runs it on the simulator,
+- extracts measurement constraints on the hidden string,
+- solves the resulting linear system over $\mathrm{GF}(2)$,
+- saves the circuit diagram and formats a readable result summary.
 
-Simon's Problem: Find σ (the period/secret string)
-```
+This is useful both as a simulator demo of Simon's exponential query advantage and as a reference for writing a compatible implementation in this codebase.
 
-### Key Quantum Concepts
+---
 
-**1. Quantum Parallelism**
-- Classical: Query f(x) for individual values of x
-- Quantum: Query superposition of all x simultaneously
-- Result: Extract global properties of f by observing interference
+## How This Implementation Works
 
-**2. Hadamard Basis Switching**
-```
-Computational basis: {|0⟩, |1⟩}
-Hadamard basis: |+⟩ = (|0⟩ + |1⟩)/√2, |-⟩ = (|0⟩ - |1⟩)/√2
+The public entry point is the `SimonAlgorithm` class in `algorithm.py`.
 
-Key insight: Hadamard transforms between bases
-H transforms |x⟩ to superposition over all x: (1/√2^n) Σ_y (-1)^(x·y)|y⟩
-```
+### Main Flow
 
-**3. XOR Structure**
-- s represents the hidden structure via XOR (bitwise addition mod 2)
-- f(x) = f(x⊕s) means f is invariant under XOR with s
-- Quantum measurement collapses to basis orthogonal to s
+The `run()` method follows this structure:
 
-## Algorithm Structure
+1. Validate the input hidden string `s_target`.
+2. Reject the all-zero string.
+3. Enforce the `torch` backend.
+4. Create two `n`-qubit quantum registers `x` and `y`, plus an `n`-bit classical register.
+5. Apply Hadamards to the input register `x`.
+6. Build the Simon oracle `U_f` determined by `s_target`.
+7. Measure the `y` register into a classical register.
+8. Apply Hadamards again to the `x` register.
+9. Execute the circuit on the simulator.
+10. Extract basis states from the `x` register and solve for `s` classically.
+11. Save the circuit diagram and return a structured result dictionary.
 
-### The Three-Phase Simon's Algorithm
+### Important Implementation Detail
 
-#### Phase 1: Quantum Circuit Setup
-```
-1. Allocate 2n qubits (n query, n output)
-2. Initialize: |ψ₀⟩ = |0⟩^(2n)
-3. Apply Hadamard: H^⊗n ⊗ I^⊗n
-4. Apply Oracle: U_f
-5. Measure output register (y register)
-6. Apply Hadamard: H^⊗n ⊗ I^⊗n
-7. Measure query register (x register)
-```
+This implementation does not repeatedly execute the circuit to collect one measured bit string at a time.
 
-#### Phase 2: Measurement and Collection
-- Run quantum circuit multiple times
-- Each measurement yields bitstring y with |P(y|s)| ∝ |amplitude|²
-- Key property: Measurement gives y ⊥ s (y · s ≡ 0 mod 2)
-- Collect n linearly independent equations
+Instead, after a single simulator execution it calls:
 
-#### Phase 3: Gaussian Elimination
-```
-System of linear equations over GF(2):
-  y₁ · s ≡ 0 (mod 2)
-  y₂ · s ≡ 0 (mod 2)
-  ...
-  y_n · s ≡ 0 (mod 2)
-
-Solve using Gaussian elimination over GF(2)
-Result: Unique s (with high probability)
-```
-
-## Installation & Setup
-
-### Prerequisites
-```bash
-# Required Python packages
-pip install numpy
-pip install torch  # or tensorflow for alternative backend
-pip install sympy  # For linear algebra over GF(2)
-```
-
-### Project Structure
-```
-quantum-cryptography/
-├── simon/
-│   ├── __init__.py
-│   ├── algorithm.py          # Main Simon implementation
-│   ├── SKILL.md              # This file
-│   └── README.md
-├── core/                      # Core quantum computing modules
-│   ├── GateSequence.py
-│   ├── Register.py
-│   ├── State.py
-│   └── ClassicalRegister.py
-└── library/                   # Quantum library functions
-```
-
-### Configuration
-Create configuration settings:
 ```python
-CONFIG = {
-    'backend': 'torch',
-    'output_dir': './simon_results',
-    'max_qubits': 25,
-    'seed': 42,
-    'num_runs': 100  # Runs to collect equations
+state_basis_dict = state_obj.calculate_state(range(n))
+```
+
+and uses the resulting support on the `x` register as the source of candidate equations. It then selects linearly independent vectors and solves for `s` with a simple back-substitution routine.
+
+That is a simulator-friendly shortcut specific to this implementation, and it is the main behavior to preserve if you want your own version to be compatible with the current module.
+
+### Register Layout
+
+For a secret string of length `n`:
+
+```python
+rx = Register('x', n)
+ry = Register('y', n)
+cqr = ClassicalRegister('cr', n)
+```
+
+So the circuit uses:
+
+- `n` qubits in the input register `x`,
+- `n` qubits in the output register `y`,
+- `n` classical bits for the mid-circuit measurement.
+
+Total quantum qubits:
+
+```python
+total_qubits = 2 * n
+```
+
+---
+
+## Using the Existing Implementation
+
+### Import Path
+
+You can import Simon from:
+
+```python
+from algorithms.cryptology import SimonAlgorithm
+```
+
+### Quickstart
+
+```python
+from algorithms.cryptology import SimonAlgorithm
+
+simon = SimonAlgorithm()
+
+result = simon.run(
+    s_target='1010',
+    backend='torch',
+    algo_dir='./simon_results'
+)
+
+print(result['status'])
+print(result['found_s'])
+print(result['circuit_path'])
+print(result['message'])
+print(result['plot'])
+```
+
+### Recommended First Example
+
+Start with a short nonzero secret string such as `1010` or `1101`.
+
+```python
+from algorithms.cryptology import SimonAlgorithm
+
+simon = SimonAlgorithm()
+result = simon.run(s_target='1101', backend='torch')
+
+if result['status'] == 'ok':
+    print(f"Recovered secret: {result['found_s']}")
+else:
+    print(f"Run failed: {result['message']}")
+```
+
+### Return Value
+
+The `run()` method returns a dictionary with this structure:
+
+```python
+{
+    "status": "ok" or "failed",
+    "found_s": "1101",
+    "circuit_path": "./simon_results/...svg",
+    "message": "runtime summary",
+    "plot": "formatted ASCII report"
 }
 ```
 
-## Key Methods
+### Cached Result State
 
-### `SimonAlgorithm.run(s_target='1010', backend='torch', algo_dir='./simon_results')`
-**Parameters**:
-- `s_target` (str): Hidden period string (binary string)
-- `backend` (str): Simulation backend ('torch', 'numpy')
-- `algo_dir` (str): Directory for output files
+On completion, the module also stores the full execution record in `self.last_result`.
 
-**Returns**: Dictionary with:
-- `status`: 'ok' or 'failed'
-- `found_s`: The discovered period string
-- `equations`: List of collected equations (y vectors)
-- `circuit_path`: Path to SVG circuit diagram
-- `timing`: Execution time breakdown
-- `confidence`: Probability of correct solution
-
-### `_build_simon_oracle(gs, s)`
-Constructs the quantum oracle U_f from the period s.
-
-### `_get_basis_simple(state_list, n_qubits)`
-Extracts linearly independent basis vectors from measurements.
-
-### `_solve_simon_general(basis_list, n)`
-Solves the linear system over GF(2) to find s.
-
-## Step-by-Step Usage Guide
-
-### Step 1: Import and Setup
 ```python
-from simon.algorithm import SimonAlgorithm
-import os
-
-# Create algorithm instance
 simon = SimonAlgorithm()
+simon.run('1010')
 
-# Set output directory
-output_dir = './simon_results'
-os.makedirs(output_dir, exist_ok=True)
+last = simon.last_result
+print(last['s_target'])
+print(last['found_s'])
+print(last['valid_states'])
+print(last['equations'])
+print(last['comp_time'])
 ```
 
-### Step 2: Define the Secret Period
+### Input Constraints
+
+The current implementation assumes:
+
+- `s_target` is a binary string,
+- `s_target` is not all zeros,
+- `backend` must be `'torch'`.
+
+If `s_target` contains no `'1'`, the code raises:
+
 ```python
-# Choose hidden period string
-n = 4  # Input register size: 4 qubits -> 2⁴ = 16 possible inputs
-s = '1010'  # Binary string (must contain at least one '1')
-
-# Alternative examples:
-# n = 2, s = '01' or '11'
-# n = 3, s = '001', '100', '111'
-# n = 5, s = '00001', '10000', '11111'
-
-print(f"Finding hidden period: n={n}, s={s}")
+ValueError("秘密字符串 s 不能为全 0 串！")
 ```
 
-### Step 3: Define the Function (Optional - Use Built-in Oracle)
-```python
-# The algorithm uses a built-in oracle based on the period s
-# For s='1010', the function pairs inputs that differ by s:
-# f(x) = f(x ⊕ s) for all x
+If the backend is not `torch`, the code raises:
 
-# The built-in oracle implements this pairing automatically
-# No manual function definition needed
+```python
+ValueError("Simon 算法目前仅支持 'torch' 后端进行含测量模拟...")
 ```
 
-### Step 4: Execute Simon's Algorithm
+---
+
+## Writing Your Own Version
+
+If you want to implement your own compatible Simon module, keep the same high-level structure and return format.
+
+### Minimal Class Skeleton
+
 ```python
-# Run the algorithm
-result = simon.run(
-    s_target=s,
-    backend='torch',
-    algo_dir=output_dir
-)
-```
-
-### Step 5: Verify the Result
-```python
-# Check success
-if result['status'] == 'ok':
-    found_s = result['found_s']
-    print(f"✓ Successfully found period: {found_s}")
-    
-    # Verify correctness
-    if found_s == s:
-        print(f"Verification: Found s = {found_s} matches original s = {s} ✓")
-    else:
-        print(f"WARNING: Found s = {found_s} does not match original s = {s}")
-else:
-    print(f"✗ Algorithm failed: {result.get('message', 'Unknown error')}")
-```
-
-### Step 6: Analyze Quantum Behavior
-```python
-# Examine collected equations
-print(f"\n--- Quantum Measurement Analysis ---")
-print(f"Number of equations collected: {len(result.get('equations', []))}")
-print("Equations (y vectors orthogonal to s):")
-
-# The algorithm automatically collects and solves equations
-# All measured y satisfy y · s ≡ 0 mod 2
-s_int = int(s, 2)
-for i, y in enumerate(result.get('equations', [])):
-    y_int = int(y, 2)
-    dot_product = bin(s_int & y_int).count('1') % 2
-    print(f"  y_{i} = {y}, y·s mod 2 = {dot_product} (should be 0)")
-```
-
-### Step 7: Batch Testing with Different Periods
-```python
-# Test with multiple secret strings
-test_cases = [
-    (2, '01'),
-    (2, '11'),
-    (3, '001'),
-    (3, '100'),
-    (3, '111'),
-    (4, '0101'),
-]
-
-results = []
-for n, s in test_cases:
-    result = simon.run(s_target=s, backend='torch')
-    success = result['status'] == 'ok' and result['found_s'] == s
-    
-    status = "✓" if success else "✗"
-    print(f"{status} n={n}, s={s} -> found={result['found_s']}")
-    results.append({
-        'params': (n, s),
-        'success': success,
-        'confidence': result.get('confidence', 0)
-    })
-```
-
-## Advanced Usage
-
-### Custom Oracle Implementation
-```python
-# While the built-in oracle works for the standard Simon problem,
-# you can implement custom periodic functions
-
-def create_custom_simon_function(n, s):
-    """
-    Create a custom 2-to-1 function with period s
-    This is for understanding - the algorithm uses built-in oracle
-    """
-    s_int = int(s, 2)
-    
-    def f(x):
-        # Simple implementation: f(x) = x & (~s_int & ((1 << n) - 1))
-        # This ensures f(x) = f(x XOR s)
-        return x & (~s_int & ((1 << n) - 1))
-    
-    return f
-
-# Example usage (for verification only)
-f = create_custom_simon_function(3, '101')
-print(f"f(0) = {f(0)}, f(0⊕5) = f({0^5}) = {f(0^5)}")  # Should be equal
-```
-
-### Performance Profiling
-```python
+import os
 import time
 
-for n in range(2, 6):
-    s = bin(1)[2:].zfill(n)  # Secret: '0...01'
-    start = time.time()
-    result = simon.run(s_target=s, backend='torch')
-    elapsed = time.time() - start
-    
-    success = result['status'] == 'ok'
-    print(f"n={n}: {elapsed:.4f}s - Status: {'✓' if success else '✗'}")
-```
+from engine import GateSequence, Register, ClassicalRegister, State
 
-### Error Handling and Retry
-```python
-max_retries = 3
-attempt = 0
-success = False
 
-while attempt < max_retries and not success:
-    try:
-        result = simon.run(s_target='1010', backend='torch')
-        if result['status'] == 'ok':
-            success = True
-            break
-    except Exception as e:
-        print(f"Attempt {attempt+1} failed: {e}")
-    attempt += 1
-
-if not success:
-    print("All attempts failed")
-```
-
-### Understanding the Oracle Construction
-```python
-# The built-in oracle implements the Simon function
-# For s='101', it pairs inputs that differ by s:
-# f(000) = f(101) = some value
-# f(001) = f(100) = some other value
-# etc.
-
-# The oracle is constructed using CNOT gates
-# This creates the required entanglement for interference
-```
-
-## Implementing Your Own Simon Algorithm
-
-### Core Components to Implement
-
-#### 1. Linear Algebra over GF(2)
-```python
-def gf2_add(a, b):
-    """Addition in GF(2) (XOR)"""
-    return a ^ b
-
-def gf2_dot_product(vec1, vec2):
-    """Dot product over GF(2)"""
-    return sum(x * y for x, y in zip(vec1, vec2)) % 2
-
-def gf2_gaussian_elimination(matrix):
-    """
-    Solve system of linear equations over GF(2)
-    Returns solution vector
-    """
-    rows, cols = len(matrix), len(matrix[0])
-    
-    # Forward elimination
-    for i in range(min(rows, cols)):
-        # Find pivot
-        pivot_row = -1
-        for j in range(i, rows):
-            if matrix[j][i] == 1:
-                pivot_row = j
-                break
-        
-        if pivot_row == -1:
-            continue  # No pivot in this column
-        
-        # Swap rows
-        matrix[i], matrix[pivot_row] = matrix[pivot_row], matrix[i]
-        
-        # Eliminate below
-        for j in range(i+1, rows):
-            if matrix[j][i] == 1:
-                for k in range(cols):
-                    matrix[j][k] ^= matrix[i][k]
-    
-    # Back substitution
-    solution = [0] * cols
-    for i in range(min(rows, cols)-1, -1, -1):
-        if matrix[i][i] == 0:
-            continue
-        solution[i] = matrix[i][-1]
-        for j in range(i+1, cols-1):
-            solution[i] ^= (matrix[i][j] * solution[j])
-    
-    return solution
-```
-
-#### 2. Simon Oracle Construction
-```python
-def build_simon_oracle(n, s):
-    """
-    Construct the Simon oracle matrix
-    For s='101', pairs inputs that differ by s
-    """
-    dim = 2**(2*n)
-    oracle = np.eye(dim, dtype=complex)
-    
-    s_int = int(s, 2)
-    for x in range(2**n):
-        y = x ^ s_int  # x XOR s
-        if x < y:  # Avoid double counting
-            # Swap |x⟩|f(x)⟩ and |y⟩|f(y)⟩
-            # This creates the required periodicity
-            idx1 = x * (2**n) + (x % (2**n))  # Simplified
-            idx2 = y * (2**n) + (y % (2**n))
-            # Swap amplitudes (simplified implementation)
-            pass
-    
-    return oracle
-
-def apply_simon_oracle(state_vector, n, s):
-    """
-    Apply Simon oracle to quantum state
-    """
-    s_int = int(s, 2)
-    new_state = np.copy(state_vector)
-    
-    for x in range(2**n):
-        y = x ^ s_int
-        if x < y:
-            # Swap amplitudes for paired states
-            temp = new_state[x]
-            new_state[x] = new_state[y]
-            new_state[y] = temp
-    
-    return new_state
-```
-
-#### 3. Basic Simon Algorithm Structure
-```python
-class BasicSimonAlgorithm:
+class SimonAlgorithm:
     def __init__(self):
-        self.backend = 'numpy'
-    
-    def run(self, s, num_measurements=100):
-        n = len(s)
-        if s == '0' * n:
-            raise ValueError("s cannot be all zeros")
-        
-        # Collect measurement results
-        measurements = []
-        
-        for _ in range(num_measurements):
-            # Simulate quantum circuit
-            y = self._simulate_measurement(n, s)
-            measurements.append(y)
-            
-            # Check if we have enough independent equations
-            if len(self._get_independent_equations(measurements, n)) >= n-1:
-                break
-        
-        # Solve the system
-        equations = self._get_independent_equations(measurements, n)
-        found_s = self._solve_equations(equations, n)
-        
-        return found_s
-    
-    def _simulate_measurement(self, n, s):
-        """Simulate a single quantum measurement"""
-        # In practice, this would run the full quantum circuit
-        # Here we simulate the expected behavior
-        
-        # Generate a random y orthogonal to s
-        s_int = int(s, 2)
-        
-        while True:
-            y_int = np.random.randint(0, 2**n)
-            if bin(s_int & y_int).count('1') % 2 == 0 and y_int != 0:
-                return format(y_int, f'0{n}b')
-    
-    def _get_independent_equations(self, measurements, n):
-        """Extract linearly independent equations"""
-        equations = []
-        for y in measurements:
-            y_vec = [int(bit) for bit in y]
-            if y_vec not in equations:
-                equations.append(y_vec)
-                if len(equations) >= n-1:
-                    break
-        return equations
-    
-    def _solve_equations(self, equations, n):
-        """Solve the linear system over GF(2)"""
-        if len(equations) < n-1:
-            return None
-        
-        # Set up augmented matrix
-        matrix = []
-        for eq in equations:
-            matrix.append(eq + [0])  # y · s = 0
-        
-        # Add the constraint that s is not all zeros
-        # This is handled by the free variable approach
-        
-        # Use Gaussian elimination
-        solution = gf2_gaussian_elimination(matrix)
-        
-        # Convert back to binary string
-        s_found = ''.join(map(str, solution))
-        return s_found
+        self.log_prefix = "INFO: "
+        self.last_result = None
+
+    def run(self, s_target='1010', backend='torch', algo_dir='./simon_results'):
+        n = len(s_target)
+        if s_target.find('1') == -1:
+            raise ValueError("secret string must not be all zeros")
+        if backend != 'torch':
+            raise ValueError("only torch backend is supported")
+
+        rx = Register('x', n)
+        ry = Register('y', n)
+        cqr = ClassicalRegister('cr', n)
+        gs = GateSequence(rx, ry, cqr, name=f'Simon_{s_target}', backend=backend)
+
+        gs.h(rx[:])
+        self._build_simon_oracle(gs, s_target)
+        gs.measure(ry[:], cqr[:])
+        gs.h(rx[:])
+
+        result_state = State(gs.execute())
+        basis_dict = result_state.calculate_state(range(n))
+        basis = self._get_basis_simple(list(basis_dict.keys()), n)
+        found_s = self._solve_simon_general(basis, n)
+
+        os.makedirs(algo_dir, exist_ok=True)
+        circuit_path = os.path.join(algo_dir, f"Simon_s_{s_target}_circuit.svg")
+        gs.draw(filename=circuit_path, title=f"Simon Algorithm (s={s_target})")
+
+        return {
+            "status": "ok" if found_s == s_target else "failed",
+            "found_s": found_s,
+            "circuit_path": circuit_path,
+        }
 ```
 
-## Best Practices
+### Required Pieces
 
-1. **Choose appropriate n**: Start small (n=2-4) for testing and verification
-2. **Verify orthogonality**: Check that collected equations satisfy y·s ≡ 0 (mod 2)
-3. **Number of runs**: Run quantum circuit ≥ n+1 times to get n independent equations
-4. **Linear independence**: Ensure collected equations are linearly independent
-5. **Backend selection**: Use 'torch' for GPU acceleration on GPU-equipped systems
-6. **Result validation**: Always verify found_s matches original period
+Your own implementation needs these parts:
 
-## Common Issues
+- a public `run()` method,
+- a Simon oracle builder,
+- Hadamards before and after the oracle,
+- a mid-circuit measurement of the `y` register,
+- extraction of basis vectors from the `x` register,
+- a classical solver over $\mathrm{GF}(2)$,
+- the same result packaging pattern.
 
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| Not enough equations | Insufficient circuit runs | Increase num_measurements (≥ n+10) |
-| Linearly dependent equations | Unlucky measurement outcomes | Run more times to collect independent equations |
-| Found wrong period | Measurement/linear algebra error | Enable verification mode and debug |
-| ImportError | Missing quantum framework | Install via pip; check PYTHONPATH |
-| Memory overflow | n too large for simulator | Use smaller n (max ~20-25 qubits) |
+### Classical Recovery Condition
 
-## Performance Characteristics
+Each sampled or extracted bit string `y` must satisfy:
 
-- **Quantum Queries**: O(n) vs Ω(2^(n/2)) classically
-- **Total Time**: O(n³) for Gaussian elimination + O(n·m) for quantum sampling
-- **Success Probability**: High (exponentially close to 1) with n+O(log n) runs
-- **Circuit Depth**: O(1) with oracle, O(n) QFT if used
+$$
+y \cdot s \equiv 0 \pmod 2
+$$
 
-## Simon vs Other Quantum Algorithms
+The classical post-processing stage recovers `s` from enough linearly independent equations of that form.
 
-| Algorithm | Problem | Quantum Time | Classical Time | Speedup |
-|-----------|---------|---|---|---|
-| Simon | Find hidden period | O(n) | Ω(2^n) | Exponential |
-| Deutsch-Jozsa | Balanced vs constant | O(1) | O(2^(n-1)) | Exponential |
-| Grover | Search |O(√N) | O(N) | Quadratic |
-| Shor (factoring) | Factor N | O(log³ N) | Sub-exponential | Exponential |
+---
 
-## Cryptographic Significance
+## Key Code Blocks
 
-### Simon's Problem in Cryptography
+### 1. Circuit Construction Pattern
 
-1. **Symmetric Cryptanalysis**: Finding collisions in block ciphers
-2. **Key Recovery**: Exploiting periodic structures if cipher leaks information
-3. **Quantum Meet-in-Middle**: Simon's algorithm applied to cryptanalysis
+This is the core setup used in the existing implementation:
 
-### Example Attack Scenario
-```
-Classical Meet-in-Middle:
-  Time: O(2^(n/2))
+```python
+from engine import Register, ClassicalRegister, GateSequence
+n = len(s_target)
 
-Quantum Simon's Attack:
-  Find period s in cipher behavior
-  Time: O(n) queries + O(n³) classical
-  Result: Exponential speedup
+rx = Register('x', n)
+ry = Register('y', n)
+cqr = ClassicalRegister('cr', n)
+gs = GateSequence(rx, ry, cqr, name=f'Simon_{s_target}', backend=backend)
+
+gs.h(rx[:])
+self._build_simon_oracle(gs, s_target)
+gs.measure(ry[:], cqr[:])
+gs.h(rx[:])
 ```
 
-### Real-World Applications
-- **Even-Mansour Construction**: Breaking certain block cipher designs
-- **Message Authentication Codes**: Finding periodic structures in MACs
-- **Hash Function Analysis**: Detecting hidden symmetries
+Meaning:
 
-## Mathematical Deep Dive
+- the first Hadamard layer creates a uniform superposition over inputs,
+- the oracle encodes the Simon promise,
+- the `y` register is measured mid-circuit,
+- the second Hadamard layer turns the hidden-period structure into linear constraints on `s`.
 
-### Why Hadamard Basis Measurement Works
-```
-Initial: |ψ⟩ = (1/√2^n) Σ_x |x⟩|f(x)⟩
+### 2. Oracle Construction
 
-After oracle: States with f(x) = f(y) interfere constructively/destructively
-Key observation: H^⊗n |x⟩ = (1/√2^n) Σ_y (-1)^(x·y) |y⟩
+This module uses the following oracle builder:
 
-Measurement biases toward y where y·s ≡ 0 (mod 2)
-```
+```python
+def _build_simon_oracle(self, gs, s):
+    n = len(s)
+    for i in range(n - 1, -1, -1):
+        gs.cx(i, i + n)
 
-### Linear Algebra over GF(2)
-```
-The measurement gives y such that y·s = 0 mod 2
-This gives one equation in GF(2) for each measurement
-
-With n-1 independent equations, we can solve for s
-The last bit is determined by the constraint s ≠ 0
+    pivot_idx = s.find('1')
+    for i in range(n):
+        if s[i] == '1':
+            gs.cx(n - 1 - pivot_idx, n - 1 - i + n)
 ```
 
-### Oracle Implementation Details
+Why it matters:
+
+- the first loop copies input structure from `x` into `y`,
+- the second loop uses the first `1` in `s` as a pivot,
+- every `1` in `s` adds the corresponding controlled-X relation needed to enforce the Simon promise.
+
+If you are writing your own version in this repository, this is the most important block to mirror.
+
+### 3. Extracting Equations from the Final State
+
+After execution, the current implementation derives equation candidates like this:
+
+```python
+from engine import State, GateSequence
+
+re_state = gs.execute()
+state_obj = State(re_state)
+state_basis_dict = state_obj.calculate_state(range(n))
 ```
-The Simon oracle must satisfy f(x) = f(x⊕s) for all x
-This is implemented using CNOT gates to create entanglement
 
-For s with bit i set, CNOT gates connect corresponding qubits
-This creates the required periodic structure in the quantum state
+Then it chooses a small linearly independent subset:
+
+```python
+basis = self._get_basis_simple(list(state_basis_dict.keys()), n)
 ```
 
-## References
+The selection routine is:
 
-1. Simon, D. R. (1994). "On the power of quantum computation"
-2. Nielsen, M. A., & Chuang, I. L. (2010). "Quantum Computation and Quantum Information"
-3. Boneh, D., & Shacham, H. (2002). "Fast Variants of RSA"
+```python
+def _get_basis_simple(self, state_list, n_qubits):
+    basis_list, seen_pivots = [], set()
+    for bin_str in state_list:
+        pivot = bin_str.find('1')
+        if pivot != -1 and pivot not in seen_pivots:
+            seen_pivots.add(pivot)
+            basis_list.append(bin_str)
+        if len(basis_list) == n_qubits - 1:
+            break
+    return basis_list
+```
+
+This is a lightweight independence heuristic rather than a full Gaussian elimination pass.
+
+### 4. Solving for the Hidden String
+
+The hidden string is reconstructed by back-substitution:
+
+```python
+def _solve_simon_general(self, basis_list, n):
+    s_vec = [0] * n
+    pivot_map = {y.find('1'): y for y in basis_list if y.find('1') != -1}
+    free_idx = next((i for i in range(n) if i not in pivot_map), -1)
+
+    if free_idx == -1:
+        return "Error"
+    s_vec[free_idx] = 1
+
+    for p in sorted(pivot_map.keys(), reverse=True):
+        y_vec = pivot_map[p]
+        dot_sum = 0
+        for j in range(p + 1, n):
+            if y_vec[j] == '1':
+                dot_sum ^= s_vec[j]
+        s_vec[p] = dot_sum
+    return "".join(map(str, s_vec))
+```
+
+This is the classical decision point that turns the orthogonality constraints into a candidate secret string.
+
+---
+
+## Practical Notes
+
+### Backend Limitation
+
+The implementation explicitly rejects non-`torch` backends, so use:
+
+```python
+backend='torch'
+```
+
+### Which Secrets To Try First
+
+Use short nonzero binary strings first, for example:
+
+- `11`
+- `101`
+- `1010`
+- `1101`
+
+These keep the circuit small and make it easier to inspect the generated SVG diagram.
+
+### Why the Algorithm Can Fail
+
+Failures are possible in this implementation when:
+
+- the extracted basis vectors are insufficient,
+- the pivot-based heuristic does not recover enough independent equations,
+- the reconstructed `found_s` does not match `s_target`.
+
+Unlike the textbook presentation, this module does not loop over many separate circuit executions, so its recovery strategy is tightly coupled to simulator state inspection.
+
+### Practical Limits
+
+This module is best treated as a simulator demonstration and educational reference. As `n` grows, state-vector simulation becomes expensive because the total quantum register width is `2n`.
+
+### Environment Expectation
+
+The repository README indicates the simulator depends on `unitarylab`, and the examples use the `torch` backend. Ensure the backend dependency is installed before running the algorithm.
+
+---
+
+## Summary
+
+Use this module when you want to:
+
+- demonstrate Simon's hidden-string workflow on the project simulator,
+- study a complete quantum-plus-classical implementation,
+- inspect how a Simon oracle is encoded with `GateSequence`,
+- build your own compatible version using the same circuit and return conventions.
+
+For first-time use, start with `SimonAlgorithm().run('1010', backend='torch')`. For contributors, treat `_build_simon_oracle()`, `_get_basis_simple()`, and `_solve_simon_general()` as the key reference points.

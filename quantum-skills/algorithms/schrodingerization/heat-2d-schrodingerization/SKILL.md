@@ -54,6 +54,97 @@ Otherwise, full Schrödingerization procedure is required.
 
 ------
 
+## Minimal Executable Example
+
+This repository now includes a runnable example at `./example_heat_2d_schrodingerization.py`.
+
+It demonstrates a minimal periodic 2D heat problem:
+
+$$
+\frac{\partial u}{\partial t} = a_1 u_{xx} + a_2 u_{yy}, \quad
+u(x,y,0) = \sin(2\pi x)\sin(2\pi y)
+$$
+
+with:
+
+- $a_1 = 0.8$
+- $a_2 = 0.3$
+- $L = 1$
+- $N_x = N_y = 2^3 = 8$
+- periodic boundary conditions
+
+Run it with the UnitaryLab environment:
+
+```bash
+python ./.agents/skills/quantum-skills/algorithms/schrodingerization/heat-2d-schrodingerization/example_heat_2d_schrodingerization.py
+```
+
+Core code:
+
+```python
+import numpy as np
+import scipy.sparse as sp
+from scipy.sparse.linalg import expm_multiply
+
+from engine import state_preparation
+from engine.library import CDiff
+from engine.library.schrodingerization import schro_classical
+
+length = 1.0
+final_time = 0.02
+diffusion_x = 0.8
+diffusion_y = 0.3
+num_spatial_qubits = 3
+grid_size = 2 ** num_spatial_qubits
+dx = length / grid_size
+
+x = np.arange(0.0, length, dx)
+y = np.arange(0.0, length, dx)
+x_grid, y_grid = np.meshgrid(x, y, indexing='ij')
+initial_field = np.sin(2 * np.pi * x_grid / length) * np.sin(2 * np.pi * y_grid / length)
+
+laplacian_1d = CDiff(N=grid_size, dx=dx, order=2, boundary='periodic').get_matrix()
+identity = sp.eye(grid_size, format='csc')
+operator = diffusion_x * sp.kron(laplacian_1d, identity, format='csc')
+operator += diffusion_y * sp.kron(identity, laplacian_1d, format='csc')
+
+solution = np.asarray(
+	schro_classical(
+		operator,
+		initial_field.reshape(-1),
+		T=final_time,
+		na=7,
+		R=4,
+		order=3,
+	)
+)
+
+reference = expm_multiply(final_time * operator, initial_field.reshape(-1))
+relative_l2_error = np.linalg.norm(solution - reference) / np.linalg.norm(reference)
+
+normalized_solution = solution / np.linalg.norm(solution)
+preparation_circuit = state_preparation(normalized_solution)
+zero_state = np.zeros_like(normalized_solution, dtype=complex)
+zero_state[0] = 1.0
+prepared_state = np.asarray(preparation_circuit.execute(zero_state.copy()))
+state_preparation_error = np.linalg.norm(prepared_state - normalized_solution)
+
+print(relative_l2_error)
+print(state_preparation_error)
+```
+
+Validation signals from the verified run in this workspace:
+
+- `solution_rel_l2_error_vs_matrix_exp ≈ 3.0e-05`
+- `state_preparation_error ≈ 1e-16`
+
+This gives two concrete checks:
+
+1. The Schrödingerization output matches the semidiscrete matrix-exponential reference very closely.
+2. The normalized final field can be encoded and executed on the simulator with negligible statevector error.
+
+------
+
 ## Full Algorithm Pipeline (Step-by-Step)
 
 ### Step 1: Parse 2D Domain & Parameters

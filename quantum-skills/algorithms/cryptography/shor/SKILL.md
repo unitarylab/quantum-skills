@@ -1,571 +1,395 @@
 ---
 name: shor
-description: Shor's algorithm - a quantum algorithm to factor large integers in polynomial time. Efficiently finds prime factors exponentially faster than classical algorithms.
-requirements:
-  - quantum computing framework (GateSequence, Register, State)
-  - numpy for matrix operations
-  - fractions for continued fraction expansion
-  - QFT/IQFT (Quantum/Inverse Quantum Fourier Transform) modules
-  - simulation backend (torch or similar)
+description: Shor integer factorization algorithm guide for using the quantum simulator implementation and for writing a compatible implementation from scratch
 ---
 
-# Shor's Integer Factoring Algorithm - Period Finding Problem Skill
+# Shor Integer Factorization Guide
 
-## Overview
-**Shor's Algorithm** is a quantum algorithm that factors large integers in polynomial time, exponentially faster than any known classical algorithm. Given a composite integer N, the algorithm finds its prime factors by exploiting quantum parallelism to find the period of a modular exponential function.
 
-### Why Shor's Algorithm Matters
-- **Cryptographic Impact**: Breaks RSA encryption and threatens internet security
-- **Complexity**: O((log N)³) quantum time vs sub-exponential classical time (exponential speedup)
-- **Foundational**: First quantum algorithm to demonstrate exponential advantage
-- **Real-world Threat**: Endangers current public-key cryptography infrastructure
+## What It Does
 
-## Mathematical Background
+This module implements **Shor's algorithm** for integer factorization.
 
-### The Integer Factoring Problem
-- **Input**: Composite integer N to be factored
-- **Promise**: N is not prime and not a prime power
-- **Goal**: Find non-trivial factors p, q such that N = p × q
-- **Hardness**: Classical algorithms require sub-exponential time O(exp(c(log N)^(1/3)(log log N)^(2/3)))
+Given a composite integer $N$, it tries to find non-trivial factors of $N$ by reducing factorization to **order finding** for:
 
-### Period Finding and Factoring
-The quantum algorithm reduces factoring to finding the period of the function:
+$$f(x) = a^x \bmod N$$
 
-```
-f(x) = a^x mod N
-```
+The implementation combines:
+- fast classical exits for easy cases,
+- a quantum period-finding circuit built with `GateSequence`,
+- classical continued-fraction post-processing,
+- automatic retry logic over random bases `a`.
 
-where a is randomly chosen such that gcd(a, N) = 1.
+This is important because classical integer factorization is hard for large inputs, while Shor's algorithm can solve the order-finding subproblem in polynomial time on a quantum computer.
 
-If f has period r (smallest r such that a^r ≡ 1 mod N), and r is even with a^(r/2) ≢ -1 mod N, then:
+---
 
-```
-p = gcd(a^(r/2) - 1, N)
-q = gcd(a^(r/2) + 1, N)
-```
+## How This Implementation Works
 
-give non-trivial factors of N.
+The public entry point is the `ShorAlgorithm` class in `algorithm.py`.
 
-### Key Quantum Concepts
+### Main Flow
 
-**1. Quantum Phase Estimation**
-- Classical: Finds eigenvalues of unitary operators
-- Quantum: Estimates phase e^(2πiθ) with high precision
-- Application: Extracts periodic information from quantum superpositions
+The `run()` method follows this structure:
 
-**2. Modular Exponentiation**
-```
-U_a |y⟩ = |a·y mod N⟩
-```
-- Creates controlled modular multiplication
-- Enables quantum evaluation of a^x mod N for all x simultaneously
+1. Check whether `N` is even.
+2. Randomly choose a base `a` with `2 <= a <= N-1`.
+3. If `gcd(a, N) > 1`, return factors classically.
+4. Build a quantum circuit for modular exponentiation and inverse QFT.
+5. Simulate the circuit with the selected backend.
+6. Measure the counting register and estimate the phase.
+7. Use continued fractions to infer the period `r`.
+8. Convert `r` into candidate factors.
+9. Retry with a new `a` if the attempt is invalid.
 
-**3. Continued Fractions**
-- Classical tool for Diophantine approximation
-- Quantum measurement gives s/2^n ≈ k/r
-- Extracts period r from measurement outcomes
+### Supported Circuit Construction Modes
 
-## Algorithm Structure
+The implementation supports two methods:
 
-### The Five-Phase Shor's Algorithm
+- `matrix`: builds controlled modular multiplication from an explicit permutation matrix.
+- `operator`: builds modular multiplication from arithmetic subcircuits.
 
-#### Phase 1: Classical Pre-Processing
-```
-1. Check if N is even: if N % 2 == 0, return [2, N//2]
-2. Choose random a ∈ [2, N-1]
-3. Compute g = gcd(a, N): if g > 1, return [g, N//g]
-4. Verify gcd(a, N) = 1, otherwise retry
-```
+The `matrix` method is easier to understand and is the best starting point for users trying the algorithm for small `N`.
 
-#### Phase 2: Quantum Circuit Construction
-```
-1. Set register sizes: n_count = 2·⌈log₂N⌉, n_work = ⌈log₂N⌉
-2. Initialize: |0⟩^(n_count) ⊗ |1⟩^(n_work)
-3. Create superposition: H^⊗(n_count) on counting register
-4. Apply controlled modular exponentiation oracle
-5. Apply inverse QFT: IQFT on counting register
-```
+### Register Sizing
 
-#### Phase 3: Quantum Execution
-```
-1. Execute quantum circuit
-2. Measure counting register to get integer s
-3. Extract phase information: θ = s / 2^(n_count)
-```
+For an input integer `N`:
 
-#### Phase 4: Classical Post-Processing
-```
-1. Apply continued fraction expansion to θ
-2. Find best rational approximation k/r
-3. Verify r is valid period: a^r ≡ 1 mod N
-4. Check conditions: r even and a^(r/2) ≢ -1 mod N
-```
-
-#### Phase 5: Factor Extraction
-```
-1. Compute a^(r/2) mod N
-2. Calculate p = gcd(a^(r/2) - 1, N)
-3. Calculate q = gcd(a^(r/2) + 1, N)
-4. Verify p·q = N and p,q are non-trivial factors
-```
-
-## Installation & Setup
-
-### Prerequisites
-```bash
-# Required Python packages
-pip install numpy
-pip install torch  # or tensorflow for alternative backend
-pip install fractions  # Built-in Python module
-```
-### Configuration
-Create configuration settings:
 ```python
-CONFIG = {
-    'backend': 'torch',
-    'output_dir': './shor_results',
-    'max_qubits': 30,
-    'max_retries': 15,
-    'seed': 42
-}
+n_work = N.bit_length()
+n_count = 2 * n_work
 ```
 
-## Key Methods
+Then:
 
-### `ShorAlgorithm.run(N, method='matrix', backend='torch', max_retries=15, algo_dir='./shor_results')`
-**Parameters**:
-- `N` (int): The composite number to factor
-- `method` (str): Implementation method ('matrix' or 'operator')
-- `backend` (str): Simulation backend ('torch', 'numpy')
-- `max_retries` (int): Maximum attempts with different random a values
-- `algo_dir` (str): Directory for output files
+- `matrix` mode uses `n_work_actual = n_work`
+- `operator` mode uses `n_work_actual = n_work * 2 + 2`
 
-**Returns**: Dictionary with:
-- `status`: 'ok' or 'failed'
-- `factors`: List of prime factors found
-- `period`: The discovered period r (or None)
-- `circuit_path`: Path to SVG circuit diagram (or None)
-- `message`: Status message
-- `plot`: ASCII-formatted result summary
+Total qubits:
 
-### `_get_modular_matrix(a, N, n_qubits)`
-Creates unitary matrix for modular multiplication by a modulo N.
-
-### `_build_modular_matrix_circuit(gs, n_count, n_work, a, N)`
-Builds controlled modular exponentiation using matrix method.
-
-### `_build_modular_operator_circuit(gs, n_count, n_work, n_work_actual, a, N, backend)`
-Builds controlled modular exponentiation using operator method.
-
-## Step-by-Step Usage Guide
-
-### Step 1: Import and Setup
 ```python
-from shor.algorithm import ShorAlgorithm
-import os
+total_qubits = n_count + n_work_actual
+```
 
-# Create algorithm instance
+---
+
+## Using the Existing Implementation
+
+### Import Path
+
+You can import Shor from either of these paths:
+
+```python
+from algorithms.cryptology import ShorAlgorithm
+```
+
+### Quickstart
+
+```python
+from algorithms.cryptology import ShorAlgorithm
+
 shor = ShorAlgorithm()
 
-# Set output directory
-output_dir = './shor_results'
-os.makedirs(output_dir, exist_ok=True)
-```
-
-### Step 2: Choose Number to Factor
-```python
-# Example: Factor N = 15 = 3 × 5
-N = 15
-
-# Alternative examples:
-# N = 21 = 3 × 7
-# N = 35 = 5 × 7
-# N = 51 = 3 × 17
-# N = 91 = 7 × 13
-
-print(f"Factoring N = {N}")
-```
-
-### Step 3: Execute Shor's Algorithm
-```python
-# Run with matrix method (recommended for beginners)
 result = shor.run(
-    N=N,
+    N=15,
     method='matrix',
     backend='torch',
     max_retries=15,
-    algo_dir=output_dir
+    algo_dir='./shor_results'
 )
+
+print(result['status'])
+print(result['factors'])
+print(result['period'])
+print(result['circuit_path'])
+print(result['message'])
+print(result['plot'])
 ```
 
-### Step 4: Analyze the Results
+### Recommended First Example
+
+Use `N = 15` first. It is small, standard for demos, and aligns with the existing module default example.
+
 ```python
-# Check success and display results
-print(result['plot'])  # ASCII-formatted summary
+from algorithms.cryptology import ShorAlgorithm
+
+shor = ShorAlgorithm()
+result = shor.run(15, method='matrix', backend='torch')
 
 if result['status'] == 'ok':
-    factors = result['factors']
-    period = result['period']
-    print(f"✓ Successfully factored {N} = {factors[0]} × {factors[1]}")
-    print(f"Found period r = {period}")
-    
-    # Manual verification
-    if len(factors) == 2:
-        product = factors[0] * factors[1]
-        if product == N:
-            print(f"✓ Verification: {factors[0]} × {factors[1]} = {product}")
-        else:
-            print(f"✗ Verification failed: {product} ≠ {N}")
+    p, q = result['factors']
+    print(f"Success: {p} * {q} = {p*q}")
 else:
-    print(f"✗ Algorithm failed: {result.get('message', 'Unknown error')}")
+    print(f"Failed: {result['message']}")
 ```
 
-### Step 5: Examine Quantum Circuit
+### Return Value
+
+The `run()` method returns a dictionary with this structure:
+
 ```python
-# The circuit diagram is automatically saved
-circuit_path = result.get('circuit_path')
-if circuit_path:
-    print(f"Circuit diagram saved to: {circuit_path}")
-    
-    # Open in browser or image viewer
-    import webbrowser
-    webbrowser.open(circuit_path)
+{
+    "status": "ok" or "failed",
+    "factors": [p, q],
+    "period": r,
+    "circuit_path": "./shor_results/...svg" or None,
+    "message": "runtime summary",
+    "plot": "formatted ASCII report"
+}
 ```
 
-### Step 6: Batch Testing with Different Numbers
-```python
-# Test factoring multiple numbers
-test_cases = [15, 21, 35, 51, 91]
+### Output Behavior
 
-results = []
-for N in test_cases:
-    result = shor.run(N=N, method='matrix', backend='torch')
-    success = result['status'] == 'ok'
-    
-    status = "✓" if success else "✗"
-    factors = result.get('factors', [])
-    factors_str = f"{factors[0]}×{factors[1]}" if len(factors) == 2 else "N/A"
-    print(f"{status} N={N} -> {factors_str}")
-    
-    results.append({
-        'N': N,
-        'success': success,
-        'factors': factors
-    })
+On success, the module also:
+
+- caches the full result in `self.last_result`,
+- saves a circuit diagram to `algo_dir`,
+- renders an ASCII summary through `format_result_ascii()`.
+
+You can inspect the cached result after a run:
+
+```python
+shor = ShorAlgorithm()
+shor.run(15)
+
+last = shor.last_result
+print(last['N'])
+print(last['a'])
+print(last['period'])
+print(last['computation_time'])
 ```
 
-## Advanced Usage
+---
 
-### Comparing Matrix vs Operator Methods
+## Writing Your Own Version
+
+If you want to implement your own compatible Shor module, keep the same high-level structure.
+
+### Minimal Class Skeleton
+
 ```python
-# Test both implementation methods
-methods = ['matrix', 'operator']
+import math
+import random
+from fractions import Fraction
 
-for method in methods:
-    result = shor.run(N=15, method=method, backend='torch')
-    success = result['status'] == 'ok'
-    factors = result.get('factors', [])
-    
-    print(f"Method {method}: {'✓' if success else '✗'} -> {factors}")
-```
+from engine import GateSequence, State, IQFT
 
-### Custom Backend Selection
-```python
-# Use different simulation backends
-backends = ['torch', 'numpy']
-
-for backend in backends:
-    result = shor.run(N=15, method='matrix', backend=backend)
-    print(f"Backend {backend}: status={result['status']}")
-```
-
-### Performance Benchmarking
-```python
-import time
-
-# Test with different composite numbers
-test_numbers = [15, 21, 35, 51, 91]
-
-for N in test_numbers:
-    start = time.time()
-    result = shor.run(N=N, method='matrix', backend='torch')
-    elapsed = time.time() - start
-    
-    success = result['status'] == 'ok'
-    factors = result.get('factors', [])
-    print(f"N={N}: {elapsed:.4f}s - Status: {'✓' if success else '✗'} - Factors: {factors}")
-```
-
-### Analyzing Quantum Measurements
-```python
-# Run with detailed output
-result = shor.run(N=15, method='matrix', backend='torch')
-
-# Access measurement details (if available in result)
-if 'measure_int' in result:
-    measure_int = result['measure_int']
-    measure_bin = result['measure_bin']
-    phase = result['phase']
-    
-    print("Quantum measurement details:")
-    print(f"  Measured integer: {measure_int}")
-    print(f"  Binary representation: {measure_bin}")
-    print(f"  Phase: {phase:.6f}")
-    print(f"  Estimated period: {result.get('period')}")
-```
-
-## Implementing Your Own Shor Algorithm
-
-### Core Components to Implement
-
-#### 1. Classical Helper Functions
-```python
-def mod_pow(base, exp, mod):
-    """Modular exponentiation using fast exponentiation"""
-    result = 1
-    base = base % mod
-    while exp > 0:
-        if exp % 2 == 1:
-            result = (result * base) % mod
-        exp = exp >> 1
-        base = (base * base) % mod
-    return result
-
-def extended_gcd(a, b):
-    """Extended Euclidean algorithm for gcd and coefficients"""
-    if a == 0:
-        return b, 0, 1
-    gcd, x1, y1 = extended_gcd(b % a, a)
-    x = y1 - (b // a) * x1
-    y = x1
-    return gcd, x, y
-
-def mod_inverse(a, m):
-    """Compute modular inverse using extended gcd"""
-    gcd, x, y = extended_gcd(a, m)
-    if gcd != 1:
-        raise ValueError(f"Modular inverse doesn't exist for {a} mod {m}")
-    return x % m
-```
-
-#### 2. Continued Fraction Expansion
-```python
-def continued_fractions(a, b, max_terms=20):
-    """Compute continued fraction expansion of a/b"""
-    cf = []
-    for _ in range(max_terms):
-        cf.append(a // b)
-        a, b = b, a % b
-        if b == 0:
-            break
-    return cf
-
-def convergents(cf):
-    """Compute convergents from continued fraction"""
-    h, k = [0, 1], [1, 0]
-    for q in cf:
-        h.append(q * h[-1] + h[-2])
-        k.append(q * k[-1] + k[-2])
-    return list(zip(h[1:], k[1:]))
-
-def find_period_from_phase(phase, N, max_denominator=None):
-    """Find period r from phase measurement"""
-    if max_denominator is None:
-        max_denominator = N
-    
-    frac = Fraction(phase).limit_denominator(max_denominator)
-    return frac.denominator, frac.numerator
-```
-
-#### 3. Modular Arithmetic Oracle
-```python
-def create_modular_exponentiation_oracle(a, N, n_qubits):
-    """
-    Create controlled modular exponentiation oracle
-    U |x⟩|y⟩ = |x⟩|y ⊕ f(x)⟩ where f(x) = a^x mod N
-    """
-    dim = 2**n_qubits
-    # This is a simplified version - full implementation requires
-    # quantum circuit construction
-    pass
-
-def create_qft_oracle(n_qubits):
-    """Create quantum Fourier transform oracle"""
-    dim = 2**n_qubits
-    omega = np.exp(2j * np.pi / dim)
-    
-    qft_matrix = np.zeros((dim, dim), dtype=complex)
-    for i in range(dim):
-        for j in range(dim):
-            qft_matrix[i, j] = omega**(i * j)
-    
-    qft_matrix /= np.sqrt(dim)
-    return qft_matrix
-```
-
-#### 4. Basic Shor Algorithm Structure
-```python
-class BasicShorAlgorithm:
+class ShorAlgorithm:
     def __init__(self):
-        self.backend = 'numpy'
-    
-    def run(self, N, max_retries=10):
-        # Phase 1: Classical pre-processing
+        self.last_result = None
+
+    def run(self, N, method='matrix', backend='torch', max_retries=15, algo_dir='./shor_results'):
         if N % 2 == 0:
-            return [2, N // 2]
-        
-        for attempt in range(max_retries):
+            return {"status": "ok", "factors": [2, N // 2]}
+
+        for _ in range(max_retries):
             a = random.randint(2, N - 1)
-            if math.gcd(a, N) > 1:
-                return [math.gcd(a, N), N // math.gcd(a, N)]
-            
-            # Phase 2: Quantum period finding (simplified)
-            r = self._quantum_period_finding(a, N)
-            
-            if r is None or r % 2 == 1:
-                continue
-                
-            # Phase 3: Factor extraction
-            factors = self._extract_factors(a, r, N)
-            if factors:
-                return factors
-        
-        return None  # Failed
-    
-    def _quantum_period_finding(self, a, N):
-        """Simplified quantum period finding simulation"""
-        # In practice, this would run the full quantum circuit
-        # Here we simulate the expected behavior
-        
-        # Simulate measurement outcome
-        n_count = 2 * N.bit_length()
-        s = random.randint(0, 2**n_count - 1)
-        phase = s / (2**n_count)
-        
-        # Extract period using continued fractions
-        r, _ = find_period_from_phase(phase, N)
-        
-        # Verify it's a valid period
-        if mod_pow(a, r, N) == 1:
-            return r
-        return None
-    
-    def _extract_factors(self, a, r, N):
-        """Extract factors from period"""
-        if r % 2 == 1:
-            return None
-            
-        ar2 = mod_pow(a, r // 2, N)
-        if ar2 == N - 1:  # Trivial case
-            return None
-            
-        p = math.gcd(ar2 - 1, N)
-        q = math.gcd(ar2 + 1, N)
-        
-        if p > 1 and q > 1 and p * q == N:
-            return [p, q]
-        return None
+            gcd_val = math.gcd(a, N)
+            if gcd_val > 1:
+                return {"status": "ok", "factors": [gcd_val, N // gcd_val]}
+
+            n_work = N.bit_length()
+            n_count = 2 * n_work
+            total_qubits = n_count + n_work
+
+            gs = GateSequence(total_qubits, backend=backend)
+            gs.h(range(n_count))
+            gs.x(n_count)
+
+            self._build_modular_matrix_circuit(gs, n_count, n_work, a, N)
+            gs.append(IQFT(n_count, backend=backend), range(n_count))
+
+            result_vector = gs.execute()
+            measure_bin = State(result_vector).measure(range(n_count), endian='little')
+            measure_int = int(measure_bin, 2)
+
+            phase = measure_int / (2 ** n_count)
+            r = Fraction(phase).limit_denominator(N).denominator
+
+            if r % 2 == 0:
+                guess = pow(a, r // 2, N)
+                if guess not in (1, N - 1):
+                    p = math.gcd(guess - 1, N)
+                    if p > 1 and N % p == 0:
+                        return {"status": "ok", "factors": [p, N // p], "period": r}
+
+        return {"status": "failed", "factors": []}
 ```
 
-## Best Practices
+### Required Pieces
 
-1. **Choose appropriate N**: Start with small composites (N<100) for testing and verification
-2. **Use matrix method**: 'matrix' method is simpler and more reliable for beginners
-3. **Set reasonable retries**: max_retries=10-20 is usually sufficient
-4. **Verify results**: Always check that p×q = N for found factors
-5. **Backend selection**: Use 'torch' for GPU acceleration when available
-6. **Circuit visualization**: Examine generated circuit diagrams for debugging
+Your own implementation needs these parts:
 
-## Common Issues
+- a public `run()` method that orchestrates retry, circuit construction, simulation, and post-processing,
+- a modular multiplication implementation,
+- inverse QFT on the counting register,
+- measurement of the counting register,
+- continued-fraction reconstruction of the period,
+- factor extraction from the recovered period.
 
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| Algorithm fails | Bad random a choice | Increase max_retries |
-| Wrong factors | Invalid period found | Verify period: a^r ≡ 1 mod N |
-| Memory overflow | N too large | Use smaller N for testing |
-| ImportError | Missing dependencies | Install numpy, torch |
-| No factors found | Trivial period cases | Algorithm handles automatically |
+### Core Mathematical Condition
 
-## Performance Characteristics
+After estimating the order `r`, factor extraction depends on:
 
-- **Quantum Queries**: O(log N) for period finding
-- **Total Time**: O((log N)³) polynomial time
-- **Success Probability**: High with multiple random a trials
-- **Circuit Depth**: O(log N) with optimized modular arithmetic
+1. `r` must be even.
+2. `a^(r/2) mod N` must not be `1`.
+3. `a^(r/2) mod N` must not be `N - 1`.
 
-## Shor vs Other Quantum Algorithms
+Then candidate factors come from:
 
-| Algorithm | Problem | Quantum Time | Classical Time | Impact |
-|-----------|---------|---|---|---|
-| Shor (Factoring) | Factor N | O((log N)³) | Sub-exp | Breaks RSA |
-| Shor (DL) | Find x: g^x=y mod P | O((log P)³) | Sub-exp | Breaks D-H, ECC |
-| Grover | Search | O(√N) | O(N) | Quadratic speedup |
-| Deutsch-Jozsa | Balanced vs constant | O(1) | O(2^(n-1)) | Exponential |
+```python
+import math
 
-## Cryptographic Significance
-
-### Breaking Modern Cryptography
-
-**1. RSA Cryptosystem**
-```
-Classical: Security based on factoring hardness
-Quantum: Private keys recoverable in polynomial time
-Impact: All RSA-based systems vulnerable
+p = math.gcd(pow(a, r // 2, N) - 1, N)
+q = math.gcd(pow(a, r // 2, N) + 1, N)
 ```
 
-**2. Digital Signatures**
-```
-RSA signatures: Based on factoring
-Quantum: Signatures forgeable, private keys recoverable
-Impact: Certificate authorities, code signing compromised
-```
+---
 
-**3. Key Exchange Protocols**
-```
-Diffie-Hellman: Based on discrete log (broken by Shor)
-Quantum: Session keys recoverable
-Impact: TLS/SSL, IPsec, VPNs at risk
-```
+## Key Code Blocks
 
-### Post-Quantum Cryptography
-Shor's algorithm motivates development of:
-- **Lattice-based cryptography** (hard even for quantum computers)
-- **Hash-based signatures** (XMSS, LMS)
-- **Multivariate cryptography**
-- **Supersingular isogeny key exchange** (SIKE)
+### 1. Quantum Circuit Setup
 
-## Mathematical Deep Dive
+This is the core pattern used in the existing implementation:
 
-### Why Quantum Fourier Transform Works
-```
-The QFT transforms periodic states into peaked distributions:
-For periodic function f(x) = f(x+r), the QFT concentrates
-measurement probability around multiples of 2^n/r
+```python
+from engine import GateSequence, IQFT
 
-This allows extracting the period r from measurement statistics.
+n_work = N.bit_length()
+n_count = 2 * n_work
+total_qubits = n_count + n_work
+
+gs = GateSequence(total_qubits, name=f'Shor_N{N}_a{a}_matrix', backend=backend)
+gs.h(range(n_count))
+gs.x(n_count)
+
+self._build_modular_matrix_circuit(gs, n_count, n_work, a, N)
+gs.append(IQFT(n_count, backend=backend), range(n_count))
 ```
 
-### Continued Fractions and Diophantine Approximation
+Meaning:
+
+- `gs.h(range(n_count))` creates a superposition over counting states.
+- `gs.x(n_count)` initializes the work register to `|1⟩`.
+- modular multiplication writes phase information into the counting register.
+- `IQFT` converts phase information into a measurable frequency pattern.
+
+### 2. Matrix-Based Controlled Modular Multiplication
+
+This is the easiest part to reuse when building a small demonstration version:
+
+```python
+import numpy as np
+
+def _get_modular_matrix(self, a, N, n_qubits):
+    dim = 2 ** n_qubits
+    matrix = np.zeros((dim, dim))
+    for y in range(dim):
+        if y < N:
+            target = (a * y) % N
+        else:
+            target = y
+        matrix[target, y] = 1.0
+    return matrix
+
+
+def _build_modular_matrix_circuit(self, gs, n_count, n_work, a, N):
+    total_qubits = n_count + n_work
+    for q in range(n_count):
+        power_factor = pow(a, 2 ** q, N)
+        matrix = self._get_modular_matrix(power_factor, N, n_work)
+        gs.unitary(matrix, range(n_count, total_qubits), q, '1')
 ```
-Quantum measurement gives s/2^n ≈ k/r + ε
-Continued fraction expansion finds the best rational approximation:
 
-The convergents h_m/k_m satisfy |s/2^n - h_m/k_m| < 1/(k_m·k_{m+1})
+Why it works:
 
-For periodic functions, this recovers the exact period r.
+- each counting qubit controls multiplication by $a^{2^q} \bmod N$,
+- this is the standard repeated-squaring structure used in modular exponentiation,
+- the control pattern lets phase estimation recover the order of `a mod N`.
+
+### 3. Post-Processing the Measured Phase
+
+```python
+from fractions import Fraction
+
+from engine import State
+
+result_vector = gs.execute()
+result_state = State(result_vector)
+measure_bin = result_state.measure(range(n_count), endian='little')
+measure_int = int(measure_bin, 2)
+
+phase = measure_int / (2 ** n_count)
+r = Fraction(phase).limit_denominator(N).denominator
 ```
 
-### Modular Arithmetic in Quantum Circuits
+This is the bridge from quantum output to a classical period estimate.
+
+### 4. Factor Recovery
+
+```python
+import math
+
+if r % 2 == 0 and r > 0:
+    guess = pow(a, r // 2, N)
+    if guess != N - 1 and guess != 1:
+        p = math.gcd(guess - 1, N)
+        q = math.gcd(guess + 1, N)
 ```
-Controlled modular multiplication U_a |x⟩|y⟩ = |x⟩|a·y mod N⟩
-can be implemented using quantum adders and comparators.
 
-The circuit depth is O(log N) with carry-lookahead techniques.
-```
+This is the exact classical decision point where a valid order becomes a factorization.
 
-## References
+---
 
-1. Shor, P. W. (1994). "Algorithms for quantum computation: discrete logarithms and factoring"
-2. Nielsen, M. A., & Chuang, I. L. (2010). "Quantum Computation and Quantum Information"
-3. Bernstein, D. J. (2009). "Introduction to post-quantum cryptography"
-4. Mosca, M. (2018). "Cybersecurity in an era with quantum computers"
+## Practical Notes
+
+### Which Method Should You Try First?
+
+- Choose `matrix` if you want a compact, readable implementation for small examples.
+- Choose `operator` if you want to study arithmetic circuit construction in more detail.
+
+### When Runs Fail
+
+Failures are normal in Shor-style demonstrations. Common reasons:
+
+- the random base `a` does not yield a useful period,
+- the inferred period `r` is odd,
+- the value $a^{r/2} \bmod N$ is trivial,
+- the simulator cost grows quickly with larger `N`.
+
+This is why the module retries automatically with new random bases.
+
+### Practical Limits
+
+This implementation is best treated as a **quantum simulator demonstration** and an **educational reference**, not a large-scale factoring tool.
+
+As `N` grows:
+
+- qubit counts increase,
+- matrix dimensions grow exponentially,
+- simulation becomes expensive very quickly.
+
+### Suggested Learning Path
+
+1. Run `ShorAlgorithm().run(15, method='matrix')`.
+2. Read `_get_modular_matrix()` and `_build_modular_matrix_circuit()` first.
+3. Inspect how `IQFT` is appended.
+4. Trace the continued-fraction recovery of `r`.
+5. Only then move to the `operator` arithmetic subcircuit path.
+
+### Environment Expectation
+
+The repository README indicates the simulator depends on `unitarylab` and uses the `torch` backend in examples. Make sure the project dependencies and simulator backend are installed before running the algorithm.
+
+---
+
+## Summary
+
+Use this module when you want to:
+
+- demonstrate Shor's order-finding workflow on a simulator,
+- inspect a complete classical-plus-quantum factoring pipeline,
+- reuse a working matrix-based period-finding template,
+- extend the implementation with your own modular arithmetic circuit design.
+
+For first-time users, start with `N = 15` and `method='matrix'`. For contributors, treat the matrix path as the reference implementation and the operator path as the deeper circuit-engineering version.
