@@ -1,6 +1,6 @@
 ---
 name: simon
-description: Simon hidden-string algorithm guide for running the quantum simulator implementation and for writing a compatible implementation from scratch
+description: "Use for implementing, explaining, running, or debugging Simon's algorithm in this repository, especially for oracle construction, measurement interpretation, GF(2) post-processing, simulator state extraction, and compatible reimplementation."
 ---
 
 # Simon Hidden-String Guide
@@ -22,6 +22,24 @@ Given a target secret string such as `1010`, the implementation:
 - saves the circuit diagram and formats a readable result summary.
 
 This is useful both as a simulator demo of Simon's exponential query advantage and as a reference for writing a compatible implementation in this codebase.
+
+## Trigger Phrases (User Commands)
+
+This skill should be triggered when the user asks for Simon-algorithm tasks such as implementation, explanation, debugging, or adaptation to this repository.
+
+Typical trigger prompts include:
+
+- "Implement the Simon algorithm"
+- "Write a compatible SimonAlgorithm in this repository"
+- "Explain the run flow of the Simon hidden string algorithm"
+- "Help me debug why the Simon algorithm cannot find 's'"
+- "Build a Simon oracle using GateSequence"
+- "How to find Simon's 's' from measurement results using GF(2)"
+- "Run the Simon algorithm with secret 1010 on the torch backend"
+- "Create a SimonAlgorithm implementation compatible with engine.algorithms"
+- "Why does my Simon circuit fail to recover the hidden string?"
+
+To improve activation reliability, user requests should mention one or more of these keywords: `Simon`, `hidden string`, `oracle`, `GF(2)`, `SimonAlgorithm`, `GateSequence`, `torch backend`.
 
 ---
 

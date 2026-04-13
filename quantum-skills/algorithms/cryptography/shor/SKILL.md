@@ -1,9 +1,22 @@
 ---
 name: shor
-description: Shor integer factorization algorithm guide for using the quantum simulator implementation and for writing a compatible implementation from scratch
+description: Use this skill when the user asks for Shor integer factorization, quantum order-finding, period estimation, or implementing/running/debugging ShorAlgorithm in this repository (especially matrix/operator methods, IQFT-based phase post-processing, and continued-fraction period recovery). Keywords: shor, factor N, order finding, period finding, modular exponentiation, continued fraction, quantum factoring, ShorAlgorithm.
 ---
 
 # Shor Integer Factorization Guide
+
+## Trigger Examples
+
+This skill should be triggered when user input is about Shor factoring workflows in this repository.
+
+Typical trigger instructions include:
+
+- "Fold N=15 using Shor's algorithm, give me runnable code."
+- "Help me run/debug ShorAlgorithm, why does it keep failing?"
+- "Explain the relationship between order finding, period r, and continued fraction in this implementation."
+- "Change the matrix method to operator, or compare the differences between the two methods."
+- "Provide a minimal example of Shor, outputting factors, period, and circuit_path."
+- "Check if the modular exponentiation circuit and IQFT concatenation are correct."
 
 
 ## What It Does

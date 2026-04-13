@@ -1,6 +1,6 @@
 ---
 name: discretelog
-description: Quantum Discrete Logarithm Algorithm (Shor's DLG) - A comprehensive guide for solving g^x ≡ y (mod P) using quantum simulators
+description: "Use when users ask about solving the discrete logarithm problem g^x ≡ y (mod P) with Shor's quantum algorithm, building/explaining DLP circuits, running simulator demos, or debugging post-processing (continued fractions, order recovery, congruence solving). Triggers: discrete log, DLP, Shor discrete logarithm, g^x mod P, modular exponentiation, continued fractions, quantum cryptography demo."
 ---
 
 # 🔐 Discrete Logarithm Quantum Algorithm (Shor's DLG) Guide
@@ -27,6 +27,19 @@ This problem underpins:
 - ECDSA digital signatures
 
 Classical computers solve this in **sub-exponential time** → Quantum computers solve it in **polynomial time** (O(n³)).
+
+### Trigger Prompts (What Users Can Type)
+
+Use or trigger this skill when users input prompts like:
+
+- "Calculate the discrete logarithm using a quantum algorithm: g^x ≡ y (mod P)"
+- "Implement Shor's Discrete Logarithm Algorithm (DLP)"
+- "Write a discrete logarithm quantum circuit for me and explain each step"
+- "Why can't I find x in my continued fractions post-processing?"
+- "Give me a quantum simulation example of discrete logarithms (including IQFT)"
+- "How to recover r and x from measured u and v?"
+- "Please debug the issue of failing to recover r in DLP"
+- "Quantum cryptography demo: Breaking g^x ≡ y (mod P)"
 
 ---
 
