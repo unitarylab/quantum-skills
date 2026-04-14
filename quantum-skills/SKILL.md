@@ -28,21 +28,47 @@ Every `See reference:` line is a callable skill — open it before proceeding.
 ```
 Does the task require running / executing code?
 │
-├─ YES → Follow "UnitaryLab Installation" below before running anything
+├─ YES → Use uv workflow first (recommended), then fallback to conda if needed
+│       1) uv venv --python 3.11
+│       2) uv pip install ./dist/unitarylab-*.whl
+│       3) uv run python -c "import engine; print('UnitaryLab OK')"
+│       4) uv run python <your_script>.py
+│
+│       If uv is unavailable or fails due to local constraints,
+│       follow conda installation as fallback.
 │
 └─ NO  → Skip all installation. Explain, write, or review directly.
 ```
 
-### UnitaryLab Installation (default simulator)
+### UnitaryLab Installation (default simulator, uv first)
 
 The pre-built wheel is located at:
 ```
 .agents/skills/quantum-skills/simulators/unitarylab/dist/
-  unitarylab_engine-0.1.0-cp311-cp311-win_amd64.whl
+  unitarylab-0.1.0-cp311-cp311-win_amd64.whl
 ```
 
 **Requirements:** Python 3.11
 
+#### Using `uv` (Recommended, run this first)
+```bash
+# 1. Create local virtual environment
+uv venv --python 3.11
+
+# 2. Install UnitaryLab wheel
+uv pip install ./dist/unitarylab-*.whl
+
+# 3. Install common scientific dependencies
+uv pip install numpy, scipy, scikit-learn, matplotlib
+
+# 4. Verify
+uv run python -c "import engine; print('UnitaryLab OK')"
+
+# 5. Run user script
+uv run python <your_script>.py
+```
+
+#### Using `conda` (Fallback if uv is unavailable)
 ```bash
 # 1. Create environment (skip if unitarylab-env already exists)
 conda create -n unitarylab-env python=3.11
@@ -51,10 +77,13 @@ conda create -n unitarylab-env python=3.11
 conda activate unitarylab-env
 
 # 3. Install wheel  (run from the unitarylab/ skill folder)
-python -m pip install ./dist/unitarylab_engine-*.whl
+python -m pip install ./dist/unitarylab-*.whl
 
 # 4. Verify
 python -c "from engine import GateSequence; print('UnitaryLab OK')"
+
+# 5. Run user script
+python <your_script>.py
 ```
 
 If step 4 prints `UnitaryLab OK`, the environment is ready.
@@ -228,8 +257,9 @@ See reference: `./algorithms/schrodingerization/SKILL.md`
 ```
 User request
 │
-├─ "Which simulator should I use?" or "Set up environment"
+├─ "Which simulator should I use?" or "Set up environment" or "Run this code/script"
 │       └─ Read: ./simulators/SKILL.md
+│           └─ For execution: prefer uv setup + uv run first
 │
 ├─ "Solve a PDE / differential equation"
 │       └─ Read: ./algorithms/schrodingerization/SKILL.md

@@ -15,7 +15,7 @@ Choose it when you need:
 
 ---
 
-## Environment Installation — When to Act
+## Environment Installation
 
 > **Rule: Only install the environment when the user is about to run or execute code.**
 > If the task is explanation, circuit design, concept review, or code writing without execution, skip all installation steps and proceed directly to the relevant section.
@@ -58,6 +58,8 @@ The pre-built wheel is located in this skill folder:
 
 ```
 ./dist/unitarylab_engine-*.whl
+./dist/unitarylab-*.whl
+
 ```
 
 **Compatibility requirements:**
@@ -71,6 +73,15 @@ If the environment does not match these constraints, the wheel will fail to inst
 
 ### Step-by-Step Installation
 
+#### Using `uv` (Recommended)
+```bash
+uv venv --python 3.11
+uv pip install ./dist/unitarylab-*.whl
+uv pip install numpy, scipy, scikit-learn, matplotlib
+uv run python -c "import engine; print('UnitaryLab OK')"
+```
+
+#### Using `conda`
 ```bash
 # Step 1 — Create a Python 3.11 conda environment (skip if already exists)
 conda create -n unitarylab-env python=3.11
@@ -79,13 +90,16 @@ conda create -n unitarylab-env python=3.11
 conda activate unitarylab-env
 
 # Step 3 — Install UnitaryLab from the local wheel
-#          Run this from the directory containing the dist/ folder,
-#          i.e. from: .agents/skills/quantum-skills/simulators/unitarylab/
-python -m pip install ./dist/unitarylab_engine-*.whl
+python -m pip install ./dist/unitarylab-*.whl
 
 # Step 4 — Verify installation
-python -c "from engine import GateSequence; print('UnitaryLab OK')"
+python -c "import engine; print('UnitaryLab OK')"
 ```
+
+**Note**
+
+- Package name: `unitarylab`
+- Import name: `engine`
 
 ### Verify Before Running Any Script
 
@@ -129,7 +143,7 @@ print(probs)  # expected: [0.5, 0.0, 0.0, 0.5]
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `ModuleNotFoundError: engine` | Wheel not installed in active environment. | Run `pip install ./dist/unitarylab_engine-*.whl` in the active env. |
+| `ModuleNotFoundError: engine` | Wheel not installed in active environment. | Run `pip install ./dist/unitarylab-*.whl` in the active env. |
 | `Wheel is not supported on this platform` | Python version, OS, or architecture mismatch. | Use Python 3.11 on Windows x64, or switch to Qiskit/PennyLane on other platforms. |
 | Wrong conda environment active | `conda activate` not run. | Run `conda activate unitarylab-env` before executing. |
 | `engine` imports but results are wrong | Initial state not copied before passing to `execute()`. | Always pass `initial_state.copy()` to preserve the original. |
