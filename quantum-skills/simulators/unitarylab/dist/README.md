@@ -1,5 +1,6 @@
-# 原来的版本
-unitarylab_engine-0.1.0-cp311-cp311-win_amd64.whl
 
-# 自己打包的版本（从python-quantum-simulator库中打包的engine
+# windows 版本的 wheel 文件（从 python-quantum-simulator 库中打包）
 unitarylab-0.1.0-cp311-cp311-win_amd64.whl
+
+# Mac 版本的 wheel 文件（从 python-quantum-simulator 库中打包）
+unitarylab-0.1.0-cp311-cp311-macosx_11_0_0.whl
