@@ -1,9 +1,12 @@
 ---
 name: traffic-flow-schrodingerization-solver
 description: This skill enables the AI agent to solve the 1D Traffic Flow Equation (LWR model) using the Schrödingerization framework, which transforms a nonlinear conservation law into a linear unitary evolution problem suitable for both classical and quantum simulation.
-----
+---
 
-
+## One Step to Run Traffic Flow Example
+```bash
+python ./scripts/algorithm.py
+```
 
 # Skill: Traffic Flow Equation (Schrödingerization)
 
@@ -34,7 +37,7 @@ $$
 f(u) = u(1-u)
 $$
 
-------
+---
 
 ## **Level Set Lifting**
 
@@ -47,7 +50,7 @@ $$
 \partial_t \phi + \nabla_p f(p)\cdot \nabla_x \phi = 0
 $$
 
-------
+---
 
 ## **Schrödingerization**
 
@@ -60,11 +63,11 @@ $$
 H_C = A_1 \otimes D_\eta + A_2 \otimes I
 $$
 
-------
+---
 
 ## Agent Workflow (Step-by-Step with Code)
 
-------
+---
 
 ### Step 1 — Parse Input Parameters
 
@@ -84,7 +87,7 @@ def run(self, params: Optional[str] = None) -> Dict[str, Any]:
         return self._solve_trotter(eq)
 ```
 
-------
+---
 
 ### Step 2 — Construct Flux Function $f'(u)$
 
@@ -101,7 +104,7 @@ flowx = sympy.diff(flow, u)
 fx = sympy.lambdify(u, flowx, 'numpy')
 ```
 
-------
+---
 
 ### Step 3 — Discretize Spatial Domain
 
@@ -121,7 +124,7 @@ if bd == 'periodic':
 u0 = f0(x)
 ```
 
-------
+---
 
 ### Step 4 — Level Set Initialization
 
@@ -140,7 +143,7 @@ psi = np.where(abs(phi) > w, 0,
                (1 / w / 2) * (1 + np.cos(np.pi * phi / w)))
 ```
 
-------
+---
 
 ### Step 5 — Upwind Scheme Selection
 
@@ -156,7 +159,7 @@ if scheme == 'upwind':
         scheme = 'backward'
 ```
 
-------
+---
 
 ### Step 6 — Construct Differential Operator
 
@@ -176,7 +179,7 @@ A = A0.T * fxl
 b = b0 * fxl
 ```
 
-------
+---
 
 ### Step 7 — Classical Schrödinger Evolution
 
@@ -198,7 +201,7 @@ u_l = schro_classical(
 )
 ```
 
-------
+---
 
 ### Step 8 — Reconstruction via Level Set Integration
 
@@ -213,7 +216,7 @@ v_norm = v_norm + u_l * dl
 u = v / v_norm
 ```
 
-------
+---
 
 ### Step 9 — Quantum (Trotter) Evolution
 
@@ -240,7 +243,7 @@ u_l, qc = schro_trotter(
 )
 ```
 
-------
+---
 
 ### Step 10 — Generate Solution Plot
 
@@ -259,7 +262,7 @@ ax.set_xlabel("x")
 ax.set_ylabel("u(x,t)")
 ```
 
-------
+---
 
 ### Step 11 — Generate Quantum Circuit
 
@@ -274,7 +277,7 @@ H1.decompose().draw(filename=circuit_path2)
 H2.decompose().draw(filename=circuit_path3)
 ```
 
-------
+---
 
 ## Agent Capabilities Summary
 

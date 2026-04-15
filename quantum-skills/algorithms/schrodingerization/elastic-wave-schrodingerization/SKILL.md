@@ -3,16 +3,12 @@ name: elastic-wave-schrodingerization
 description: Quantum solver for 1D/2D isotropic elastic wave equations using Schrödingerization. Supports homogeneous or variable coefficient media, Dirichlet/periodic boundaries, and classical/Trotter quantum solvers. Outputs physical fields, plots, and quantum circuit diagrams.
 ---
 
+## One Step to Run Elastic Wave Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: Quantum Simulation of 1D/2D Elastic Wave Equations
-
-## Basic Information
-
-- **Skill ID**: `quantum_elastic_wave_simulation`
-- **Skill Name**: Quantum Solver for 1D/2D Elastic Wave Equations via Schrödingerization
-- **Domain**: Quantum Computing, Numerical PDEs, Geophysics, Material Mechanics
-- **Core Capability**: Implements quantum solution for **1D/2D isotropic elastic wave equations**. Supports homogeneous/variable coefficient media, Dirichlet/periodic boundaries, and classical/Trotter solvers. Automatically outputs field solutions, plots, and quantum circuits.
-
----
 
 ## 1. Mathematical Background
 

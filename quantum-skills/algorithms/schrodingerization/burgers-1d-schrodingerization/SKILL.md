@@ -2,17 +2,12 @@
 name: burgers-1d-schrodingerization
 description: A quantum-compatible solver for the 1D viscous Burgers’ equation using Schrödingerization and Cole-Hopf transformation to linearize the nonlinear PDE. Supports shock wave formation, viscous smoothing, and both classical and quantum Trotter-based evolution with circuit generation.
 ---
+## One Step to Run 1D Burgers Example
+```bash
+python ./scripts/algorithm.py
+```
 
-# Skill: Quantum Simulation for 1D Burgers’ Equation
-
-## Basic Information
-
-- **Skill ID**: `quantum_burgers_1d`
-- **Skill Name**: Quantum Solver for 1D Viscous Burgers’ Equation
-- **Domain**: Quantum Computing, Computational Fluid Dynamics, Nonlinear PDEs
-- **Core Purpose**: Solve the **1D viscous Burgers’ equation** using quantum Schrödingerization + **Cole-Hopf transformation** to linearize the nonlinear PDE. Supports shock wave capturing, viscous smoothing, and both classical matrix exponential and Trotter time-splitting quantum solvers.
-
----
+# Skill: Quantum Simulation for 1D Burgers' Equation
 
 ## 1. Mathematical Background
 

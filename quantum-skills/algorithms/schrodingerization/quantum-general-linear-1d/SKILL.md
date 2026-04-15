@@ -3,16 +3,12 @@ name: quantum-general-linear-1d
 description: Quantum solver for 1D general linear evolution equations via Schrödingerization. Supports arbitrary-order derivatives, multiple boundary conditions, and classical/Trotter quantum solvers. Outputs solution fields, plots, and quantum circuit diagrams.
 ---
 
+## One Step to Run General Linear PDE Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: Quantum Simulation of 1D General Linear PDEs
-
-## Basic Information
-
-- **Skill ID**: `quantum_general_linear_1d`
-- **Skill Name**: Quantum Solver for 1D General Linear Evolution Equations
-- **Domain**: Quantum Computing, PDEs, Scientific Computing
-- **Core Capability**: Solve **1D linear time-dependent PDEs** using Schrödingerization. Supports arbitrary-order derivatives, Dirichlet/Periodic/Neumann boundaries, classical/Trotter solvers, and automatic finite-difference assembly.
-
----
 
 ## 1. Mathematical Formulation
 

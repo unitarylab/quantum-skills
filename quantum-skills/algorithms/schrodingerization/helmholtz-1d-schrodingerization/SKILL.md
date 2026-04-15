@@ -3,16 +3,12 @@ name: helmholtz-1d-schrodingerization
 description: A quantum-compatible solver for the 1D Helmholtz equation using Schrödingerization via damped dynamical system reformulation. Supports radiation boundary conditions, preconditioning, and complex-valued steady-state wave solutions with quantum circuit generation.
 ---
 
+## One Step to Run 1D Helmholtz Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: Quantum Simulation for 1D Helmholtz Equation
-
-## Basic Information
-
-- **Skill ID**: `quantum_helmholtz_1d`
-- **Skill Name**: Quantum Solver for 1D Helmholtz Equation
-- **Domain**: Quantum Computing, Wave Propagation, Acoustics, Electromagnetism, PDEs
-- **Core Purpose**: Solve the **1D time-harmonic Helmholtz equation** using Schrödingerization via damped dynamical system (DDS) reformulation and quantum matrix exponential solver. Supports radiation boundary conditions and central difference discretization.
-
-------
 
 ## 1. Mathematical Background
 

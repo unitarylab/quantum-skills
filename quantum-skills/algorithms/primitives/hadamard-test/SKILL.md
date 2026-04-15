@@ -3,7 +3,7 @@ name: hadamard-test
 description: A quantum algorithm that uses the Hadamard test to estimate the expectation value of a unitary operator with respect to a given quantum state. This algorithm is fundamental in quantum computing and has applications in various quantum algorithms, including quantum phase estimation and variational quantum algorithms.
 ---
 
-# One Step to Run Hadamard Test Example
+## One Step to Run Hadamard Test Example
 ```bash
 python ./scripts/algorithm.py
 ```

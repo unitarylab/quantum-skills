@@ -3,7 +3,7 @@ name: quantum-phase-estimation
 description: A quantum phase estimation algorithm that can estimate the eigenvalues of a unitary operator with high precision, which is a fundamental component in many quantum algorithms such as Shor's algorithm and quantum simulation.
 ---
 
-# One Step to Run QPE Example
+## One Step to Run QPE Example
 ```bash
 python ./scripts/algorithm.py
 ```

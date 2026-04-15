@@ -1,7 +1,12 @@
 ---
 name: taylor
-description: "Use when: you need truncated-Taylor Hamiltonian simulation via LCU, with guidance on degree control, slice composition, and matrix-block extraction in this repository."
+description: Taylor-series Hamiltonian simulation via Linear Combination of Unitaries (LCU), approximating e^{-iHt} with a truncated polynomial expansion of the evolution operator.
 ---
+
+## One Step to Run Taylor Example
+```bash
+python ./scripts/algorithm.py
+```
 
 # Taylor-Series Hamiltonian Simulation Skill Guide
 

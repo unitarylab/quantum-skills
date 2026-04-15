@@ -3,7 +3,7 @@ name: hadamard-transform
 description: A quantum algorithm for performing the Hadamard transform, which is a fundamental operation in quantum computing that creates superposition states. This skill includes efficient implementations and educational resources for understanding and utilizing the Hadamard transform in various quantum algorithms and applications.
 --- 
 
-# One Step to Run Hadamard Transform Example
+## One Step to Run Hadamard Transform Example
 ```bash
 python ./scripts/algorithm.py
 ```

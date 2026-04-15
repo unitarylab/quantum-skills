@@ -1,18 +1,15 @@
 ---
-name: quantum-cryptography
-description: Comprehensive quantum cryptography and quantum algorithm attacks implementation guide, including BB84, E91, quantum key distribution, digital signature, Discrete Logarithm Problem solver, Shor's factorization algorithm, and Simon's hidden subgroup problem algorithm.
+name: cryptography
+description: Quantum algorithms that attack classical cryptographic protocols, including Shor's integer factorization, discrete logarithm solving, and Simon's hidden subgroup problem.
 ---
 
 # Quantum Cryptography Algorithms
 
-## Discrete Logarithm Problem (DLP) Solver
-   - Overview: A quantum algorithm for solving the discrete logarithm problem, breaking cryptographic protocols based on its hardness.
-   - Path reference: `./discretelog/SKILL.md`
+## 1. Shor's Algorithm
+See reference: `./shor/SKILL.md`
 
-## Shor's Algorithm
-   - Overview: A quantum algorithm for integer factorization, breaking RSA and other public-key cryptosystems.
-   - Path reference: `./shor/SKILL.md`
+## 2. Discrete Logarithm Problem (DLP) Solver
+See reference: `./discretelog/SKILL.md`
 
-## Simon's Algorithm
-   - Overview: A quantum algorithm for solving the hidden subgroup problem, demonstrating exponential speedup over classical methods.
-   - Path reference: `./simon/SKILL.md`
+## 3. Simon's Algorithm
+See reference: `./simon/SKILL.md`

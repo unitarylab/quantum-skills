@@ -1,6 +1,6 @@
 ---
 name: algorithms
-description: A collection of quantum algorithms implemented using UnitaryLab, covering amplitude amplification, variational algorithms, and quantum machine learning techniques. Provides efficient implementations and educational resources for quantum algorithm development.
+description: A collection of quantum algorithms implemented using UnitaryLab, covering primitives (QPE, amplitude amplification/estimation, Hadamard), linear-systems solvers (HHL, LCU, QSVT, QSP), cryptography (Shor, discrete log, Simon), Hamiltonian simulation (Trotter, QDrift, Taylor, QSP), and Schrodingerization PDE solvers.
 ---
 # Quantum Algorithms
 

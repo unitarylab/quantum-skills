@@ -2,7 +2,10 @@
 name: discretelog
 description: "Use when users ask about solving the discrete logarithm problem g^x ≡ y (mod P) with Shor's quantum algorithm, building/explaining DLP circuits, running simulator demos, or debugging post-processing (continued fractions, order recovery, congruence solving). Triggers: discrete log, DLP, Shor discrete logarithm, g^x mod P, modular exponentiation, continued fractions, quantum cryptography demo."
 ---
-
+## One Step to Run Discrete Log Example
+```bash
+python ./scripts/algorithm.py
+```
 # 🔐 Discrete Logarithm Quantum Algorithm (Shor's DLG) Guide
 
 ---
@@ -274,36 +277,36 @@ def format_result_ascii(self) -> str:
         return "No execution yet"
     
     res = self.last_result
-    status_emoji = '✅' if res['success'] else '❌'
+    status_emoji = 'PASS' if res['success'] else 'FAIL'
 
     return f"""
 {'='*70}
-⚛️  DISCRETE LOG (DLP) ALGORITHM EXECUTION RESULTS ⚛️
+DISCRETE LOG (DLP) ALGORITHM EXECUTION RESULTS
 {'='*70}
 
-📊 Status: {status_emoji} {'Successfully found discrete logarithm' if res['success'] else 'Failed to find solution'}
+Status: {status_emoji} {'Successfully found discrete logarithm' if res['success'] else 'Failed to find solution'}
 
 ─────────────────────────────────────────────────────────────
-🔢 Input Parameters
+Input Parameters
 ─────────────────────────────────────────────────────────────
   Equation: {res['g']}^x ≡ {res['y']} (mod {res['P']})
   Register size n: {res['n']}
 
 ─────────────────────────────────────────────────────────────
-🎯 Quantum Computation Results
+Quantum Computation Results
 ─────────────────────────────────────────────────────────────
   Computation time: {res['comp_time']:.4f} second(s)
   Detected order r: {res['r']}
 
 ─────────────────────────────────────────────────────────────
-🔓 Classical Post-Processing Results  
+Classical Post-Processing Results
 ─────────────────────────────────────────────────────────────
   Final solution x: {res['x'] if res['success'] else 'N/A'}
   Verification: {res['g']}^{res['x'] if res['success'] else '?'} ≡ {res['y']} (mod {res['P']}) {'✓' if res['success'] else '✗'}
 
 ─────────────────────────────────────────────────────────────
-📁 Output file: {res['path']}
-💡 Remarks: {res['msg']}
+Output file: {res['path']}
+Remarks: {res['msg']}
 {'='*70}
 """
 ```

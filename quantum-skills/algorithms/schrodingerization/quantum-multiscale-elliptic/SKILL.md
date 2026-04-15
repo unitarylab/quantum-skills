@@ -3,16 +3,12 @@ name: quantum-multiscale-elliptic
 description: Quantum simulation for 1D highly oscillatory multiscale elliptic equations using Schrödingerization. Supports both original fine-scale model and two-scale homogenization model, constructs FEM stiffness matrices, computes macro and micro solutions, and outputs quantum circuit diagrams.
 ---
 
+## One Step to Run Multiscale Elliptic Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: Quantum Algorithm for Multiscale Elliptic PDEs
-
-## Basic Information
-
-- **Skill ID**: `quantum_multiscale_elliptic`
-- **Skill Name**: Quantum Simulation for Multiscale Elliptic Equations (Homogenization + Schrödingerization)
-- **Domain**: Quantum Computing, Multiscale Modeling, Scientific Computing
-- **Core Capability**: Solve **1D highly oscillatory multiscale elliptic PDEs** using quantum Schrödingerization, supporting **original fine-scale model** and **two-scale homogenization model**.
-
-------
 
 ## 1. Theoretical Background
 

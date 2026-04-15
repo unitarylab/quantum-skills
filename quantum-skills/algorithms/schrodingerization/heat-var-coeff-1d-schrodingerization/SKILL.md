@@ -3,16 +3,12 @@ name: heat-var-coeff-1d-schrodingerization
 description: A quantum-compatible solver for the 1D heat equation with spatially varying diffusion coefficient using Schrödingerization. Supports periodic boundaries, variable a(x)=1+cos(2πx/L), classical and block quantum solvers, and generates 1D temperature profiles along with quantum circuit diagrams.
 ---
 
+## One Step to Run Variable-Coefficient Heat Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: Quantum Simulation for 1D Variable-Coefficient Heat Equation
-
-## Basic Information
-
-- **Skill ID**: `quantum_heat_var_coeff_1d`
-- **Skill Name**: Quantum Solver for 1D Variable-Coefficient Forward Heat Equation
-- **Domain**: Quantum Computing, Heat Conduction, PDEs, Nonhomogeneous Materials
-- **Core Purpose**: Solve the **1D heat equation with spatially varying thermal conductivity** using Schrödingerization quantum methods. Supports periodic boundaries, variable diffusivity $a(x)$, and classical/block solvers.
-
-------
 
 ## 1. Mathematical Background
 

@@ -3,6 +3,11 @@ name: shor
 description: Use this skill when the user asks for Shor integer factorization, quantum order-finding, period estimation, or implementing/running/debugging ShorAlgorithm in this repository (especially matrix/operator methods, IQFT-based phase post-processing, and continued-fraction period recovery). Keywords: shor, factor N, order finding, period finding, modular exponentiation, continued fraction, quantum factoring, ShorAlgorithm.
 ---
 
+## One Step to Run Shor Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Shor Integer Factorization Guide
 
 ## Trigger Examples

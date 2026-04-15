@@ -3,16 +3,12 @@ name: quantum-multiscale-transport-1d
 description: Quantum simulation for 1D multiscale particle transport equations using Schrödingerization and damped dynamical systems. Supports inflow boundary conditions, small ε scaling, velocity-space quadrature, finite-difference discretization, and outputs particle density, gradients, and quantum circuit diagrams.
 ---
 
+## One Step to Run 1D Multiscale Transport Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: Quantum Simulation for 1D Multiscale Transport Equation
-
-## Basic Information
-
-- **Skill ID**: `quantum_multiscale_transport_1d`
-- **Skill Name**: Quantum Solver for 1D Multiscale Kinetic Transport Equation
-- **Domain**: Quantum Computing, Radiative Transfer, Neutron Transport, Multiscale PDEs
-- **Core Capability**: Solve **1D multiscale particle transport equations** using Schrödingerization and damped dynamical systems.
-
-------
 
 ## 1. Mathematical Background
 

@@ -4,17 +4,17 @@ description: A collection of fundamental quantum computing primitives implemente
 ---
 # Quantum Primitives
 
-## 1. amplitude estimation
+## 1. Amplitude Amplification
+See reference: `./amplitude-amplification/SKILL.md`
+
+## 2. Amplitude Estimation
 See reference: `./amplitude-estimation/SKILL.md`
 
-## 2. quantum phase estimation
+## 3. Quantum Phase Estimation
 See reference: `./quantum-phase-estimation/SKILL.md`
 
-## 3. hadamard test
+## 4. Hadamard Test
 See reference: `./hadamard-test/SKILL.md`
 
-## 4. hadamard transform
+## 5. Hadamard Transform
 See reference: `./hadamard-transform/SKILL.md`
-
-## 5. Amplitude Amplification 
-See reference: `./amplitude-amplification/SKILL.md`

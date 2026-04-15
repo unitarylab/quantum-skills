@@ -1,7 +1,12 @@
 ---
 name: qdrift
-description: "Use when: you need stochastic Hamiltonian simulation via random Pauli sampling, with guidance for steps, variance control, and code-level interpretation of the QDrift implementation."
+description: QDrift randomized Hamiltonian simulation, approximating e^{-iHt} by stochastically sampling Pauli-term evolutions with probability proportional to coefficient magnitude.
 ---
+
+## One Step to Run QDrift Example
+```bash
+python ./scripts/algorithm.py
+```
 
 # QDrift Hamiltonian Simulation Skill Guide
 

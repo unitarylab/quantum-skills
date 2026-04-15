@@ -1,7 +1,12 @@
 ---
 name: qsp
-description: "Use when: you need block-encoding based Hamiltonian simulation with Quantum Signal Processing phases, parity-aware polynomial construction, and implementation-level guidance for this repository."
+description: Quantum Signal Processing (QSP) Hamiltonian simulation, approximating e^{-iHt} via block-encoding and optimized polynomial phase sequences for high-precision time evolution.
 ---
+
+## One Step to Run QSP Example
+```bash
+python ./scripts/algorithm.py
+```
 
 # Quantum Signal Processing (QSP) Hamiltonian Simulation Skill Guide
 

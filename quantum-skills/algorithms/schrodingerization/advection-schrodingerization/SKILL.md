@@ -3,21 +3,12 @@ name: advection-schrodingerization
 description: A Schrödingerization-based solver for the 1D advection equation, supporting both direct unitary evolution (under periodic and central difference discretization) and general transformation for non-unitary cases. Enables classical and quantum simulation through Hamiltonian formulation.
 ---
 
+## One Step to Run Advection Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: Advection Equation Solver via Schrödingerization
-
-## Skill Identity
-
-- **Name:** Quantum_Advection_Schrodingerization_Solver
-- **Version:** 1.0
-- **Domain:** Numerical PDEs · Quantum Simulation · Hyperbolic Equations
-- **Equation Type:** Linear First-Order Hyperbolic PDE
-- **Task Type:**
-  - PDE Discretization
-  - Operator Construction
-  - Schrödingerization
-  - Quantum Simulation
-
-------
 
 ## Skill Objective
 

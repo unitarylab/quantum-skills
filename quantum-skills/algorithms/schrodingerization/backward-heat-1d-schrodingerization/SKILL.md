@@ -2,21 +2,13 @@
 name: backward-heat-1d-schrodingerization
 description: A Schrödingerization-based solver for the 1D backward heat equation, addressing its ill-posed nature by transforming unstable exponential growth into a structured evolution system. Supports classical matrix methods and quantum-inspired Trotter simulation.
 ---
+
+## One Step to Run 1D Backward Heat Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: 1D Backward Heat Equation Solver via Schrödingerization
-
-## Skill Identity
-
-- **Name:** Quantum_BackwardHeat_Schrodingerization_Solver
-- **Version:** 1.0
-- **Domain:** Ill-posed PDEs · Parabolic Equations · Quantum Simulation
-- **Equation Type:** Backward Heat Equation (Ill-posed)
-- **Task Type:**
-  - Ill-posed Problem Regularization
-  - PDE Discretization
-  - Schrödingerization
-  - Quantum/Classic Hybrid Simulation
-
-------
 
 ## Skill Objective
 

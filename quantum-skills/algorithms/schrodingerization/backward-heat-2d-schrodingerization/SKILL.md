@@ -3,21 +3,12 @@ name: backward-heat-2d-schrodingerization
 description: A Schrödingerization-based solver for the 2D backward heat equation using Kronecker-structured discretization. Handles ill-posed diffusion dynamics and supports classical solvers and quantum Trotter evolution with circuit generation.
 ---
 
+## One Step to Run 2D Backward Heat Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: 2D Backward Heat Equation Solver via Schrödingerization
-
-## Skill Identity
-
-- **Name:** Quantum_2D_BackwardHeat_Schrodingerization_Solver
-- **Version:** 1.0
-- **Domain:** Ill-posed PDEs · Parabolic Equations · Quantum Simulation
-- **Equation Type:** 2D Backward Heat Equation
-- **Task Type:**
-  - Ill-posed Problem Regularization
-  - PDE Discretization (2D)
-  - Schrödingerization
-  - Quantum/Classic Hybrid Simulation
-
-------
 
 ## Skill Objective
 

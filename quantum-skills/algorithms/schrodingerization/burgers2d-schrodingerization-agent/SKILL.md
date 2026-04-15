@@ -1,25 +1,14 @@
 ---
-
 name: burgers2d-schrodingerization-agent
 description: Solve the 2D inviscid Burgers' equation using level-set lifting and Schrödingerization. This agent transforms nonlinear PDEs into linear high-dimensional systems, enabling both classical simulation and quantum-inspired Trotter evolution.
-
 ---
 
-
+## One Step to Run 2D Burgers Example
+```bash
+python ./scripts/algorithm.py
+```
 
 # Skill: 2D Burgers Equation via Schrödingerization + Level-Set
-
-## Skill ID
-burgers_2d_schrodingerization
-
-## Description
-This skill solves the **2D inviscid Burgers' equation** using:
-
-- Level-set lifting (nonlinear → linear)
-- Schrödingerization (non-unitary → unitary embedding)
-- Classical or quantum (Trotter) evolution
-
-The method transforms a nonlinear PDE into a **linear high-dimensional transport equation**, enabling quantum simulation.
 
 ---
 
@@ -90,7 +79,7 @@ u = \frac{\int \ell \, u_\ell d\ell}{\int u_\ell d\ell}
 - First/second order Trotter splitting
 - Gate-based Hamiltonian simulation
 
-------
+---
 
 ## Algorithm Workflow
 
@@ -114,7 +103,7 @@ L, T, source, nx, na, R, point, order, f0 = eq.get_common_coefficients()
 nu = eq.get_parameter('ν')
 ```
 
-------
+---
 
 ### Stage 2: Grid Construction
 
@@ -127,7 +116,7 @@ y = np.arange(0, L, dx)
 u0 = f0(x[:, None], y[None, :]).flatten()
 ```
 
-------
+---
 
 ### Stage 3: Level-set Sampling
 
@@ -137,7 +126,7 @@ l_vec = np.linspace(-1, 1, nl)
 dl = 1 / (nl - 1)
 ```
 
-------
+---
 
 ### Stage 4: Delta Approximation (关键!)
 
@@ -152,7 +141,7 @@ psi = np.where(
 )
 ```
 
-------
+---
 
 ### Stage 5: Build Operator
 
@@ -170,7 +159,7 @@ A = (
 )
 ```
 
-------
+---
 
 #### Trotter (Quantum)
 
@@ -182,7 +171,7 @@ H1.append(D1, ...)
 H2.append(D2, ...)
 ```
 
-------
+---
 
 ### Stage 6: Schrödinger Evolution
 
@@ -197,7 +186,8 @@ u_l, qc = schro(u0=psi, H1=H1, H2=H2, Nt=Nt, ...)
 ```
 
 The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
-------
+
+---
 
 ### Stage 7: Reconstruction
 
@@ -208,7 +198,7 @@ v_norm += u_l * dl
 u = v / v_norm
 ```
 
-------
+---
 
 ### Stage 8: Visualization
 
@@ -217,7 +207,7 @@ X, Y = np.meshgrid(x, y)
 ax.plot_surface(X, Y, u.reshape(Nx, Nx))
 ```
 
-------
+---
 
 ## Key Features
 
@@ -226,7 +216,7 @@ ax.plot_surface(X, Y, u.reshape(Nx, Nx))
 - Compatible with **quantum simulation**
 - Modular: easy to extend to higher dimensions
 
-------
+---
 
 ## When to Use
 
@@ -237,7 +227,7 @@ Use this skill when:
 - Testing Schrödingerization framework
 - Comparing classical vs quantum PDE solvers
 
-------
+---
 
 ## Limitations
 
@@ -247,7 +237,7 @@ Use this skill when:
   - $w$ (delta width)
 - Upwind scheme needed for stability
 
-------
+---
 
 ## Extension Ideas
 

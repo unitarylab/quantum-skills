@@ -3,7 +3,7 @@ name: amplitude-amplification
 description: A quantum algorithm that generalizes Grover's search algorithm, allowing for the amplification of the probability of desired outcomes in a quantum state. It is used to find marked items in an unsorted database with quadratic speedup compared to classical algorithms. This skill provides a comprehensive guide to understanding, implementing (using UnitaryLab's quantum simulator), and utilizing amplitude amplification in quantum computing applications.
 ---
 
-# One Step to Run Amplitude Amplification Example
+## One Step to Run Amplitude Amplification Example
 ```bash
 python ./scripts/algorithm.py
 ```

@@ -3,7 +3,7 @@ name: qsvt-qlsa
 description: A quantum algorithm for solving linear systems of equations using Quantum Singular Value Transformation (QSVT), providing exponential speedup over classical methods for certain types of problems. This skill includes efficient implementations and educational resources for understanding and utilizing QSVT-based quantum linear systems algorithms in various applications.
 ---
 
-# One Step to Run QSVT Example
+## One Step to Run QSVT Example
 ```bash
 python ./scripts/algorithm.py
 ```

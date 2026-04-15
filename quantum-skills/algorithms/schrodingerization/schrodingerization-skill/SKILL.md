@@ -1,17 +1,14 @@
 ---
 name: schrodingerization-skill
-description: A quantum algorithm for simulating the time evolution of quantum systems under a given Hamiltonian, providing exponential speedup over classical methods for certain types of problems. This skill includes efficient implementations and educational resources for understanding and utilizing quantum Schrodingerization algorithms in various applications.
+description: Core Schrodingerization method that transforms non-unitary ODE/PDE evolution equations into unitary Schrodinger-type dynamics via Hermitian decomposition and warped phase transformation, enabling quantum simulation of classical PDEs.
 ---
 
+## One Step to Run Schrodingerization Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: Schrödingerization Method for Quantum PDE Simulation
-
-## Skill Identity
-Name: Quantum_Schrodingerization_Method
-Version: 1.0
-Field: Quantum Computing, Quantum PDE Simulation, Hamiltonian Simulation
-Task Type: Theoretical Explanation | Formula Derivation | Algorithm Implementation | Complexity Analysis | Qubit/Qumode Implementation
-
-------
 
 ## Skill Objective
 

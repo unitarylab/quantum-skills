@@ -3,16 +3,12 @@ name: quantum-ou-process-1d
 description: Quantum simulation for 1D Ornstein-Uhlenbeck stochastic process using Schrödingerization, warped phase transformation, and Crank–Nicolson quantum evolution. Supports Euler–Maruyama discretization, exact solution validation, trajectory reconstruction, and quantum circuit visualization.
 ---
 
+## One Step to Run 1D OU Process Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: Quantum Simulation for 1D Ornstein-Uhlenbeck (OU) Process
-
-## Basic Information
-
-- **Skill ID**: `quantum_ou_process_1d`
-- **Skill Name**: Quantum Solver for 1D Ornstein-Uhlenbeck Stochastic Process
-- **Domain**: Quantum Computing, Stochastic Differential Equations (SDEs), Finance, Physics
-- **Core Capability**: Solve the **1D OU stochastic differential equation** using Schrödingerization and quantum evolution.
-
-------
 
 ## 1. Mathematical Background
 

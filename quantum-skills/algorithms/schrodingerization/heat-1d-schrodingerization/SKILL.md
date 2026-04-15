@@ -3,16 +3,12 @@ name: heat-1d-schrodingerization
 description: A quantum-compatible solver for the 1D Heat Equation using Schrödingerization to transform the non-unitary diffusion equation into a unitary evolution problem. Supports Dirichlet and periodic boundary conditions, source terms, and both classical and Trotter-based quantum evolution with automatic circuit generation and solution visualization.
 ---
 
+## One Step to Run 1D Heat Equation Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: Quantum Simulation of 1D Heat Equation
-
-## Basic Information
-
-- **Skill ID**: `quantum_1d_heat`
-- **Skill Name**: Quantum Schrödingerization Solver for 1D Heat Equation
-- **Domain**: Quantum Computing, PDEs, Scientific Computing
-- **Core Capability**: Solve **1D parabolic diffusion equations** via Schrödingerization. Supports Dirichlet/Periodic boundaries, classical/Trotter solvers, and automatic discretization.
-
-------
 
 ## 1. Mathematical Formulation
 

@@ -188,7 +188,7 @@ def test_gs_unitary_apply(n):
         # Check whether the actual result matches the expected result
         assert np.allclose(actual, expected), f"gs.unitary result does not match expectation, basis index = {j}"
 
-    print(f"✅ test_gs_unitary_apply({n}) passed")
+    print(f"test_gs_unitary_apply({n}) passed")
 
 ```
 ### Example run

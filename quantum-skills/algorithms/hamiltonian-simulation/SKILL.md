@@ -1,24 +1,21 @@
 ---
 name: hamiltonian-simulation
-description: "Use when: you need the unified hamiltonian_simulation interface, method dispatch behavior, parameter constraints, and result-object semantics across trotter, qdrift, taylor, and qsp."
+description: Unified interface for quantum Hamiltonian simulation, dispatching across Trotter-Suzuki, QDrift, Taylor-LCU, and QSP methods to approximate time evolution e^{-iHt}.
 ---
 
-# Hamiltonian Simulation Interface Skill Guide
+# Hamiltonian Simulation
 
-## References
-
-### qdrift
-See reference: `./qdrift/SKILL.md`
-
-### trotter
+## 1. Trotter-Suzuki Decomposition
 See reference: `./trotter/SKILL.md`
 
-### taylor
+## 2. QDrift (Randomized)
+See reference: `./qdrift/SKILL.md`
+
+## 3. Taylor Series Expansion
 See reference: `./taylor/SKILL.md`
 
-### qsp
+## 4. Quantum Signal Processing (QSP)
 See reference: `./qsp/SKILL.md`
-
 
 ## Overview
 
@@ -58,12 +55,6 @@ After using this skill, you should be able to:
 2. Time-evolution operator $e^{-iHt}$ and truncated approximations.
 3. Power-of-two Hilbert-space sizing and matrix padding intuition.
 
-### Recommended:
-
-1. Read [qitonghu/hamiltonian_simulation/algorithms/trotter/skill.md](qitonghu/hamiltonian_simulation/algorithms/trotter/skill.md).
-2. Read [qitonghu/hamiltonian_simulation/algorithms/qdrift/skill.md](qitonghu/hamiltonian_simulation/algorithms/qdrift/skill.md).
-3. Read [qitonghu/hamiltonian_simulation/algorithms/taylor/skill.md](qitonghu/hamiltonian_simulation/algorithms/taylor/skill.md).
-4. Read [qitonghu/hamiltonian_simulation/algorithms/qsp/skill.md](qitonghu/hamiltonian_simulation/algorithms/qsp/skill.md).
 
 ## Using the Provided Implementation
 
@@ -264,7 +255,7 @@ Responsibilities:
 
 Tie-in with method skill:
 
-- See [qitonghu/hamiltonian_simulation/algorithms/trotter/skill.md](qitonghu/hamiltonian_simulation/algorithms/trotter/skill.md) for Suzuki recursion, error scaling, and practical parameter tuning.
+- See `./hamiltonian-simulation/trotter/SKILL.md` for Suzuki recursion, error scaling, and practical parameter tuning.
 
 ### 3) `_simulation_qdrift`: Randomized Sampling Wrapper
 
@@ -295,7 +286,7 @@ Responsibilities:
 
 Tie-in with method skill:
 
-- See [qitonghu/hamiltonian_simulation/algorithms/qdrift/skill.md](qitonghu/hamiltonian_simulation/algorithms/qdrift/skill.md) for $\lambda$-weighted sampling, trajectory variance, and reproducibility practice.
+- See `./hamiltonian-simulation/qdrift/SKILL.md` for $\lambda$-weighted sampling, trajectory variance, and reproducibility practice.
 
 ### 4) `_simulation_taylor`: Truncated-Series + LCU Wrapper
 
@@ -326,7 +317,7 @@ Responsibilities:
 
 Tie-in with method skill:
 
-- See [qitonghu/hamiltonian_simulation/algorithms/taylor/skill.md](qitonghu/hamiltonian_simulation/algorithms/taylor/skill.md) for dynamic-programming coefficient build, LCU construction, and complexity discussion.
+- See `./hamiltonian-simulation/algorithms/taylor/SKILL.md` for dynamic-programming coefficient build, LCU construction, and complexity discussion.
 
 ### 5) `_simulation_qsp`: Block-Encoding + Phase Synthesis Wrapper
 
@@ -357,7 +348,7 @@ Responsibilities:
 
 Tie-in with method skill:
 
-- See [qitonghu/hamiltonian_simulation/algorithms/qsp/skill.md](qitonghu/hamiltonian_simulation/algorithms/qsp/skill.md) for parity split, phase synthesis, and block-encoding formulas.
+- See `./hamiltonian-simulation/algorithms/qsp/SKILL.md` for parity split, phase synthesis, and block-encoding formulas.
 
 Practical note:
 

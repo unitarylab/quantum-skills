@@ -3,7 +3,7 @@ name: hhl
 description: A quantum algorithm for solving linear systems of equations, providing exponential speedup over classical methods for certain types of problems. This skill includes efficient implementations and educational resources for understanding and utilizing quantum linear systems algorithms in various applications.
 ---
 
-# One Step to Run HHL Example
+## One Step to Run HHL Example
 ```bash
 python ./scripts/algorithm.py
 ```

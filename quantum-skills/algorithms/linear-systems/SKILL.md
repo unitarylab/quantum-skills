@@ -2,18 +2,16 @@
 name: linear-systems
 description: A set of quantum algorithms for solving linear systems of equations, providing exponential speedup over classical methods for certain types of problems. This skill includes efficient implementations and educational resources for understanding and utilizing quantum linear systems algorithms in various applications.
 ---
-# Quantum Linear Systems Algorithm
+# Quantum Linear Systems Algorithms
 
-Use this index to choose the right solver quickly.
-
-## hhl-algorithm
+## 1. HHL Algorithm
 See reference: `./hhl/SKILL.md`
 
-## lcu-algorithm
-See reference: `./lcu/SKILL.md` 
+## 2. LCU (Linear Combination of Unitaries)
+See reference: `./lcu/SKILL.md`
 
-## qsvt-qlsa
+## 3. QSVT-QLSA
 See reference: `./qsvt-qlsa/SKILL.md`
 
-## quantum-signal-processing
+## 4. Quantum Signal Processing
 See reference: `./quantum-signal-processing/SKILL.md`

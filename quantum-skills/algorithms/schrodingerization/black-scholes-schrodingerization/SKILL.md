@@ -3,21 +3,12 @@ name: black-scholes-schrodingerization
 description: A quantum-compatible solver for the Black–Scholes equation in log-price formulation using Schrödingerization. Supports European option pricing with far-field boundary treatment, enabling both classical and quantum Hamiltonian-based simulation approaches.
 ---
 
+## One Step to Run Black-Scholes Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: Quantum Solver for Black–Scholes Equation via Schrödingerization
-
-## Skill Identity
-
-- **Name:** Quantum_BlackScholes_Schrodingerization_Solver
-- **Version:** 1.0
-- **Domain:** Computational Finance · Quantum Computing · PDEs
-- **Equation Type:** Parabolic PDE (Black–Scholes)
-- **Task Type:**
-  - Financial PDE Modeling
-  - PDE Discretization
-  - Schrödingerization
-  - Quantum/Classic Hybrid Simulation
-
-------
 
 ## Skill Objective
 

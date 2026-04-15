@@ -3,16 +3,12 @@ name: quantum-schrodinger-abc-simulation
 description: Quantum simulation of 2D Schrödinger equation with artificial (absorbing) boundary conditions (ABC) using Schrödingerization. Restores unitary evolution for non-unitary dynamics, outputs wavefunction, 3D visualization, and quantum circuit diagrams.
 ---
 
+## One Step to Run Schrodinger ABC Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: Quantum Dynamics Simulation with Artificial Boundary Conditions (2D Schrödinger)
-
-## Basic Information
-
-- **Skill ID**: `quantum_schrodinger_abc_simulation`
-- **Skill Name**: Quantum Dynamics Simulation with Artificial Boundary Conditions (ABC)
-- **Domain**: Quantum Computing, Quantum Dynamics, Scientific Computing, PDEs
-- **Core Capability**: Solve the **2D Schrödinger equation with non-unitary ABC** using Schrödingerization, enabling quantum simulation of open systems.
-
-------
 
 ## 1. Theoretical Foundation
 

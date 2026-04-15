@@ -3,7 +3,7 @@ name: quantum-signal-processing
 description: A quantum algorithm for signal processing tasks, leveraging quantum phase estimation and amplitude amplification techniques to achieve efficient signal analysis and transformation. This skill includes implementations and educational resources for understanding and utilizing quantum signal processing algorithms in various applications.
 ---
 
-# One Step to Run QSP Example
+## One Step to Run QSP Example
 ```bash
 python ./scripts/algorithm.py
 ```

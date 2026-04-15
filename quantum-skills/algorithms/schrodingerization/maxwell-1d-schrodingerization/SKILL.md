@@ -3,16 +3,12 @@ name: maxwell-1d-schrodingerization
 description: A quantum-compatible solver for the 1D Maxwell equations using Schrödingerization with staggered-grid discretization. Supports impedance/periodic boundary conditions, outputs electric and magnetic fields, visualizations, and quantum circuit diagrams.
 ---
 
+## One Step to Run 1D Maxwell Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: Quantum Simulation for 1D Maxwell's Equations
-
-## Basic Information
-
-- **Skill ID**: `quantum_maxwell_1d`
-- **Skill Name**: Quantum Simulation of 1D Maxwell's Equations Based on Schrödingerization
-- **Domain**: Quantum Computing, Electromagnetics, PDE Numerical Simulation
-- **Core Capability**: Implements quantum solution for **1D Maxwell's equations** using Schrödingerization and twisted phase transformation. Supports impedance and periodic boundary conditions, and outputs electric/magnetic field solutions, visualizations, and quantum circuit diagrams.
-
-------
 
 ## 1. Mathematical Background
 

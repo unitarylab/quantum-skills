@@ -1,7 +1,12 @@
 ---
 name: trotter
-description: "Use when: you need product-formula Hamiltonian simulation with Trotter-Suzuki order and step control, code-level guidance, and practical error-depth tradeoff tuning."
+description: Trotter-Suzuki product-formula Hamiltonian simulation, approximating e^{-iHt} via structured short-time exponential products with controllable order and step count.
 ---
+
+## One Step to Run Trotter Example
+```bash
+python ./scripts/algorithm.py
+```
 
 # Trotter-Suzuki Hamiltonian Simulation Skill Guide
 

@@ -3,16 +3,12 @@ name: heat-2d-schrodingerization
 description: A quantum-compatible solver for the 2D Heat Equation using Schrödingerization to transform the non-unitary diffusion equation into a unitary evolution problem. Supports anisotropic diffusion, Dirichlet and periodic boundary conditions, source terms, and both classical and Trotter-based quantum evolution with automatic 2D circuit generation and 3D temperature field visualization.
 ---
 
+## One Step to Run 2D Heat Equation Example
+```bash
+python ./scripts/algorithm.py
+```
+
 # Skill: 2D Heat Equation (Schrödingerization-based Solver)
-
-## Basic Information
-
-- **Skill ID**: `heat_2d_schrodingerization`
-- **Skill Name**: Quantum Solver for 2D Heat Equation
-- **Domain**: Quantum Computing, Heat Conduction, PDEs, Thermal Simulation
-- **Core Purpose**: Solve the **2D heat conduction PDE** on a planar domain using Schrödingerization. Supports anisotropic diffusion, Dirichlet and periodic boundary conditions, source terms, and both classical and Trotter-based quantum evolution. Automatically generates quantum circuits and 3D visualizations of the temperature field.
-
-------
 
 ## Mathematical Model
 
