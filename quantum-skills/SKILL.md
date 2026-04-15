@@ -30,7 +30,7 @@ Does the task require running / executing code?
 │
 ├─ YES → Use uv workflow first (recommended), then fallback to conda if needed
 │       1) uv venv --python 3.11
-│       2) uv pip install ./dist/unitarylab-*.whl
+│       2) uv pip install ./dist/<WHEEL>   ← pick wheel for your OS (see table below)
 │       3) uv run python -c "import engine; print('UnitaryLab OK')"
 │       4) uv run python <your_script>.py
 │
@@ -42,24 +42,32 @@ Does the task require running / executing code?
 
 ### UnitaryLab Installation (default simulator, uv first)
 
-The pre-built wheel is located at:
+Pre-built wheels for all major platforms are located at:
 ```
 .agents/skills/quantum-skills/simulators/unitarylab/dist/
-  unitarylab-0.1.0-cp311-cp311-win_amd64.whl
+  unitarylab-0.1.0-cp311-cp311-win_amd64.whl        ← Windows x86-64
+  unitarylab-0.1.0-cp311-cp311-macosx_11_0_arm64.whl ← macOS 11+ (Apple Silicon / arm64)
+  unitarylab-0.1.0-cp311-cp311-linux_x86_64.whl      ← Linux x86-64
 ```
 
-**Requirements:** Python 3.11
+**Requirements:** Python 3.11 — select the wheel matching the user's OS and architecture.
+
+| OS | Wheel to use |
+|----|-------------|
+| Windows x64 | `unitarylab-0.1.0-cp311-cp311-win_amd64.whl` |
+| macOS (arm64) | `unitarylab-0.1.0-cp311-cp311-macosx_11_0_arm64.whl` |
+| Linux x86-64 | `unitarylab-0.1.0-cp311-cp311-linux_x86_64.whl` |
 
 #### Using `uv` (Recommended, run this first)
 ```bash
 # 1. Create local virtual environment
 uv venv --python 3.11
 
-# 2. Install UnitaryLab wheel
-uv pip install ./dist/unitarylab-*.whl
+# 2. Install UnitaryLab wheel — replace <WHEEL> with the file matching your OS (see table above)
+uv pip install ./dist/<WHEEL>
 
 # 3. Install common scientific dependencies
-uv pip install numpy, scipy, scikit-learn, matplotlib
+uv pip install numpy scipy scikit-learn matplotlib
 
 # 4. Verify
 uv run python -c "import engine; print('UnitaryLab OK')"
@@ -76,8 +84,9 @@ conda create -n unitarylab-env python=3.11
 # 2. Activate
 conda activate unitarylab-env
 
-# 3. Install wheel  (run from the unitarylab/ skill folder)
-python -m pip install ./dist/unitarylab-*.whl
+# 3. Install wheel — replace <WHEEL> with the file matching your OS (see table above)
+#    Run from the unitarylab/ skill folder
+python -m pip install ./dist/<WHEEL>
 
 # 4. Verify
 python -c "from engine import GateSequence; print('UnitaryLab OK')"

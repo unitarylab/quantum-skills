@@ -53,31 +53,40 @@ Skip installation when:
 
 ## Installation Steps (run only when needed)
 
-### Available Wheel
-The pre-built wheel is located in this skill folder:
+### Available Wheels
+Pre-built wheels for all major platforms are located in this skill folder:
 
 ```
-./dist/unitarylab_engine-*.whl
-./dist/unitarylab-*.whl
-
+./dist/unitarylab-0.1.0-cp311-cp311-win_amd64.whl        ← Windows x86-64
+./dist/unitarylab-0.1.0-cp311-cp311-macosx_11_0_arm64.whl ← macOS (Apple Silicon / arm64)
+./dist/unitarylab-0.1.0-cp311-cp311-linux_x86_64.whl      ← Linux x86-64
 ```
 
 **Compatibility requirements:**
 | Requirement | Value |
 |-------------|-------|
 | Python | 3.11 exactly |
-| OS | Windows |
-| Architecture | x86-64 (AMD64) |
+| OS | Windows x64, macOS 11+ (arm64), or Linux x86-64 |
+| Architecture | platform-specific (see table above) |
 
-If the environment does not match these constraints, the wheel will fail to install. Do not attempt to install on Linux, macOS, or Python 3.10/3.12.
+Select the wheel that matches your OS and architecture. Python 3.10 and 3.12 are not supported.
 
 ### Step-by-Step Installation
 
 #### Using `uv` (Recommended)
+
+Replace `<WHEEL>` with the wheel file that matches your OS:
+
+| OS | Wheel filename |
+|----|----------------|
+| Windows x64 | `unitarylab-0.1.0-cp311-cp311-win_amd64.whl` |
+| macOS (arm64) | `unitarylab-0.1.0-cp311-cp311-macosx_11_0_arm64.whl` |
+| Linux x86-64 | `unitarylab-0.1.0-cp311-cp311-linux_x86_64.whl` |
+
 ```bash
 uv venv --python 3.11
-uv pip install ./dist/unitarylab-*.whl
-uv pip install numpy, scipy, scikit-learn, matplotlib
+uv pip install ./dist/<WHEEL>
+uv pip install numpy scipy scikit-learn matplotlib
 uv run python -c "import engine; print('UnitaryLab OK')"
 ```
 
@@ -89,8 +98,8 @@ conda create -n unitarylab-env python=3.11
 # Step 2 — Activate it
 conda activate unitarylab-env
 
-# Step 3 — Install UnitaryLab from the local wheel
-python -m pip install ./dist/unitarylab-*.whl
+# Step 3 — Install UnitaryLab from the local wheel matching your OS (see table above)
+python -m pip install ./dist/<WHEEL>
 
 # Step 4 — Verify installation
 python -c "import engine; print('UnitaryLab OK')"
@@ -100,6 +109,7 @@ python -c "import engine; print('UnitaryLab OK')"
 
 - Package name: `unitarylab`
 - Import name: `engine`
+- Wheels are platform-specific; using the wrong wheel will result in a "not supported on this platform" error.
 
 ### Verify Before Running Any Script
 
@@ -144,7 +154,7 @@ print(probs)  # expected: [0.5, 0.0, 0.0, 0.5]
 | Error | Cause | Fix |
 |-------|-------|-----|
 | `ModuleNotFoundError: engine` | Wheel not installed in active environment. | Run `pip install ./dist/unitarylab-*.whl` in the active env. |
-| `Wheel is not supported on this platform` | Python version, OS, or architecture mismatch. | Use Python 3.11 on Windows x64, or switch to Qiskit/PennyLane on other platforms. |
+| `Wheel is not supported on this platform` | Wrong wheel for your OS/architecture, or wrong Python version. | Use Python 3.11 and pick the correct wheel: `win_amd64` (Windows), `macosx_11_0_arm64` (macOS), or `linux_x86_64` (Linux). |
 | Wrong conda environment active | `conda activate` not run. | Run `conda activate unitarylab-env` before executing. |
 | `engine` imports but results are wrong | Initial state not copied before passing to `execute()`. | Always pass `initial_state.copy()` to preserve the original. |
 

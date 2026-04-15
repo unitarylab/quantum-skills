@@ -23,6 +23,16 @@ Strengths:
 - Simple circuit interface.
 - Lightweight local workflow.
 - Good fit for educational and algorithm prototypes.
+- Available for Windows, macOS, and Linux via platform-specific wheels.
+
+### Wheel Files (Python 3.11 required)
+| OS | Wheel filename |
+|----|----------------|
+| Windows x64 | `unitarylab-0.1.0-cp311-cp311-win_amd64.whl` |
+| macOS (arm64) | `unitarylab-0.1.0-cp311-cp311-macosx_11_0_arm64.whl` |
+| Linux x86-64 | `unitarylab-0.1.0-cp311-cp311-linux_x86_64.whl` |
+
+All wheels are located in `./unitarylab/dist/`. Use the one matching the user's OS and architecture.
 
 ## Qiskit
 Reference: ./qiskit/SKILL.md
