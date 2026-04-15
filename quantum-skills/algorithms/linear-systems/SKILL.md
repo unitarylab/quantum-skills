@@ -4,6 +4,8 @@ description: A set of quantum algorithms for solving linear systems of equations
 ---
 # Quantum Linear Systems Algorithm
 
+Use this index to choose the right solver quickly.
+
 ## hhl-algorithm
 See reference: `./hhl/SKILL.md`
 

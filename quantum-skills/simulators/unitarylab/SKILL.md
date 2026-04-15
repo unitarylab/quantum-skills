@@ -73,6 +73,36 @@ Select the wheel that matches your OS and architecture. Python 3.10 and 3.12 are
 
 ### Step-by-Step Installation
 
+### Install `uv` First (before any `uv ...` command)
+
+Use a Python-based install first (works across Windows, macOS, and Linux):
+
+```bash
+python -m pip install -U uv
+```
+
+If `python` is not on PATH, use your interpreter explicitly:
+
+```bash
+python3 -m pip install -U uv
+```
+
+If pip-based install is unavailable in your environment, use OS-specific installers:
+
+```bash
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then verify:
+
+```bash
+uv --version
+```
+
 #### Using `uv` (Recommended)
 
 Replace `<WHEEL>` with the wheel file that matches your OS:
@@ -84,6 +114,7 @@ Replace `<WHEEL>` with the wheel file that matches your OS:
 | Linux x86-64 | `unitarylab-0.1.0-cp311-cp311-linux_x86_64.whl` |
 
 ```bash
+# Ensure `uv` is installed first (see section above)
 uv venv --python 3.11
 uv pip install ./dist/<WHEEL>
 uv pip install numpy scipy scikit-learn matplotlib

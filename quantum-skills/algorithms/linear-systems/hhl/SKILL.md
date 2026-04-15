@@ -12,29 +12,28 @@ python ./scripts/algorithm.py
 
 ## Overview
 
-**HHL Algorithm** is one of the most important quantum algorithms, solving the fundamental problem of **linear equations**: given a Hermitian matrix $A$ and vector $\mathbf{b}$, solve:
+**HHL Algorithm** solves linear systems with quantum state output. Given Hermitian $A$ and vector $\mathbf{b}$:
 
 $$A\mathbf{x} = \mathbf{b}$$
 
-Unlike classical solvers, **HHL doesn't directly output the solution vector** but prepares a quantum state:
+It prepares a state instead of directly returning the full classical vector:
 
 $$|\mathbf{x}\rangle \propto A^{-1}|\mathbf{b}\rangle$$
 
 ### Why HHL Matters:
 
-**Exponential Speedup Potential**: For sparse, well-conditioned matrices:
+For sparse, well-conditioned matrices, HHL can offer exponential scaling in $N$.
 - **Classical** (Conjugate Gradient): $O(N s \kappa \log(1/\epsilon))$
 - **Quantum (HHL)**: $O(\log(N) s^2 \kappa^2 / \epsilon)$
 
-When $\kappa$ and $1/\epsilon$ are poly-logarithmic in $N$, quantum gives **exponential advantage**!
+When $\kappa$ and $1/\epsilon$ are poly-logarithmic in $N$, this yields exponential advantage.
 
 ### Real-World Applications:
 
-1. **Computational Physics**: Solving differential equations (discretized into linear systems)
-2. **Machine Learning**: Fast solving in kernel methods, linear regression
-3. **Chemistry**: Simulating molecular properties
-4. **Optimization**: Gradient descent acceleration
-5. **Finance**: Option pricing, risk modeling
+1. Computational physics and PDE discretizations
+2. Quantum machine learning and regression subroutines
+3. Chemistry and scientific simulation pipelines
+4. Optimization and selected finance models
 
 ---
 
@@ -42,12 +41,12 @@ When $\kappa$ and $1/\epsilon$ are poly-logarithmic in $N$, quantum gives **expo
 ## Prerequisites
 
 - **Essential knowledge**:
-  - Quantum Phase Estimation (QPE) - required!
-  - Eigenvalues and eigenvectors
-  - Hermitian matrices and spectral decomposition
-  - Controlled rotations and ancilla qubits
-  - Post-selection and conditional measurement
-- **Mathematical background**: Linear algebra, complex numbers, eigenvalue decomposition
+    - Quantum Phase Estimation (QPE)
+    - Eigenvalues and eigenvectors
+    - Hermitian matrices and spectral decomposition
+    - Controlled rotations and ancilla qubits
+    - Post-selection and conditional measurement
+- **Mathematical background**: Linear algebra and complex numbers
 ---
 
 ## Using the Provided Implementation

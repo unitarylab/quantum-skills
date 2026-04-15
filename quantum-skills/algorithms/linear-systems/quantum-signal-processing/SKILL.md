@@ -12,7 +12,7 @@ python ./scripts/algorithm.py
 
 ## Overview
 
-**Quantum Signal Processing (QSP)** is a powerful framework that applies arbitrary polynomial functions to quantum signals using phase sequences and controlled signal operators. Given a target function $P(x)$, QSP constructs a quantum circuit that:
+**Quantum Signal Processing (QSP)** applies polynomial functions to quantum signals via phase sequences and signal operators. For target $P(x)$, QSP:
 
 1. **Encodes the signal** in a unitary operator $W(x)$ (e.g., via rotation angles)
 2. **Applies polynomial transformation** using alternating phase gates and signal operators
@@ -20,11 +20,7 @@ python ./scripts/algorithm.py
 
 ### Key Innovation
 
-Instead of using classical signal processing or Fourier transforms, QSP:
-- Works directly in the **quantum circuit domain**
-- Applies **arbitrary polynomials** to eigenvalues
-- Achieves **exponential advantage** for certain function approximations
-- Enables **polynomial-time function evaluation**
+QSP works directly at circuit level and enables polynomial transformations of encoded eigenvalues/singular values.
 
 ### The QSP Framework
 
@@ -39,10 +35,9 @@ where:
 
 ### Why QSP Matters
 
-1. **Foundation for Modern Quantum Algorithms**: QSVT, HHL improvements, optimal algorithms
-2. **Polynomial Function Evaluation**: Directly compute $P(A)$ for Hermitian $A$
-3. **Hamiltonian Simulation**: Implement time evolution $e^{-iHt}$ to high precision
-4. **Optimal Complexity**: Achieves optimal gate complexity for function approximation
+1. Foundation for QSVT and many modern algorithms
+2. Direct route to polynomial function evaluation $P(A)$
+3. High-precision Hamiltonian simulation primitives
 
 ### Real Applications
 
@@ -57,27 +52,22 @@ where:
 
 After mastering this skill, you will be able to:
 
-1. Understand the QSP theorem and its mathematical foundations
-2. Explain signal operators $W(x)$ and their role in encoding information
-3. Understand how phase sequences implement polynomial transformations
-4. Optimize phase sequences for target polynomials
-5. Use the provided `QSPAlgorithm` class for Hamiltonian simulation
-6. Construct quantum circuits for polynomial approximation
-7. Analyze approximation error and convergence
-8. Implement QSP from scratch
-9. Apply QSP to various polynomial functions
-10. Compare with classical Fourier-based signal processing
+1. Explain the QSP theorem and the role of $W(x)$
+2. Use phase sequences to implement target polynomials
+3. Use `QSPAlgorithm` for simulation-oriented tasks
+4. Analyze degree/error trade-offs and convergence
+5. Apply QSP as a building block for broader algorithms
 
 ---
 
 ## Prerequisites
 
 - **Essential knowledge**:
-  - Quantum gates and circuit construction
-  - Complex numbers and Chebyshev polynomials
-  - Matrix algebra and eigenvalues
-  - Polynomial approximation theory
-  - Basic optimization (gradient descent, L-BFGS)
+    - Quantum gates and circuit construction
+    - Complex numbers and Chebyshev polynomials
+    - Matrix algebra and eigenvalues
+    - Polynomial approximation theory
+    - Basic optimization (for phase fitting)
 
 ---
 

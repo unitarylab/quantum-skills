@@ -12,7 +12,7 @@ python ./scripts/algorithm.py
 
 ## Overview
 
-**Quantum Singular Value Transformation (QSVT)** is a cutting-edge quantum algorithm that solves linear systems of equations $Ax = b$ by applying polynomial functions directly to singular values. Given an $N \times N$ matrix $A$ with condition number $\kappa$, QSVT:
+**Quantum Singular Value Transformation (QSVT)** solves $Ax=b$ by applying polynomial transforms directly to singular values. For matrix $A$ with condition number $\kappa$, QSVT:
 
 1. **Approximates the inverse function** $f(x) = 1/x$ using Chebyshev polynomials
 2. **Constructs polynomial block-encodings** via Quantum Signal Processing (QSP)
@@ -21,21 +21,17 @@ python ./scripts/algorithm.py
 
 ### Key Innovation
 
-Instead of using phase estimation (like HHL) or linear combinations (like LCU/HHL), QSVT directly transforms the **singular values** of $A$ using:
+Instead of phase-estimation-heavy inversion, QSVT transforms singular values of $A$:
 
 $$\text{QSVT: } A = U\Sigma V^\dagger \rightarrow \text{Poly}^{(SV)}(A) = U \cdot \text{Poly}(\Sigma) \cdot V^\dagger$$
 
-This enables:
-- **Better scaling**: $O(\kappa^2 \alpha \sqrt{\log(\kappa^3/\epsilon)})$ gate complexity (vs. $O(\kappa/\epsilon)$ for HHL)
-- **Polynomial functions**: Apply any polynomial transformation to eigenvalues
-- **Non-symmetric matrices**: Works directly with full SVD
+This enables polynomial filtering with strong error scaling and support for non-symmetric matrices.
 
 ### Why QSVT-QLSA Matters
 
-1. **Improved Complexity**: Polynomial dependence on error tolerance $\epsilon$
-2. **Handles Non-Hermitian Systems**: Works for arbitrary (non-symmetric) matrices
-3. **Foundation for QSP**: Quantum Signal Processing is basis for modern quantum algorithms
-4. **Practical Speedup**: Proven speedup for many linear algebra problems
+1. Improved complexity vs. older linear-system methods in key regimes
+2. Works with arbitrary matrices through SVD/block-encoding
+3. Built on QSP, a central modern quantum primitive
 
 ### Real Applications
 
@@ -50,16 +46,11 @@ This enables:
 
 After mastering this skill, you will be able to:
 
-1. Understand singular value transformation vs. eigenvalue-based methods
-2. Grasp Chebyshev polynomial approximation of $f(x) = 1/x$
-3. Understand Quantum Signal Processing (QSP) phase sequences
-4. Explain block-encoding and polynomial scaling
-5. Use `QSVTLinearSolverAlgorithm` class effectively
-6. Calculate required polynomial degree and approximation error
-7. Implement core components (Chebyshev coefficients, QSP phases)
-8. Analyze complexity and compare with HHL algorithm
-9. Apply QSVT to non-symmetric matrices
-10. Understand QSP theorem and its quantum circuit realization
+1. Contrast singular-value and eigenvalue-based solvers
+2. Apply Chebyshev/QSP ideas to approximate $1/x$
+3. Use `QSVTLinearSolverAlgorithm` with correct parameters
+4. Estimate degree, error, and complexity trade-offs
+5. Apply QSVT workflows to non-symmetric systems
 
 ---
 
@@ -72,7 +63,7 @@ After mastering this skill, you will be able to:
   - Chebyshev polynomials and approximation theory
   - Basic quantum gates and measurements
 - **Recommended background**: [HHL Algorithm](../hhl/SKILL.md) for comparison
-- **Mathematical comfort**: Complex polynomials, Fourier analysis, optimization
+- **Mathematical comfort**: Complex polynomials and optimization
 
 ---
 

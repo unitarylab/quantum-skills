@@ -12,7 +12,7 @@ python ./scripts/algorithm.py
 
 ## Overview
 
-**Linear Combination of Unitaries (LCU)** is a fundamental quantum subroutine that implements a **non-unitary matrix** as a linear combination of unitary matrices. Given:
+**Linear Combination of Unitaries (LCU)** implements a non-unitary matrix as a weighted sum of unitaries:
 
 $$M = \sum_{j=0}^{m-1} \alpha_j U_j$$
 
@@ -22,25 +22,20 @@ $$|\psi'\rangle \propto M|\psi\rangle$$
 
 ### Key Insight
 
-Instead of directly implementing the non-unitary $M$ (which is impossible), LCU:
-1. Uses auxiliary qubits to encode which unitary to apply
-2. Creates quantum superposition over all unitary choices
-3. Applies them simultaneously through quantum parallelism
-4. Post-selects on ancilla measurement to extract result
+LCU uses ancilla encoding + controlled unitaries + post-selection to realize $M|\psi\rangle$ probabilistically.
 
 ### Why LCU Matters:
 
-1. **Foundation for Quantum Linear Solvers**: HHL and similar algorithms use LCU
-2. **Hamiltonian Simulation**: Approximate Hamiltonian evolution
-3. **Block-Encoding Framework**: Key component in modern quantum algorithms
-4. **Amplitude Amplification Target**: Can boost success probability
+1. Core primitive behind multiple linear-system solvers
+2. Useful in Hamiltonian simulation and block-encoding methods
+3. Compatible with amplitude amplification for higher success probability
 
 ### Real Applications:
 
-- Simulating quantum dynamics (Hamiltonian simulation)
-- Quantum machine learning (kernel methods)
-- Chemistry simulations (molecular property calculation)
-- Solving differential equations (PDE discretization)
+- Hamiltonian simulation
+- Quantum machine learning pipelines
+- Chemistry simulation workflows
+- PDE discretization subroutines
 
 ---
 
@@ -48,15 +43,10 @@ Instead of directly implementing the non-unitary $M$ (which is impossible), LCU:
 
 After mastering this skill, you will be able to:
 
-1. Understand why non-unitary matrices require probabilistic implementation
-2. Grasp the LCU three-step procedure (V → SELECT → V†)
-3. Explain auxiliary qubit role in coefficient encoding
-4. Understand the SELECT operator (multi-controlled unitaries)
-5. Use the provided `LCUAlgorithm` class effectively
-6. Calculate success probability and post-selection requirements
-7. Implement LCU from scratch
-8. Apply to Hamiltonian simulation and other problems
-9. Combine with amplitude amplification for improved success rate
+1. Explain the V → SELECT → V† workflow
+2. Use `LCUAlgorithm` correctly
+3. Estimate success probability and post-selection cost
+4. Apply LCU to linear algebra and simulation tasks
 
 ---
 
@@ -69,7 +59,7 @@ After mastering this skill, you will be able to:
   - Amplitude encoding and state preparation
   - Basic linear algebra (eigenvalues, norms)
 - **Mathematical comfort**: Complex numbers, matrix decomposition
-- **Recommended**: Study [Amplitude Amplification](../amplitude-amplification/SKILL.md) for success probability improvement
+- **Recommended**: Study [Amplitude Amplification](../amplitude-amplification/SKILL.md) for improving success probability
 
 ---
 

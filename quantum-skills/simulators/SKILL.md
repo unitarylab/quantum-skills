@@ -11,6 +11,10 @@ Use this guide to choose a simulator quickly and consistently.
 - If UnitaryLab is unavailable: Qiskit.
 - If the task is differentiable hybrid optimization: PennyLane.
 
+## Installation Note
+- For any installation path that uses `uv`, install it with `python -m pip install -U uv` first, then verify with `uv --version`.
+- If pip-based install is unavailable, use the platform-specific installer commands in the UnitaryLab guide.
+
 ## UnitaryLab (Recommended)
 Reference: ./unitarylab/SKILL.md
 

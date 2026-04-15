@@ -42,6 +42,36 @@ Does the task require running / executing code?
 
 ### UnitaryLab Installation (default simulator, uv first)
 
+### Install `uv` First (before any `uv ...` command)
+
+Use a Python-based install first (works across Windows, macOS, and Linux):
+
+```bash
+python -m pip install -U uv
+```
+
+If `python` is not on PATH, use your interpreter explicitly:
+
+```bash
+python3 -m pip install -U uv
+```
+
+If pip-based install is unavailable in your environment, use OS-specific installers:
+
+```bash
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then verify:
+
+```bash
+uv --version
+```
+
 Pre-built wheels for all major platforms are located at:
 ```
 .agents/skills/quantum-skills/simulators/unitarylab/dist/
@@ -60,7 +90,7 @@ Pre-built wheels for all major platforms are located at:
 
 #### Using `uv` (Recommended, run this first)
 ```bash
-# 1. Create local virtual environment
+# 1. Ensure `uv` is installed (see "Install `uv` First" above), then create local virtual environment
 uv venv --python 3.11
 
 # 2. Install UnitaryLab wheel — replace <WHEEL> with the file matching your OS (see table above)
