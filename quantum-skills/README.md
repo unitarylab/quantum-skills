@@ -97,10 +97,10 @@ quantum-skills/
 
 ```bash
 # Using Bun (recommended)
-bunx skills add https://github.com/awesome-skills/quantum-skills.git
+bunx skills add https://github.com/unitarylab/quantum-skills
 
 # Using npm / npx
-npx skills add https://github.com/awesome-skills/quantum-skills.git
+npx skills add https://github.com/unitarylab/quantum-skills
 ```
 
 This places the skill under `.agents/skills/quantum-skills/` in your workspace — Copilot will discover it automatically.
@@ -109,11 +109,11 @@ This places the skill under `.agents/skills/quantum-skills/` in your workspace �
 
 ```bash
 # macOS / Linux
-git clone https://github.com/awesome-skills/quantum-skills.git \
+git clone https://github.com/unitarylab/quantum-skills \
   .agents/skills/quantum-skills
 
 # Windows (PowerShell)
-git clone https://github.com/awesome-skills/quantum-skills.git `
+git clone https://github.com/unitarylab/quantum-skills `
   .agents/skills/quantum-skills
 ```
 
@@ -209,10 +209,10 @@ quantum-skills/
 
 ```bash
 # 使用 Bun（推荐）
-bunx skills add https://github.com/awesome-skills/quantum-skills.git
+bunx skills add https://github.com/unitarylab/quantum-skills
 
 # 使用 npm / npx
-npx skills add https://github.com/awesome-skills/quantum-skills.git
+npx skills add https://github.com/unitarylab/quantum-skills
 ```
 
 命令会将技能放置到工作区的 `.agents/skills/quantum-skills/` 目录下，Copilot 将自动发现并加载它。
@@ -221,11 +221,11 @@ npx skills add https://github.com/awesome-skills/quantum-skills.git
 
 ```bash
 # macOS / Linux
-git clone https://github.com/awesome-skills/quantum-skills.git \
+git clone https://github.com/unitarylab/quantum-skills \
   .agents/skills/quantum-skills
 
 # Windows (PowerShell)
-git clone https://github.com/awesome-skills/quantum-skills.git `
+git clone https://github.com/unitarylab/quantum-skills `
   .agents/skills/quantum-skills
 ```
 
