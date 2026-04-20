@@ -137,6 +137,14 @@ This skill is automatically invoked by Copilot when you ask about quantum comput
 
 ---
 
+## License
+
+This repository is licensed under the Apache License 2.0.  
+The `unitarylab` package itself contains proprietary binary components —
+see the `LICENSE` and `LICENSE-PROPRIETARY` files bundled inside the wheel.
+
+---
+
 <a name="chinese"></a>
 
 ## 中文
@@ -246,3 +254,11 @@ git clone https://github.com/unitarylab/quantum-skills `
 | `用 Schrodingerization 模拟一维热方程` | 加载 schrodingerization/heat-1d 指南 |
 | `比较 Trotter 和 QDrift 在哈密顿量模拟中的异同` | 加载哈密顿量模拟指南 |
 | `对 n=15 运行 Shor 算法` | 加载密码学/shor 指南 |
+
+---
+
+## License
+
+This repository is licensed under the Apache License 2.0.  
+The `unitarylab` package itself contains proprietary binary components —
+see the `LICENSE` and `LICENSE-PROPRIETARY` files bundled inside the wheel.
