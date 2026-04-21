@@ -34,7 +34,7 @@ The algorithm supports two modes:
 ## Using the Provided Implementation
 
 ```python
-from engine.algorithms import HadamardTransformAlgorithm
+from unitarylab.algorithms import HadamardTransformAlgorithm
 
 algo = HadamardTransformAlgorithm()
 
@@ -142,7 +142,7 @@ Norm preservation: $\|H^{\otimes n}|x\rangle\|^2 = \sum_{y}|(-1)^{x\cdot y}/\sqr
 ## Hands-On Example
 
 ```python
-from engine.algorithms import HadamardTransformAlgorithm
+from unitarylab.algorithms import HadamardTransformAlgorithm
 import numpy as np
 
 algo = HadamardTransformAlgorithm()
@@ -160,7 +160,7 @@ result2 = algo.run(n_qubits=4, mode='reflexive_test', backend='torch')
 ## Implementing Your Own Version
 
 ```python
-from engine.core import GateSequence
+from unitarylab.core import GateSequence
 
 def hadamard_transform(n: int, backend: str = 'torch') -> GateSequence:
     """Apply H to all n qubits."""

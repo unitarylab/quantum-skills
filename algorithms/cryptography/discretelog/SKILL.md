@@ -34,12 +34,12 @@ python ./scripts/algorithm.py
 - Quantum Fourier Transform and QPE.
 - Modular arithmetic, multiplicative order, modular inverse.
 - Continued fractions algorithm.
-- Python: `numpy`, `GateSequence`, `Register`, `ClassicalRegister`, `State`, `engine.library.IQFT`.
+- Python: `numpy`, `GateSequence`, `Register`, `ClassicalRegister`, `State`, `unitarylab.library.IQFT`.
 
 ## Using the Provided Implementation
 
 ```python
-from engine.algorithm import DiscreteLogAlgorithm
+from unitarylab.algorithm import DiscreteLogAlgorithm
 
 algo = DiscreteLogAlgorithm()
 result = algo.run(
@@ -167,7 +167,7 @@ From the measurement $(u, v)$:
 ## Hands-On Example
 
 ```python
-from engine.algorithm import DiscreteLogAlgorithm
+from unitarylab.algorithm import DiscreteLogAlgorithm
 
 # Solve 3^x ≡ 6 (mod 7): answer is x=3 since 3^3=27=3*7+6
 algo = DiscreteLogAlgorithm()
@@ -186,8 +186,8 @@ Below is a skeleton that reconstructs the discrete-log quantum circuit at the co
 import math
 from fractions import Fraction
 import numpy as np
-from engine.core import GateSequence, Register, State
-from engine.library import IQFT
+from unitarylab.core import GateSequence, Register, State
+from unitarylab.library import IQFT
 
 def modular_matrix(mult: int, P: int, n_work: int) -> np.ndarray:
     """Permutation matrix |x> -> |x * mult mod P>."""

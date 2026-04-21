@@ -1,8 +1,8 @@
 """LCU — apply a linear combination of unitaries M = sum(alpha_j * U_j)."""
 
 import numpy as np
-from engine.algorithms import LCUAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import LCUAlgorithm
+from unitarylab.core import GateSequence
 
 
 def example_h_plus_x():

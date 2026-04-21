@@ -1,6 +1,6 @@
 """Hadamard Transform — uniform superposition and self-inverse verification."""
 
-from engine.algorithms import HadamardTransformAlgorithm
+from unitarylab.algorithms import HadamardTransformAlgorithm
 
 
 def example_superposition():

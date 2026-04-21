@@ -40,8 +40,8 @@ or set manually via `reps`.
 ## Using the Provided Implementation
 
 ```python
-from engine.algorithms import AmplitudeAmplificationAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import AmplitudeAmplificationAlgorithm
+from unitarylab.core import GateSequence
 
 # Prepare state U such that some target qubits land in |0>
 # Example: 2-qubit state preparation
@@ -175,8 +175,8 @@ Query complexity: $O(1/\sqrt{p})$, quadratic speedup over classical $O(1/p)$.
 ## Hands-On Example
 
 ```python
-from engine.algorithms import AmplitudeAmplificationAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import AmplitudeAmplificationAlgorithm
+from unitarylab.core import GateSequence
 import numpy as np
 
 # Build a 3-qubit state with small success probability
@@ -209,7 +209,7 @@ print(result['plot'])
 ## Implementing Your Own Version
 
 ```python
-from engine.core import GateSequence
+from unitarylab.core import GateSequence
 import math
 
 def amplitude_amplification(U: GateSequence, good_zero_qubits, p: float, backend='torch'):

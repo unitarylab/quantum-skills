@@ -1,7 +1,7 @@
 """Quantum Amplitude Estimation (QAE) — estimate success probability of a circuit."""
 
-from engine.algorithms import AmplitudeEstimationAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import AmplitudeEstimationAlgorithm
+from unitarylab.core import GateSequence
 
 
 def example_uniform():

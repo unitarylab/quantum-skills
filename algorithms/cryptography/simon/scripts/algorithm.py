@@ -1,6 +1,6 @@
 """Simon's Algorithm — find hidden string s such that f(x) = f(x ⊕ s)."""
 
-from engine.algorithms import SimonAlgorithm
+from unitarylab.algorithms import SimonAlgorithm
 
 
 def example_4bit():

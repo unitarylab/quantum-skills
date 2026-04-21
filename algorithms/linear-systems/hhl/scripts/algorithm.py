@@ -1,7 +1,7 @@
 """HHL Algorithm — solve linear system Ax = b on a quantum simulator."""
 
 import numpy as np
-from engine.algorithms import HHLAlgorithm
+from unitarylab.algorithms import HHLAlgorithm
 
 
 def example_2x2():

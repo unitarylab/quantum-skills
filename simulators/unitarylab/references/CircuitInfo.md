@@ -18,7 +18,7 @@ This tool is essential for quickly obtaining circuit structure information when 
 ### 1. Import and Create the Circuit
 
 ```python
-from engine import GateSequence
+from unitarylab import GateSequence
 import numpy as np
 
 gs = GateSequence(4)

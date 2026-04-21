@@ -38,7 +38,7 @@ The phase sequence $\Phi$ is optimized (via L-BFGS-B) to approximate the target 
 ## Using the Provided Implementation
 
 ```python
-from engine.algorithms import QSPAlgorithm
+from unitarylab.algorithms import QSPAlgorithm
 
 algo = QSPAlgorithm(seed=42)
 result = algo.run(
@@ -152,7 +152,7 @@ $$\langle 0|U_\Phi(x)|0\rangle = P(x)$$
 ## Hands-On Example
 
 ```python
-from engine.algorithms import QSPAlgorithm
+from unitarylab.algorithms import QSPAlgorithm
 import numpy as np
 
 algo = QSPAlgorithm(seed=0)
@@ -211,7 +211,7 @@ def find_qsp_phases(tau: float, d: int, seed: int = 42) -> np.ndarray:
 
 ```python
 # Simplified reconstruction — mirrors QSPAlgorithm.run() Stage 2 and Stage 3
-from engine.core import GateSequence, Register
+from unitarylab.core import GateSequence, Register
 import numpy as np
 
 def build_qsp_circuit(phases: np.ndarray, x_value: float, backend: str = 'torch') -> GateSequence:

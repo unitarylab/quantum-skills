@@ -36,7 +36,7 @@ python ./scripts/algorithm.py
 ## Using the Provided Implementation
 
 ```python
-from engine.algorithms import VQEAlgorithm
+from unitarylab.algorithms import VQEAlgorithm
 
 algo = VQEAlgorithm(seed=42)
 result = algo.run(
@@ -153,7 +153,7 @@ The variational principle guarantees $E(\theta) \geq E_0$ for all $\theta$. As o
 ## Hands-On Example
 
 ```python
-from engine.algorithms import VQEAlgorithm
+from unitarylab.algorithms import VQEAlgorithm
 
 algo = VQEAlgorithm(seed=0)
 result = algo.run(n_qubits=2, n_layers=4, max_iter=200)
@@ -172,7 +172,7 @@ The following Python skeleton reconstructs the VQE core components — the Hamil
 import numpy as np
 import torch
 from scipy.optimize import minimize
-from engine.core import GateSequence
+from unitarylab.core import GateSequence
 
 def build_ising_hamiltonian() -> torch.Tensor:
     """2-qubit Ising H = ZZ - 0.5*XI - 0.5*IX."""

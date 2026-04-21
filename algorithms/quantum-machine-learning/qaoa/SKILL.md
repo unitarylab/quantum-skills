@@ -36,7 +36,7 @@ python ./scripts/algorithm.py
 ## Using the Provided Implementation
 
 ```python
-from engine.algorithms import QAOAAlgorithm
+from unitarylab.algorithms import QAOAAlgorithm
 
 edges = [(0, 1), (1, 2), (2, 3), (3, 0), (0, 4), (1, 5)]
 n_qubits = 6
@@ -160,7 +160,7 @@ $$\min_{\gamma,\beta} \langle\psi(\gamma,\beta)|H_C|\psi(\gamma,\beta)\rangle = 
 ## Hands-On Example
 
 ```python
-from engine.algorithms import QAOAAlgorithm
+from unitarylab.algorithms import QAOAAlgorithm
 
 # Petersen graph-like structure
 edges = [(0,1), (1,2), (2,3), (3,4), (4,0), (0,5), (1,6), (2,7), (3,8), (4,9)]
@@ -181,7 +181,7 @@ The following Python skeleton reconstructs the core QAOA components — the cost
 # Simplified reconstruction — mirrors QAOAAlgorithm._get_h_cost(), _build_circuit(), and obj_func()
 import numpy as np
 from scipy.optimize import minimize
-from engine.core import GateSequence
+from unitarylab.core import GateSequence
 
 def build_cost_hamiltonian(edges, n_qubits: int) -> np.ndarray:
     """Build H_C = sum_{(u,v) in E} Z_u Z_u as a (2^n x 2^n) matrix."""

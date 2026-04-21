@@ -38,7 +38,7 @@ python ./scripts/algorithm.py
 
 ```python
 import numpy as np
-from engine.algorithms import QNNAlgorithm
+from unitarylab.algorithms import QNNAlgorithm
 
 # Synthetic binary classification data
 np.random.seed(0)
@@ -160,7 +160,7 @@ $$U(\theta, x) = \prod_{l=1}^{L}\left[\prod_{q} R_x(\theta_{l,q,0})R_y(\theta_{l
 ```python
 import numpy as np
 from sklearn.datasets import load_iris
-from engine.algorithms import QNNAlgorithm
+from unitarylab.algorithms import QNNAlgorithm
 
 iris = load_iris()
 X = iris.data[:, :2]    # first 2 features
@@ -182,7 +182,7 @@ The following skeleton reconstructs the PQC architecture and training loop from 
 ```python
 # Simplified reconstruction — mirrors QNNAlgorithm._build_vqc_layer() and training loop
 import numpy as np
-from engine.core import GateSequence, Register
+from unitarylab.core import GateSequence, Register
 
 def build_vqc_layer(gs: GateSequence, x: np.ndarray, params: np.ndarray,
                     n_qubits: int, layers: int, n_features: int):

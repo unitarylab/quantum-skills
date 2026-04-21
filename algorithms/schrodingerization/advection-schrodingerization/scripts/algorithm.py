@@ -4,9 +4,9 @@ Compares classical Schrodingerization solver with Trotter quantum circuit.
 """
 
 import numpy as np
-from engine.library import schro_classical, schro_trotter
-from engine.library.differential_operator import TDiff
-from engine.library.differential_operator.classical_matrices import (
+from unitarylab.library import schro_classical, schro_trotter
+from unitarylab.library.differential_operator import TDiff
+from unitarylab.library.differential_operator.classical_matrices import (
     first_order_derivative,
     matrix_exponential,
 )

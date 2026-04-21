@@ -5,7 +5,7 @@
 Create circuits using the `GateSequence` class:
 
 ```python
-from engine import GateSequence
+from unitarylab import GateSequence
 import numpy as np
 
 # Create a circuit with 4 qubits

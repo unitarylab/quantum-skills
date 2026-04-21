@@ -35,12 +35,12 @@ Two circuit methods are supported:
 - Quantum Fourier Transform (QFT) and inverse QFT.
 - Modular arithmetic and Euler's theorem.
 - Continued fractions algorithm.
-- Python: `numpy`, `GateSequence`, `State`, `engine.library.QFT`, `engine.library.IQFT`.
+- Python: `numpy`, `GateSequence`, `State`, `unitarylab.library.QFT`, `unitarylab.library.IQFT`.
 
 ## Using the Provided Implementation
 
 ```python
-from engine.algorithms import ShorAlgorithm
+from unitarylab.algorithms import ShorAlgorithm
 
 algo = ShorAlgorithm()
 result = algo.run(
@@ -141,14 +141,14 @@ yields non-trivial factors of $N$.
 | Work register initialized to $|1\rangle$ | `gs.x(n_count)` in Stage 2 |
 | Controlled $a^{2^k} \bmod N$ (matrix method) | `_build_modular_matrix_circuit()` — `gs.unitary(matrix, work, control=q)` |
 | Controlled $a^{2^k} \bmod N$ (operator method) | `_build_modular_operator_circuit()` via `_multiple_mod()` using QFT-domain adders |
-| Inverse QFT (iQFT) | `gs.append(IQFT(n_count, backend), range(n_count))` from `engine.library` |
+| Inverse QFT (iQFT) | `gs.append(IQFT(n_count, backend), range(n_count))` from `unitarylab.library` |
 | Measurement of counting register | `state.measure(range(n_count), endian='little')` → binary string → integer |
 | Phase $\phi \approx k/r$ | `phase = measure_int / 2^n_count` |
 | Continued fractions algorithm | `Fraction(phase).limit_denominator(N).denominator` → `r` |
 | Factor extraction $\gcd(a^{r/2}\pm1, N)$ | `math.gcd(guess - 1, N)` and `math.gcd(guess + 1, N)` |
 | Classical shortcut (even N or gcd>1) | Pre-loop checks before any quantum circuit construction |
 
-**Notes on method differences:** The `'matrix'` method builds an explicit permutation matrix for each controlled power, making it circuit-efficient but memory-intensive for large $N$. The `'operator'` method uses QFT-domain phase additions and is more gate-intensive but architecturally general. Both append the same `IQFT` from `engine.library`. The retry loop is necessary because the continued fractions step can fail for unlucky choices of `a` or measurement outcomes.
+**Notes on method differences:** The `'matrix'` method builds an explicit permutation matrix for each controlled power, making it circuit-efficient but memory-intensive for large $N$. The `'operator'` method uses QFT-domain phase additions and is more gate-intensive but architecturally general. Both append the same `IQFT` from `unitarylab.library`. The retry loop is necessary because the continued fractions step can fail for unlucky choices of `a` or measurement outcomes.
 
 ## Mathematical Deep Dive (the multiplicative order of $a$ modulo $N$), i.e., $a^r \equiv 1 \pmod{N}$.
 
@@ -161,7 +161,7 @@ yields non-trivial factors of $N$.
 ## Hands-On Example
 
 ```python
-from engine.algorithm import ShorAlgorithm
+from unitarylab.algorithm import ShorAlgorithm
 
 algo = ShorAlgorithm()
 result = algo.run(N=15, method='matrix', backend='torch', max_retries=20)
@@ -179,8 +179,8 @@ Below is a skeleton that reconstructs Shor's algorithm at the component level, m
 import math, random
 from fractions import Fraction
 import numpy as np
-from engine.core import GateSequence, State
-from engine.library import IQFT
+from unitarylab.core import GateSequence, State
+from unitarylab.library import IQFT
 
 def get_modular_matrix(mult: int, N: int, n_work: int) -> np.ndarray:
     """Build the 2^n_work x 2^n_work unitary for |x> -> |x*mult mod N>."""
@@ -229,7 +229,7 @@ def shor_factor(N: int, max_retries: int = 15, backend: str = 'torch'):
 
         # Measure counting register
         sv   = gs.execute()
-        from engine.core import State
+        from unitarylab.core import State
         meas = State(sv).measure(range(n_count), endian='little')
         phase_int = int(meas, 2)
 

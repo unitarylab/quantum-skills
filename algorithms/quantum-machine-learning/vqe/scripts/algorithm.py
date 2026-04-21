@@ -1,6 +1,6 @@
 """VQE — Variational Quantum Eigensolver for 2-qubit Ising Hamiltonian."""
 
-from engine.algorithms import VQEAlgorithm
+from unitarylab.algorithms import VQEAlgorithm
 
 
 def main():

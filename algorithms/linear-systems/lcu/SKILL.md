@@ -34,8 +34,8 @@ The LCU circuit has three components:
 ## Using the Provided Implementation
 
 ```python
-from engine.algorithms import LCUAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import LCUAlgorithm
+from unitarylab.core import GateSequence
 import numpy as np
 
 # Build two unitary operators U0, U1
@@ -158,8 +158,8 @@ To boost $P$, apply amplitude amplification $O(s/\|M|\psi\rangle\|)$ times.
 ## Hands-On Example
 
 ```python
-from engine.algorithms import LCUAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import LCUAlgorithm
+from unitarylab.core import GateSequence
 
 n_sys = 2
 I_circ = GateSequence(n_sys, backend='torch')   # Identity
@@ -187,7 +187,7 @@ The following Python skeleton reconstructs the three structural components of LC
 ```python
 # Simplified reconstruction — mirrors LCUAlgorithm._build_V() and _state_preparation_tree()
 import numpy as np
-from engine.core import GateSequence
+from unitarylab.core import GateSequence
 
 def build_prepare(alphas, n_anc: int, backend: str = 'torch') -> GateSequence:
     """Build V|0> = sum_j sqrt(alpha_j/s)|j> on ancilla register."""

@@ -38,8 +38,8 @@ The `QPEAlgorithm` class also exposes `build_qpe_circuit()` for embedding QPE as
 ## Using the Provided Implementation
 
 ```python
-from engine.algorithms import QPEAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import QPEAlgorithm
+from unitarylab.core import GateSequence
 import numpy as np
 
 # Build a 1-qubit unitary with known phase phi = 1/4
@@ -111,7 +111,7 @@ This method is the core algorithmic component, designed to be called by other al
 1. If `prepare_target` is provided, appends it to the target register (`target_qubits = range(d, d+n_target)`).
 2. Applies Hadamard to all `d` phase qubits (`phase_qubits = range(d)`).
 3. Loops `k = 0..d-1`: builds `cU = U.control(1, '1')` and applies it `2^k` times controlled by `phase_qubits[k]`.
-4. Appends `IQFT(d, backend=backend)` from `engine.library` to the phase register.
+4. Appends `IQFT(d, backend=backend)` from `unitarylab.library` to the phase register.
 
 **Helper Methods:**
 
@@ -148,13 +148,13 @@ The iQFT transforms the phase-encoded register to: if $\phi = k_0/2^d$ exactly, 
 | Phase register $|0\rangle^d$ → $H^{\otimes d}$ | `for q in phase_qubits: gs.h(q)` in `build_qpe_circuit()` |
 | Eigenstate preparation $|\psi\rangle$ | `prepare_target` appended via `gs.append(prepare_target, target_qubits)` |
 | Controlled $U^{2^k}$ | `cU = U.control(1, '1')` repeated `2^k` times per phase qubit `k` |
-| Inverse QFT | `IQFT(d, backend)` from `engine.library`, appended to `phase_qubits` |
+| Inverse QFT | `IQFT(d, backend)` from `unitarylab.library`, appended to `phase_qubits` |
 | Phase readout $\phi = k_0/2^d$ | `int(best_bits_str, 2) / (2 ** d)` in Stage 4 |
 | Probability of best phase | `best_prob = sorted_phases[0][1]` from `state_obj.probabilities_dict()` |
 | Phase precision $\delta\phi = 1/2^d$ | Implicit: determined by number of bits `d` in phase register |
 | Subroutine for HHL / QAE | `build_qpe_circuit()` returns a standalone `GateSequence` embeddable externally |
 
-**Notes on encapsulation:** The iQFT is sourced from `engine.library.IQFT` rather than constructed inline, unlike the amplitude estimation implementation which builds it locally. The controlled-unitary power is realized by looping `2^k` repetitions of `cU`, not by general unitary exponential; this is correct but exponentially expensive in `d`. The `endian='little'` argument in `probabilities_dict()` ensures the least-significant bit is on the left, consistent with the register ordering.
+**Notes on encapsulation:** The iQFT is sourced from `unitarylab.library.IQFT` rather than constructed inline, unlike the amplitude estimation implementation which builds it locally. The controlled-unitary power is realized by looping `2^k` repetitions of `cU`, not by general unitary exponential; this is correct but exponentially expensive in `d`. The `endian='little'` argument in `probabilities_dict()` ensures the least-significant bit is on the left, consistent with the register ordering.
 
 ## Mathematical Deep Dive
 $$|0\rangle^d|\psi\rangle \rightarrow \frac{1}{\sqrt{2^d}}\sum_{j=0}^{2^d-1} e^{2\pi i\phi j}|j\rangle|\psi\rangle$$
@@ -166,13 +166,13 @@ When $\phi = k_0/2^d$ exactly, the sum equals $\delta_{k', k_0}$ and the measure
 
 **Precision:** To estimate $\phi$ to $n$ bits of accuracy with probability $\geq 1 - \epsilon$, use $d = n + \lceil\log_2(2 + 1/(2\epsilon))\rceil$ phase bits.
 
-**Library backend:** This implementation uses `engine.library.IQFT` for the inverse QFT.
+**Library backend:** This implementation uses `unitarylab.library.IQFT` for the inverse QFT.
 
 ## Hands-On Example
 
 ```python
-from engine.algorithms import QPEAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import QPEAlgorithm
+from unitarylab.core import GateSequence
 import numpy as np
 
 # Estimate phase of T gate (T|1> = e^{i*pi/4}|1>, phi = 1/8 = 0.125)
@@ -192,8 +192,8 @@ print(f"Best probability = {result['confidence_probability']:.4f}")
 ## Implementing Your Own Version
 
 ```python
-from engine.core import GateSequence
-from engine.library import IQFT
+from unitarylab.core import GateSequence
+from unitarylab.library import IQFT
 
 def qpe_circuit(U: GateSequence, d: int, prepare_target=None, backend='torch'):
     n_target = U.get_num_qubits()
@@ -222,4 +222,4 @@ def qpe_circuit(U: GateSequence, d: int, prepare_target=None, backend='torch'):
 2. **Phase not in $[0, 1)$**: The output `estimated_phase = int(best_bits, 2) / 2^d` is always in $[0, 1)$ by construction; no folding needed for QPE (unlike QAE).
 3. **Precision insufficient**: Increase `d`. Each additional bit doubles the resolution.
 4. **Gate count explodes**: $U^{2^{d-1}}$ is applied up to $2^{d-1}$ times. For deep $U$, use matrix exponentiation to build $U^{2^k}$ directly.
-5. **IQFT sign convention**: The engine's `IQFT` matches the standard convention. Do not swap QFT and IQFT orders.
+5. **IQFT sign convention**: The unitarylab's `IQFT` matches the standard convention. Do not swap QFT and IQFT orders.

@@ -1,25 +1,25 @@
-# UnitaryLab Engine API Reference
+# UnitaryLab API Reference
 
-> This document lists all public interfaces exported by `__init__.py` files under `engine`, `engine/core`, `engine/library`, and `engine/algorithms`.
+> This document lists all public interfaces exported by `__init__.py` files under `unitarylab`, `unitarylab/core`, `unitarylab/library`, and `unitarylab/algorithms`.
 
 ---
 
 ## Table of Contents
 
-- [engine (top-level)](#engine-top-level)
-- [engine.core](#enginecore)
+- [unitarylab (top-level)](#unitarylab-top-level)
+- [unitarylab.core](#unitarylabcore)
   - [GateSequence](#gatesequence)
   - [Register](#register)
   - [ClassicalRegister](#classicalregister)
   - [State](#state)
   - [state\_preparation](#state_preparation)
-- [engine.library](#enginelibrary)
+- [unitarylab.library](#unitarylablibrary)
   - [Differential Operators (differential\_operator)](#differential-operators-differential_operator)
   - [Quantum Fourier Transform (QFT)](#quantum-fourier-transform-qft)
   - [Schrödingerization Solvers (schrodingerization)](#schrödingerization-solvers-schrodingerization)
   - [Equation Parser (equation\_parser)](#equation-parser-equation_parser)
   - [Block Encoding (block\_encoding)](#block-encoding-block_encoding)
-- [engine.algorithms](#enginealgorithms)
+- [unitarylab.algorithms](#unitarylabalgorithms)
   - [PDE Solvers (schrodingerization)](#pde-solvers-schrodingerization)
   - [Quantum Cryptology (cryptology)](#quantum-cryptology-cryptology)
   - [Hamiltonian Simulation (hamiltonian\_simulation)](#hamiltonian-simulation-hamiltonian_simulation)
@@ -29,23 +29,23 @@
 
 ---
 
-## engine (top-level)
+## unitarylab (top-level)
 
 ```python
-from engine import <symbol>
+from unitarylab import <symbol>
 ```
 
-The top-level `engine` package re-exports the most commonly used symbols for convenience.
+The top-level `unitarylab` package re-exports the most commonly used symbols for convenience.
 
 | Symbol | Source | Description |
 |--------|--------|-------------|
-| `set_backend` | `engine.backend` | Select the compute backend (`'torch'` or `'unitarylab'`) |
-| `GateSequence` | `engine.core` | Quantum circuit container (see [GateSequence](#gatesequence)) |
-| `Register` | `engine.core` | Quantum register (see [Register](#register)) |
-| `ClassicalRegister` | `engine.core` | Classical register (see [ClassicalRegister](#classicalregister)) |
-| `QFT` | `engine.library` | n-qubit Quantum Fourier Transform circuit |
-| `IQFT` | `engine.library` | n-qubit Inverse Quantum Fourier Transform circuit |
-| `state_preparation` | `engine.core` | State-preparation circuit builder (see [state\_preparation](#state_preparation)) |
+| `set_backend` | `unitarylab.backend` | Select the compute backend (`'torch'` or `'unitarylab'`) |
+| `GateSequence` | `unitarylab.core` | Quantum circuit container (see [GateSequence](#gatesequence)) |
+| `Register` | `unitarylab.core` | Quantum register (see [Register](#register)) |
+| `ClassicalRegister` | `unitarylab.core` | Classical register (see [ClassicalRegister](#classicalregister)) |
+| `QFT` | `unitarylab.library` | n-qubit Quantum Fourier Transform circuit |
+| `IQFT` | `unitarylab.library` | n-qubit Inverse Quantum Fourier Transform circuit |
+| `state_preparation` | `unitarylab.core` | State-preparation circuit builder (see [state\_preparation](#state_preparation)) |
 
 ---
 
@@ -61,12 +61,12 @@ Raises `ValueError` if an unsupported backend is specified. Falls back to `'torc
 
 ---
 
-## engine.core
+## unitarylab.core
 
 ```python
-from engine.core import <symbol>
+from unitarylab.core import <symbol>
 # or directly:
-from engine import GateSequence, Register, ClassicalRegister, state_preparation
+from unitarylab import GateSequence, Register, ClassicalRegister, state_preparation
 ```
 
 ---
@@ -310,10 +310,10 @@ The returned `GateSequence` has `log2(len(v))` qubits and can be directly append
 
 ---
 
-## engine.library
+## unitarylab.library
 
 ```python
-from engine.library import <symbol>
+from unitarylab.library import <symbol>
 ```
 
 ---
@@ -516,10 +516,10 @@ Block-encode a given matrix and return a result object containing the quantum ci
 
 ---
 
-## engine.algorithms
+## unitarylab.algorithms
 
 ```python
-from engine.algorithms import <symbol>
+from unitarylab.algorithms import <symbol>
 ```
 
 ---

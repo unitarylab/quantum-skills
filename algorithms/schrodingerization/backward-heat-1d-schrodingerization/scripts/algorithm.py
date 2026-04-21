@@ -5,9 +5,9 @@ The backward heat equation is ill-posed; Schrodingerization stabilises it.
 """
 
 import numpy as np
-from engine.library import schro_classical, schro_trotter
-from engine.library.differential_operator import TDiff
-from engine.library.differential_operator.classical_matrices import (
+from unitarylab.library import schro_classical, schro_trotter
+from unitarylab.library.differential_operator import TDiff
+from unitarylab.library.differential_operator.classical_matrices import (
     matrix_exponential,
     second_order_derivative,
 )

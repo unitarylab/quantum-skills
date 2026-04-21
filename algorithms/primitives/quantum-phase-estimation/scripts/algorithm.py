@@ -1,8 +1,8 @@
 """Quantum Phase Estimation (QPE) — estimate eigenphase of a unitary operator."""
 
 import numpy as np
-from engine.algorithms import QPEAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import QPEAlgorithm
+from unitarylab.core import GateSequence
 
 
 def example_s_gate():

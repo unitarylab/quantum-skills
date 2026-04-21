@@ -36,8 +36,8 @@ QAE combines Grover/Amplitude Amplification with Quantum Phase Estimation (QPE):
 ## Using the Provided Implementation
 
 ```python
-from engine.algorithms import AmplitudeEstimationAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import AmplitudeEstimationAlgorithm
+from unitarylab.core import GateSequence
 
 # Build state preparation U (data register only, no ancilla)
 U = GateSequence(2, name="PrepU", backend='torch')
@@ -166,8 +166,8 @@ $$\delta a \approx \pi \cdot \delta\phi = \frac{\pi}{2^d}$$
 ## Hands-On Example
 
 ```python
-from engine.algorithms import AmplitudeEstimationAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import AmplitudeEstimationAlgorithm
+from unitarylab.core import GateSequence
 import numpy as np
 
 # True success probability: p = sin^2(pi/8) ≈ 0.146
@@ -195,7 +195,7 @@ The following Python skeleton reconstructs the key components of the QAE algorit
 ```python
 # Simplified reconstruction — mirrors AmplitudeEstimationAlgorithm._iqft_circuit()
 import numpy as np
-from engine.core import GateSequence
+from unitarylab.core import GateSequence
 
 def build_iqft(n: int, do_swaps: bool = True, backend: str = 'torch') -> GateSequence:
     gs = GateSequence(n, name=f"iQFT_{n}", backend=backend)

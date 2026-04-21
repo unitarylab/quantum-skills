@@ -1,6 +1,6 @@
 """Discrete Logarithm — solve g^x = y (mod P) via quantum period-finding."""
 
-from engine.algorithms import DiscreteLogAlgorithm
+from unitarylab.algorithms import DiscreteLogAlgorithm
 
 
 def example_small_prime():

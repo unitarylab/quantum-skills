@@ -37,7 +37,7 @@ HHL proceeds in five steps:
 ## Using the Provided Implementation
 
 ```python
-from engine.algorithms import HHLAlgorithm
+from unitarylab.algorithms import HHLAlgorithm
 import numpy as np
 
 # 2x2 Hermitian system
@@ -171,7 +171,7 @@ $$|x\rangle = \frac{1}{\mathcal{N}}\sum_j \frac{Cb_j}{\lambda_j}|u_j\rangle, \qu
 ## Hands-On Example
 
 ```python
-from engine.algorithms import HHLAlgorithm
+from unitarylab.algorithms import HHLAlgorithm
 import numpy as np
 
 # 4x4 example (requires 2 system qubits)
@@ -200,7 +200,7 @@ The following Python skeleton reconstructs the five structural stages of the HHL
 ```python
 # Simplified reconstruction — mirrors HHLAlgorithm._expi_hermitian() and _unitary_circuit_from_matrix()
 import numpy as np
-from engine.core import GateSequence
+from unitarylab.core import GateSequence
 
 def expi_hermitian(A: np.ndarray, t: float) -> np.ndarray:
     """Compute U = exp(i*A*t) numerically via eigendecomposition."""
@@ -220,7 +220,7 @@ def unitary_circuit(U_mat: np.ndarray, backend: str = 'torch') -> GateSequence:
 
 ```python
 # Exact usage — calls QPEAlgorithm.build_qpe_circuit() as in the real implementation
-from engine.algorithms import QPEAlgorithm
+from unitarylab.algorithms import QPEAlgorithm
 
 def encode_eigenphases(U_circ: GateSequence, d: int, backend: str = 'torch') -> GateSequence:
     """Build QPE sub-circuit for eigenvalue encoding."""
@@ -276,8 +276,8 @@ def extract_hhl_solution(state_arr: np.ndarray, d: int, n_sys: int, scale_factor
 # Simplified reconstruction illustrating overall HHL control flow
 
 import numpy as np
-from engine.core import GateSequence
-from engine.algorithms import QPEAlgorithm
+from unitarylab.core import GateSequence
+from unitarylab.algorithms import QPEAlgorithm
 
 def hhl_minimal(A, b, d, t=None, backend='torch'):
     n_sys = int(np.log2(len(b)))

@@ -43,8 +43,8 @@ The core circuit (for mode `'expectation'`):
 ## Using the Provided Implementation
 
 ```python
-from engine.algorithms import HadamardTestAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import HadamardTestAlgorithm
+from unitarylab.core import GateSequence
 import numpy as np
 
 # Example: estimate Re(<+|RZ(0.8)|+>) = cos(0.4)
@@ -173,8 +173,8 @@ $$|e^{i\phi}| = \sqrt{\text{Re}^2 + \text{Im}^2}, \quad \phi = \text{atan2}(\tex
 ## Hands-On Example
 
 ```python
-from engine.algorithms import HadamardTestAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import HadamardTestAlgorithm
+from unitarylab.core import GateSequence
 import numpy as np
 
 # Swap test: estimate |<phi|psi>|^2
@@ -206,7 +206,7 @@ print(result2['estimated_value'])
 ## Implementing Your Own Version
 
 ```python
-from engine.core import GateSequence
+from unitarylab.core import GateSequence
 from typing import Optional
 
 def hadamard_test_circuit(U: GateSequence, prepare_psi=None, imag=False) -> GateSequence:

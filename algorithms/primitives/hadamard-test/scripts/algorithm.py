@@ -1,7 +1,7 @@
 """Hadamard Test — estimate expectation values and state overlaps."""
 
-from engine.algorithms import HadamardTestAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import HadamardTestAlgorithm
+from unitarylab.core import GateSequence
 
 
 def example_expectation():

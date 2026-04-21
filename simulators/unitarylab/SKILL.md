@@ -36,8 +36,8 @@ Is the user asking to RUN or EXECUTE a script?
 
 Install **only** when one of these is true:
 1. The user says "run", "execute", or "try" the code.
-2. You are about to call a terminal command that imports `engine`.
-3. The user reports a `ModuleNotFoundError: engine` error.
+2. You are about to call a terminal command that imports `unitarylab`.
+3. The user reports a `ModuleNotFoundError: unitarylab` error.
 4. A script exists and the user wants to verify its output.
 
 ### Conditions that do NOT require installation
@@ -118,7 +118,7 @@ Replace `<WHEEL>` with the wheel file that matches your OS:
 uv venv --python 3.11
 uv pip install ./dist/<WHEEL>
 uv pip install numpy scipy scikit-learn matplotlib
-uv run python -c "import engine; print('UnitaryLab OK')"
+uv run python -c "import unitarylab; print('UnitaryLab OK')"
 ```
 
 #### Using `conda`
@@ -133,20 +133,20 @@ conda activate unitarylab-env
 python -m pip install ./dist/<WHEEL>
 
 # Step 4 — Verify installation
-python -c "import engine; print('UnitaryLab OK')"
+python -c "import unitarylab; print('UnitaryLab OK')"
 ```
 
 **Note**
 
 - Package name: `unitarylab`
-- Import name: `engine`
+- Import name: `unitarylab`
 - Wheels are platform-specific; using the wrong wheel will result in a "not supported on this platform" error.
 
 ### Verify Before Running Any Script
 
 Before executing user code, confirm:
 ```bash
-python -c "from engine import GateSequence; print('OK')"
+python -c "from unitarylab import GateSequence; print('OK')"
 ```
 If this prints `OK`, proceed. If it raises `ModuleNotFoundError`, go back to Step 3.
 
@@ -156,7 +156,7 @@ If this prints `OK`, proceed. If it raises `ModuleNotFoundError`, go back to Ste
 
 ```python
 import numpy as np
-from engine import GateSequence
+from unitarylab import GateSequence
 
 qc = GateSequence(2)
 qc.h(0)
@@ -184,10 +184,10 @@ print(probs)  # expected: [0.5, 0.0, 0.0, 0.5]
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `ModuleNotFoundError: engine` | Wheel not installed in active environment. | Run `pip install ./dist/unitarylab-*.whl` in the active env. |
+| `ModuleNotFoundError: unitarylab` | Wheel not installed in active environment. | Run `pip install ./dist/unitarylab-*.whl` in the active env. |
 | `Wheel is not supported on this platform` | Wrong wheel for your OS/architecture, or wrong Python version. | Use Python 3.11 and pick the correct wheel: `win_amd64` (Windows), `macosx_11_0_arm64` (macOS), or `linux_x86_64` (Linux). |
 | Wrong conda environment active | `conda activate` not run. | Run `conda activate unitarylab-env` before executing. |
-| `engine` imports but results are wrong | Initial state not copied before passing to `execute()`. | Always pass `initial_state.copy()` to preserve the original. |
+| `unitarylab` imports but results are wrong | Initial state not copied before passing to `execute()`. | Always pass `initial_state.copy()` to preserve the original. |
 
 ---
 

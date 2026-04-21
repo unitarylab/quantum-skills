@@ -37,7 +37,7 @@ python ./scripts/algorithm.py
 ## Using the Provided Implementation
 
 ```python
-from engine.algorithms import VQCAlgorithm
+from unitarylab.algorithms import VQCAlgorithm
 
 algo = VQCAlgorithm(seed=42)
 result = algo.run(
@@ -159,7 +159,7 @@ $$\nabla_\theta E = \frac{1}{2}[E(\theta+\pi/2) - E(\theta-\pi/2)]$$
 ## Hands-On Example
 
 ```python
-from engine.algorithms import VQCAlgorithm
+from unitarylab.algorithms import VQCAlgorithm
 
 # Deeper model for better accuracy
 algo = VQCAlgorithm(seed=7)
@@ -178,7 +178,7 @@ The following skeleton reconstructs the VQC data-reuploading circuit and Paramet
 # Simplified reconstruction — mirrors VQCAlgorithm._build_circuit(), _get_batch_logits()
 import numpy as np
 import torch
-from engine.core import GateSequence
+from unitarylab.core import GateSequence
 
 def build_circuit(x: np.ndarray, theta: torch.Tensor,
                   backend: str = 'torch') -> GateSequence:

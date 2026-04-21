@@ -1,7 +1,7 @@
 """Amplitude Amplification — boost probability of target states."""
 
-from engine.algorithms import AmplitudeAmplificationAlgorithm
-from engine.core import GateSequence
+from unitarylab.algorithms import AmplitudeAmplificationAlgorithm
+from unitarylab.core import GateSequence
 
 
 def example_2qubit():

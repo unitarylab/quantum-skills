@@ -56,12 +56,12 @@ Otherwise, full Schrödingerization procedure is required.
 Import necessary modules for parsing, solvers, operators, and circuit generation:
 ```python
 # import parser
-from engine.library import parse_equation
+from unitarylab.library import parse_equation
 
 # import solvers
-from engine.library import schro_classical, schro_trotter
-from engine.library.differential_operator.classical_matrices import first_order_derivative, second_order_derivative
-from engine.library.schrodingerization.classical import circuit_classical
+from unitarylab.library import schro_classical, schro_trotter
+from unitarylab.library.differential_operator.classical_matrices import first_order_derivative, second_order_derivative
+from unitarylab.library.schrodingerization.classical import circuit_classical
 from scipy.integrate import cumulative_trapezoid
 ```
 

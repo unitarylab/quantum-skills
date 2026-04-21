@@ -36,7 +36,7 @@ python ./scripts/algorithm.py
 ## Using the Provided Implementation
 
 ```python
-from engine.algorithms import QCBMAlgorithm
+from unitarylab.algorithms import QCBMAlgorithm
 
 algo = QCBMAlgorithm(seed=42)
 result = algo.run(
@@ -156,7 +156,7 @@ $$\frac{\partial \mathcal{L}}{\partial \theta_{l,q}} = \frac{1}{2}\left[\mathcal
 ## Hands-On Example
 
 ```python
-from engine.algorithms import QCBMAlgorithm
+from unitarylab.algorithms import QCBMAlgorithm
 import numpy as np
 
 for seed in [42, 123, 7]:
@@ -174,7 +174,7 @@ The following skeleton reconstructs the QCBM circuit builder, Born-rule probabil
 # Simplified reconstruction — mirrors QCBMAlgorithm._build_circuit(), _get_probs(), training loop
 import numpy as np
 import torch
-from engine.core import GateSequence
+from unitarylab.core import GateSequence
 
 def build_circuit(theta: torch.Tensor, n_qubits: int,
                   backend: str = 'torch') -> GateSequence:
