@@ -164,8 +164,113 @@ print(f"Found  s:  {result['found_s']}")
 print(f"Success:   {result['status'] == 'ok'}")
 print(result['plot'])
 ```
+## Reference Implementation (Classiq)
 
-## Implementing Your Own Version
+Classiq can be used as a high-level reference implementation of Simon's algorithm.
+It describes the algorithm with QMOD functions, automatic synthesis, and a declarative oracle definition.
+
+In this version, the Simon circuit is expressed through `@qfunc`, `@qperm`,
+`hadamard_transform`, `within_apply`, `create_model`, `synthesize`, and
+`ExecutionSession`. The oracle is defined as a reversible permutation, and the
+measured samples are post-processed over `GF(2)` to recover the hidden string.
+
+### Example: Minimal Classiq Simon Run
+
+```python
+from classiq import *
+from classiq.execution import ExecutionPreferences, ExecutionSession
+import galois
+import numpy as np
+
+@qfunc
+def simon_qfunc(
+    f_qfunc: QCallable[QNum, Output[QNum]],
+    x: QNum,
+    res: Output[QNum],
+):
+    within_apply(
+        lambda: hadamard_transform(x),
+        lambda: f_qfunc(x, res),
+    )
+
+NUM_QUBITS = 5
+S_SECRET = 6  # binary 00110
+
+@qperm
+def simon_oracle(s: CInt, x: Const[QNum], res: Output[QNum]):
+    from classiq.qmod.symbolic import min
+    res |= min(x, x ^ s)
+
+@qfunc
+def main(x: Output[QNum[NUM_QUBITS]], res: Output[QNum]):
+    allocate(x)
+    simon_qfunc(
+        lambda x, res: simon_oracle(S_SECRET, x, res),
+        x,
+        res,
+    )
+
+qmod = create_model(
+    main,
+    constraints=Constraints(
+        optimization_parameter=OptimizationParameter.WIDTH
+    ),
+)
+
+qprog = synthesize(qmod)
+
+prefs = ExecutionPreferences(num_shots=50 * NUM_QUBITS)
+
+with ExecutionSession(qprog, execution_preferences=prefs) as es:
+    result = es.sample()
+
+bitstrings = [
+    f"{x:0{NUM_QUBITS}b}"
+    for x in result.dataframe["x"].tolist()
+]
+
+samples = [
+    [int(b) for b in bs[::-1]]
+    for bs in bitstrings
+]
+
+GF = galois.GF(2)
+
+def is_independent_set(vectors):
+    if not vectors:
+        return True
+    return np.linalg.matrix_rank(GF(vectors)) == len(vectors)
+
+def get_independent_set(samples):
+    independent = []
+    for v in samples:
+        if is_independent_set(independent + [v]):
+            independent.append(v)
+            if len(independent) == len(v) - 1:
+                break
+    return independent
+
+def get_secret_integer(matrix):
+    null_space = GF(matrix).T.left_null_space()
+    return int(
+        "".join(np.array(null_space)[0][::-1].astype(str)),
+        2,
+    )
+
+matrix = get_independent_set(samples)
+
+assert len(matrix) == NUM_QUBITS - 1, (
+    "Insufficient independent samples; increase num_shots"
+)
+
+secret = get_secret_integer(matrix)
+
+print("Expected secret:", S_SECRET)
+print("Recovered secret:", secret)
+
+assert secret == S_SECRET
+```
+## Minimal Manual Implementation (UnitaryLab) 
 
 The following Python skeleton reconstructs the core components of Simon's algorithm at the oracle, circuit, and post-processing level.
 

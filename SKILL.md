@@ -26,6 +26,9 @@ Before producing code or execution commands, read skills in this order:
    - `./algorithms/hamiltonian-simulation/SKILL.md`
    - `./algorithms/schrodingerization/SKILL.md`
    - `./algorithms/quantum-machine-learning/SKILL.md`
+   - `./algorithms/eigensolvers/SKILL.md`
+   - `./algorithms/gradients/SKILL.md`
+   - `./algorithms/quantum-error-correction/SKILL.md`
 4. Read the leaf skill for the concrete task (for example `.../hhl/SKILL.md`, `.../shor/SKILL.md`, `.../heat-1d-schrodingerization/SKILL.md`).
 
 Rule: Never skip to coding from this root file alone.
@@ -52,6 +55,12 @@ Then route to the correct branch:
   - `./algorithms/schrodingerization/SKILL.md`
 - VQE, QAOA, QNN, VQC, QCBM, or variational quantum algorithms:
   - `./algorithms/quantum-machine-learning/SKILL.md`
+- Eigenvalue / eigenstate computation, NumPyEigensolver, VQD:
+  - `./algorithms/eigensolvers/SKILL.md`
+- Parameter-shift, finite-difference, linear-combination, SPSA, reverse-mode gradients, QFI:
+  - `./algorithms/gradients/SKILL.md`
+- Quantum error correcting codes, qLDPC, CSS codes, fault tolerance:
+  - `./algorithms/quantum-error-correction/SKILL.md`
 
 ## Package Map
 Top-level map of this skill package:
@@ -67,6 +76,9 @@ Top-level map of this skill package:
   - `./algorithms/hamiltonian-simulation/SKILL.md`
   - `./algorithms/schrodingerization/SKILL.md`
   - `./algorithms/quantum-machine-learning/SKILL.md`
+  - `./algorithms/eigensolvers/SKILL.md`
+  - `./algorithms/gradients/SKILL.md`
+  - `./algorithms/quantum-error-correction/SKILL.md`
 
 Use each index file as the source of truth for its children.
 
@@ -97,6 +109,9 @@ When answering user requests with this package:
 - "Hamiltonian time evolution" -> `./algorithms/hamiltonian-simulation/SKILL.md` then leaf skill
 - "Solve PDE with Schrodingerization" -> `./algorithms/schrodingerization/SKILL.md` then equation leaf skill
 - "Implement VQE/QAOA/QNN/VQC/QCBM" -> `./algorithms/quantum-machine-learning/SKILL.md` then leaf skill
+- "Compute eigenvalues/eigenstates, NumPyEigensolver, VQD" -> `./algorithms/eigensolvers/SKILL.md` then leaf skill
+- "Quantum gradients, parameter-shift, QFI" -> `./algorithms/gradients/SKILL.md` then leaf skill
+- "Quantum error correction, qLDPC, CSS codes" -> `./algorithms/quantum-error-correction/SKILL.md`
 
 ## Maintenance Notes
 When adding a new sub-skill:

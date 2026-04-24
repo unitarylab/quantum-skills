@@ -300,6 +300,38 @@ Implementation-consistent notes:
    is the same structure as the standard recursive coefficient $p_k$ after index mapping.
 3. Practical behavior may differ from asymptotic formulas when step clamping is active, because the current implementation enforces `self.steps <= 100`.
 
+
+## Reference Implementation (PennyLane)
+
+PennyLane provides `qml.ApproxTimeEvolution` for first-order Trotterized
+Hamiltonian time evolution.
+
+### Minimal PennyLane Example
+```python
+import pennylane as qml
+
+n_wires = 2
+dev = qml.device("default.qubit", wires=n_wires)
+
+coeffs = [0.1, 0.2, 0.3]
+ops = [
+    qml.Z(0) @ qml.Z(1),
+    qml.X(0),
+    qml.X(1),
+]
+
+hamiltonian = qml.Hamiltonian(coeffs, ops)
+
+@qml.qnode(dev)
+def circuit(t):
+    qml.ApproxTimeEvolution(hamiltonian, t, n=2)
+    return [qml.expval(qml.Z(i)) for i in range(n_wires)]
+
+result = circuit(0.5)
+print(result)
+```
+
+
 ## Real-World Applications
 
 1. Spin-chain evolution benchmarking.

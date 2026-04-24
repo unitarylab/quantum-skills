@@ -63,7 +63,7 @@ print(result['circuit_path'])         # SVG circuit diagram path
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `U` | `GateSequence` | required | State preparation circuit on data qubits (no ancilla). |
-| `good_zero_qubits` | `List[int]` | required | Indices of qubits that must be $\|0\rangle$ to define the good state. |
+| `good_zero_qubits` | `List[int]` | required | Indices of qubits that must be $|0\rangle$ to define the good state. |
 | `d` | `int` | `6` | Number of qubits in the phase register. Precision scales as $\delta a \approx \pi/2^d$. |
 | `backend` | `str` | `'torch'` | Simulation backend. Implementation forces `'torch'`. |
 | `algo_dir` | `str` or `None` | `None` | Directory to save circuit diagram. |
@@ -112,8 +112,16 @@ print(result['circuit_path'])         # SVG circuit diagram path
 **Data flow:** `U` + `good_zero_qubits` → `_grover_operator_from_zero_oracle()` → `G` → `_qpe_circuit()` → `qpe_circ` → `execute()` → `_phase_histogram()` → `est_amp` → `_build_return()`.
 
 ## Understanding the Key Quantum Components
-The data register is initialized with $U|0\rangle^n = \sqrt{a}|\text{good}\rangle + \sqrt{1-a}|\text{bad}\rangle$. The good state is defined by `good_zero_qubits` all being $|0\rangle$.
 
+### 1. State Preparation Operator
+
+The input circuit `U` prepares the state
+
+$$
+U|0\rangle^n = \sqrt{a}\,|\text{good}\rangle + \sqrt{1-a}\,|\text{bad}\rangle
+$$
+
+where the good state is determined by `good_zero_qubits` all being $|0\rangle$..
 ### 2. Grover Operator $Q$
 The Grover operator is constructed internally as:
 - **Phase oracle** $S_f$: Flips the phase of the good state using phase kickback from an ancilla qubit prepared in $|-\rangle$.
@@ -163,14 +171,14 @@ $$\delta a \approx \pi \cdot \delta\phi = \frac{\pi}{2^d}$$
 
 **Peak success probability:** The main QPE peak appears with probability $\geq 4/\pi^2 \approx 0.405$.
 
-## Hands-On Example
+## Hands-On Example (UnitaryLab)
 
 ```python
 from unitarylab.algorithms import AmplitudeEstimationAlgorithm
 from unitarylab.core import GateSequence
 import numpy as np
 
-# True success probability: p = sin^2(pi/8) ≈ 0.146
+# True success probability: p = cos^2(pi/8) ≈ 0.854
 # Single qubit state: |psi> = cos(theta)|0> + sin(theta)|1>
 # Good state: qubit 0 in |0>
 theta = np.pi / 8
@@ -185,8 +193,95 @@ print(f"QAE estimate = {result['estimated_amplitude']:.6f}")
 print(f"Phase phi = {result['phi']:.6f}")
 print(result['plot'])
 ```
+## Reference Implementation (Qiskit)
 
-## Implementing Your Own Version
+In addition to the UnitaryLab implementation above, the same amplitude estimation idea can also be expressed using Qiskit’s EstimationProblem and AmplitudeEstimation workflow. This section is provided only as a reference example for users who want to compare different software ecosystems. The main implementation path of this skill remains the UnitaryLab version described above.
+
+### Example A: Minimal Qiskit Amplitude Estimation Run
+```python
+from qiskit.circuit import QuantumCircuit
+from qiskit.primitives import StatevectorSampler
+from qiskit_algorithms.amplitude_estimators import AmplitudeEstimation, EstimationProblem
+
+# State preparation A
+# A|0> = cos(theta)|0> + sin(theta)|1>
+theta = 0.3
+A = QuantumCircuit(1)
+A.ry(2 * theta, 0)
+
+problem = EstimationProblem(
+    state_preparation=A,
+    objective_qubits=0,
+)
+
+ae = AmplitudeEstimation(
+    num_eval_qubits=4,
+    sampler=StatevectorSampler()
+)
+
+result = ae.estimate(problem)
+
+print("Grid estimate:", result.estimation)
+print("MLE estimate:", result.mle)
+print("Confidence interval:", result.confidence_interval)
+print("Oracle queries:", result.num_oracle_queries)
+```
+### Example B: Qiskit with Custom Grover Operator
+```python
+from qiskit.circuit import QuantumCircuit
+from qiskit.circuit.library import GroverOperator
+from qiskit.primitives import StatevectorSampler
+from qiskit_algorithms.amplitude_estimators import AmplitudeEstimation, EstimationProblem
+
+theta = 0.3
+A = QuantumCircuit(1)
+A.ry(2 * theta, 0)
+
+custom_Q = GroverOperator(oracle=A)
+
+problem = EstimationProblem(
+    state_preparation=A,
+    objective_qubits=0,
+    grover_operator=custom_Q,
+)
+
+ae = AmplitudeEstimation(
+    num_eval_qubits=4,
+    sampler=StatevectorSampler()
+)
+
+result = ae.estimate(problem)
+
+print("Grid estimate:", result.estimation)
+print("MLE estimate:", result.mle)
+print("Samples:", result.samples)
+```
+
+### Other Qiskit AE Variants (Reference)
+
+Qiskit also includes several amplitude-estimation variants beyond the standard
+QPE-based `AmplitudeEstimation`:
+
+- **`IterativeAmplitudeEstimation`**  
+  An iterative AE method that does not rely on Quantum Phase Estimation. It uses selected Grover
+  powers to produce an estimate with target error `epsilon_target` and confidence level `1 - alpha`.  
+  Official reference:  
+  `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.IterativeAmplitudeEstimation.html`
+
+- **`MaximumLikelihoodAmplitudeEstimation`**  
+  An AE method without phase estimation. It evaluates multiple Grover powers and determines the
+  final result through maximum-likelihood estimation, without requiring additional evaluation qubits.  
+  Official reference:  
+  `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.MaximumLikelihoodAmplitudeEstimation.html`
+
+- **`FasterAmplitudeEstimation`**  
+  A faster AE variant that replaces the QPE component with an iterative Grover-search-style
+  procedure. Compared with canonical QAE, it does not require the additional evaluation qubits and
+  yields less complex circuits.  
+  Official reference:  
+  `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.FasterAmplitudeEstimation.html#qiskit_algorithms.FasterAmplitudeEstimation`
+
+## Minimal Manual Implementation (UnitaryLab) 
 
 The following Python skeleton reconstructs the key components of the QAE algorithm and can be adapted into a compatible implementation.
 

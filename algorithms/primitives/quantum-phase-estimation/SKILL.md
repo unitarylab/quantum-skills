@@ -168,7 +168,7 @@ When $\phi = k_0/2^d$ exactly, the sum equals $\delta_{k', k_0}$ and the measure
 
 **Library backend:** This implementation uses `unitarylab.library.IQFT` for the inverse QFT.
 
-## Hands-On Example
+## Hands-On Example (UnitaryLab)
 
 ```python
 from unitarylab.algorithms import QPEAlgorithm
@@ -189,7 +189,131 @@ print(f"Estimated phi = {result['estimated_phase']:.6f}")  # Expected ≈ 0.125
 print(f"Best probability = {result['confidence_probability']:.4f}")
 ```
 
-## Implementing Your Own Version
+## Reference Implementation (Qiskit)
+
+In addition to the UnitaryLab implementation above, the same quantum phase estimation idea can also be expressed using Qiskit’s `PhaseEstimation` workflow. This section is provided only as a reference example for users who want to compare different software ecosystems. The main implementation path of this skill remains the UnitaryLab version described above.
+
+### Example A: Minimal Qiskit Phase Estimation Run
+```python
+from qiskit.circuit import QuantumCircuit
+from qiskit.primitives import StatevectorSampler
+from qiskit_algorithms.phase_estimators import PhaseEstimation
+
+# Unitary: T gate
+# On eigenstate |1>, T|1> = e^{i*pi/4}|1> = e^{2pi*i*(1/8)}|1>
+unitary = QuantumCircuit(1)
+unitary.t(0)
+
+# Prepare eigenstate |1>
+state_prep = QuantumCircuit(1)
+state_prep.x(0)
+
+# Use 3 evaluation qubits
+qpe = PhaseEstimation(
+    num_evaluation_qubits=3,
+    sampler=StatevectorSampler()
+)
+
+result = qpe.estimate(
+    unitary=unitary,
+    state_preparation=state_prep
+)
+
+print("Most likely phase:", result.phase)
+print("All phases:", result.phases)
+```
+### Example B: Qiskit with Phase Filtering
+```python
+from qiskit.circuit import QuantumCircuit
+from qiskit.primitives import StatevectorSampler
+from qiskit_algorithms.phase_estimators import PhaseEstimation
+
+# Unitary: S gate
+# On eigenstate |1>, S|1> = i|1> = e^{i*pi/2}|1> = e^{2pi*i*0.25}|1>
+unitary = QuantumCircuit(1)
+unitary.s(0)
+
+# Prepare eigenstate |1>
+state_prep = QuantumCircuit(1)
+state_prep.x(0)
+
+qpe = PhaseEstimation(
+    num_evaluation_qubits=4,
+    sampler=StatevectorSampler()
+)
+
+result = qpe.estimate(
+    unitary=unitary,
+    state_preparation=state_prep
+)
+
+print("Most likely phase:", result.phase)
+print("Raw phase distribution:", result.phases)
+print("Filtered phases:", result.filter_phases(cutoff=0.01, as_float=True))
+```
+## Reference Implementation (PennyLane)
+In addition to the UnitaryLab implementation above, PennyLane also provides a
+template-based standard QPE workflow through `QuantumPhaseEstimation`. This
+section is included only as a reference example. The primary implementation path
+of this skill remains the UnitaryLab version described above.
+
+```python
+import pennylane as qml
+from pennylane.templates import QuantumPhaseEstimation
+from pennylane import numpy as np
+
+# 使用 @ 组合复合算子
+unitary = qml.RX(np.pi / 2, wires=[0]) @ qml.CNOT(wires=[0, 1])
+eigenvector = np.array([-1 / 2, -1 / 2, 1 / 2, 1 / 2])
+
+n_estimation_wires = 5
+estimation_wires = range(2, n_estimation_wires + 2)
+
+dev = qml.device("default.qubit", wires=n_estimation_wires + 2)
+
+@qml.qnode(dev)
+def circuit():
+    qml.StatePrep(eigenvector, wires=[0, 1])
+    QuantumPhaseEstimation(
+        unitary,  # 已含 target_wires，无需再传
+        estimation_wires=estimation_wires,
+    )
+    return qml.probs(estimation_wires)
+
+phase_estimated = np.argmax(circuit()) / 2 ** n_estimation_wires
+print(phase_estimated)
+```
+
+### Other Qiskit PE Variants (Reference)
+
+Qiskit also includes several phase-estimation-related variants beyond the standard
+`PhaseEstimation` workflow:
+
+- **`IterativePhaseEstimation`**  
+  An iterative phase-estimation method that estimates the phase bit-by-bit using a single
+  auxiliary qubit rather than a full multi-qubit evaluation register. It performs multiple rounds
+  of controlled-unitary application and feedback-angle updates, and is useful when qubit resources
+  are limited.  
+  Official reference:  
+  `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.IterativePhaseEstimation.html#qiskit_algorithms.IterativePhaseEstimation`
+
+- **`HamiltonianPhaseEstimation`**  
+  A Hamiltonian-oriented phase-estimation variant for estimating eigenvalues of Hermitian operators.
+  Instead of taking a unitary circuit directly, it accepts a Pauli or `SparsePauliOp` Hamiltonian,
+  computes or uses an eigenvalue bound, scales the operator to avoid phase wrapping, exponentiates it
+  into a unitary evolution, and then runs phase estimation internally.  
+  Official reference:  
+  `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.HamiltonianPhaseEstimation.html#qiskit_algorithms.HamiltonianPhaseEstimation`
+
+
+### Other PennyLane PE Variant (Reference)
+
+PennyLane also provides an **iterative quantum phase estimation** interface through `qml.iterative_qpe(base, aux_wire, iters)`. Unlike standard QPE, this variant uses **one auxiliary qubit** and returns a list of **mid-circuit measurement values with qubit reset**. It is a resource-efficient alternative when qubit count is limited. 
+Official reference: 
+`https://docs.pennylane.ai/en/stable/code/api/pennylane.iterative_qpe.html`
+
+
+## Minimal Manual Implementation (UnitaryLab) 
 
 ```python
 from unitarylab.core import GateSequence

@@ -150,7 +150,7 @@ The variational principle guarantees $E(\theta) \geq E_0$ for all $\theta$. As o
 
 **Convergence:** With $n\_layers \geq 2$, the ansatz has sufficient expressibility to reach $E_0$ exactly for this 2-qubit Hamiltonian.
 
-## Hands-On Example
+## Hands-On Example (UnitaryLab)
 
 ```python
 from unitarylab.algorithms import VQEAlgorithm
@@ -163,7 +163,110 @@ print(f"Exact energy: {result['exact_energy']:.6f}")
 print(f"Error:        {abs(result['energy'] - result['exact_energy']):.2e}")
 ```
 
-## Implementing Your Own Version
+## Reference Implementation (Qiskit)
+The main implementation in this skill is based on the project’s own VQEAlgorithm.
+Qiskit is included here only as a concise reference example showing the standard VQE workflow with its estimator + ansatz + optimizer abstraction.
+### Minimal Qiskit Example
+```python
+from qiskit.circuit.library import TwoLocal
+from qiskit.primitives import StatevectorEstimator
+from qiskit.quantum_info import SparsePauliOp
+
+from qiskit_algorithms.minimum_eigensolvers import VQE
+from qiskit_algorithms.optimizers import SLSQP
+
+# Example Hamiltonian
+hamiltonian = SparsePauliOp.from_list([
+    ("ZZ", 1.0),
+    ("XI", -0.5),
+    ("IX", -0.5),
+])
+
+# Parameterized ansatz
+ansatz = TwoLocal(
+    num_qubits=2,
+    rotation_blocks="ry",
+    entanglement_blocks="cx",
+    reps=2,
+)
+
+# Estimator + optimizer
+estimator = StatevectorEstimator()
+optimizer = SLSQP(maxiter=300)
+
+# Standard VQE object
+vqe = VQE(
+    estimator=estimator,
+    ansatz=ansatz,
+    optimizer=optimizer,
+)
+
+result = vqe.compute_minimum_eigenvalue(operator=hamiltonian)
+
+print("Ground-state energy:", result.eigenvalue)
+print("Optimal parameters:", result.optimal_parameters)
+print("Cost function evaluations:", result.cost_function_evals)
+```
+
+### Qiskit Example with Callback
+```python
+import numpy as np
+from qiskit.circuit.library import TwoLocal
+from qiskit.primitives import StatevectorEstimator
+from qiskit.quantum_info import SparsePauliOp
+
+from qiskit_algorithms.minimum_eigensolvers import VQE
+from qiskit_algorithms.optimizers import SLSQP
+
+def my_callback(eval_count, params, mean, metadata):
+    if eval_count % 10 == 0:
+        print(f"Iter {eval_count}: energy = {mean:.6f}")
+
+hamiltonian = SparsePauliOp.from_list([
+    ("ZZ", 1.0),
+    ("XI", -0.5),
+    ("IX", -0.5),
+])
+
+ansatz = TwoLocal(
+    num_qubits=2,
+    rotation_blocks="ry",
+    entanglement_blocks="cx",
+    reps=2,
+)
+
+estimator = StatevectorEstimator()
+optimizer = SLSQP(maxiter=300)
+
+vqe = VQE(
+    estimator=estimator,
+    ansatz=ansatz,
+    optimizer=optimizer,
+    initial_point=np.zeros(ansatz.num_parameters),
+    callback=my_callback,
+)
+
+result = vqe.compute_minimum_eigenvalue(operator=hamiltonian)
+
+print("Final energy:", result.eigenvalue)
+print("Optimal point:", result.optimal_point)
+```
+### Other Qiskit VQE Variants (Reference)
+
+Qiskit also includes several VQE-related variants beyond the standard
+`VQE` workflow:
+
+- **`AdaptVQE`**  
+  An adaptive VQE variant that iteratively builds a compact ansatz from a pool of
+  candidate operators. In each iteration, it selects the operator associated with
+  the largest gradient and appends the corresponding evolution block, making the
+  ansatz increasingly tailored to the target Hamiltonian. It relies on an internal
+  `VQE` solver and is commonly used with operator pools such as excitation-based
+  ansätze in quantum chemistry.  
+  Official reference:  
+  `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.AdaptVQE.html#qiskit_algorithms.AdaptVQE`
+  
+## Minimal Manual Implementation (UnitaryLab) 
 
 The following Python skeleton reconstructs the VQE core components — the Hamiltonian builder, the ansatz circuit, and the hybrid optimization loop.
 

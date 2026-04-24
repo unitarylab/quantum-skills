@@ -38,7 +38,7 @@
 ### &#10024; Key Features
 
 - **Progressive Disclosure** — Root `SKILL.md` is lightweight; algorithm and simulator guides load only when needed.
-- **Full Algorithm Coverage** — Primitives, linear systems, cryptography, Hamiltonian simulation, and PDE solvers.
+- **Full Algorithm Coverage** — Primitives, linear systems, cryptography, Hamiltonian simulation, PDE solvers, eigensolvers, gradients, and quantum error correction.
 - **Multi-Simulator Support** — UnitaryLab (recommended), Qiskit, and PennyLane, with clear selection rules.
 - **Run-Ready Setup** — Pre-built wheels for Windows, macOS, and Linux; `uv`-based one-command install.
 - **Education-Friendly** — Suitable for concept explanation, circuit design, code review, and hands-on demos.
@@ -54,6 +54,9 @@
 | **Cryptography** | Shor's Algorithm, Discrete Logarithm, Simon's Algorithm |
 | **Hamiltonian Simulation** | Trotter, QDrift, Taylor Series, QSP |
 | **Schrodingerization** | Advection, Heat (1D/2D), Burgers, Black-Scholes, Maxwell, Helmholtz, Elastic Wave, Multiscale, OU Process, … |
+| **Eigensolvers** | NumPyEigensolver, VQD |
+| **Gradients** | Parameter-shift, Finite-difference, Linear-combination, SPSA, Reverse-mode, QFI |
+| **Quantum Error Correction** | qLDPC, CSS Codes, Hypergraph Product Codes |
 
 ---
 
@@ -81,6 +84,9 @@ quantum-skills/
 |   +-- cryptography/           # Shor, discrete logarithm, Simon
 |   +-- hamiltonian-simulation/ # Trotter, QDrift, Taylor, QSP
 |   +-- schrodingerization/     # PDE solvers (20+ problem types)
+|   +-- eigensolvers/           # NumPyEigensolver, VQD
+|   +-- gradients/              # Parameter-shift, finite-diff, SPSA, reverse, QFI
+|   +-- quantum-error-correction/ # qLDPC, CSS codes
 |
 +-- simulators/                 # Simulator selection & installation guides
     +-- unitarylab/             # Recommended — pre-built wheels included
@@ -158,7 +164,7 @@ see the `LICENSE` and `LICENSE-PROPRIETARY` files bundled inside the wheel.
 ### &#10024; 核心特性
 
 - **渐进式加载** — 根 `SKILL.md` 轻量，算法与模拟器指南仅在需要时才加载。
-- **算法全覆盖** — 基元、线性系统、密码学、哈密顿量模拟、PDE 求解器一应俱全。
+- **算法全覆盖** — 基元、线性系统、密码学、哈密顿量模拟、PDE 求解器、本征求解器、梯度方法、量子纠错一应俱全。
 - **多模拟器支持** — UnitaryLab（推荐）、Qiskit、PennyLane，附明确选型规则。
 - **开箱即用** — 提供 Windows / macOS / Linux 预编译 wheel，一条命令完成安装。
 - **教学友好** — 适用于概念解释、电路设计、代码审查和动手实验。
@@ -174,6 +180,9 @@ see the `LICENSE` and `LICENSE-PROPRIETARY` files bundled inside the wheel.
 | **密码学** | Shor 算法、离散对数、Simon 算法 |
 | **哈密顿量模拟** | Trotter、QDrift、Taylor 级数、QSP |
 | **Schrodingerization** | 对流、热方程（一维/二维）、Burgers、Black-Scholes、Maxwell、Helmholtz、弹性波、多尺度、OU 过程 … |
+| **本征求解器** | NumPyEigensolver、VQD |
+| **梯度方法** | 参数位移、有限差分、线性组合、SPSA、反向模式、QFI |
+| **量子纠错** | qLDPC、CSS 码、超图乘积码 |
 
 ---
 
@@ -201,6 +210,9 @@ quantum-skills/
 |   +-- cryptography/           # Shor、离散对数、Simon
 |   +-- hamiltonian-simulation/ # Trotter、QDrift、Taylor、QSP
 |   +-- schrodingerization/     # PDE 求解器（20+ 问题类型）
+|   +-- eigensolvers/           # NumPyEigensolver、VQD
+|   +-- gradients/              # 参数位移、有限差分、SPSA、反向模式、QFI
+|   +-- quantum-error-correction/ # qLDPC、CSS 码
 |
 +-- simulators/                 # 模拟器选型与安装指南
     +-- unitarylab/             # 推荐 — 内含预编译 wheel

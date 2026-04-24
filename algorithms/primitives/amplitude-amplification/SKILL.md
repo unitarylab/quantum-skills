@@ -172,8 +172,7 @@ $$k = \left\lfloor \frac{\pi}{4\theta} - \frac{1}{2} \right\rceil \approx \frac{
 
 Query complexity: $O(1/\sqrt{p})$, quadratic speedup over classical $O(1/p)$.
 
-## Hands-On Example
-
+## Hands-On Example (UnitaryLab)
 ```python
 from unitarylab.algorithms import AmplitudeAmplificationAlgorithm
 from unitarylab.core import GateSequence
@@ -205,8 +204,104 @@ print(f"Amplified probability: {result['amplified_prob']:.4f}")
 print(f"Status: {result['status']}")
 print(result['plot'])
 ```
+## Reference Implementation (Qiskit)
 
-## Implementing Your Own Version
+In addition to the UnitaryLab implementation above, the same amplitude amplification idea can also be expressed using Qiskit’s AmplificationProblem and Grover workflow. This section is provided only as a reference example for users who want to compare different software ecosystems. The main implementation path of this skill remains the UnitaryLab version described above.
+### Example A: Minimal Qiskit Grover Run
+```python
+from qiskit import QuantumCircuit
+from qiskit.primitives import StatevectorSampler
+from qiskit_algorithms.amplitude_amplifiers import AmplificationProblem, Grover
+
+# Oracle marking |11> as the good state
+oracle = QuantumCircuit(2)
+oracle.cz(0, 1)
+
+problem = AmplificationProblem(
+    oracle=oracle,
+    is_good_state=["11"],
+)
+
+grover = Grover(
+    iterations=1,
+    sampler=StatevectorSampler()
+)
+
+result = grover.amplify(problem)
+
+print("Top measurement:", result.top_measurement)
+print("Oracle evaluation:", result.oracle_evaluation)
+print("Max probability:", result.max_probability)
+```
+### Example B: Qiskit with Post-Processing
+```python
+from qiskit import QuantumCircuit
+from qiskit.primitives import StatevectorSampler
+from qiskit_algorithms.amplitude_amplifiers import AmplificationProblem, Grover
+
+# Oracle marking |111>
+oracle = QuantumCircuit(3)
+oracle.ccz(0, 1, 2)
+
+problem = AmplificationProblem(
+    oracle=oracle,
+    objective_qubits=[0, 1, 2],
+    is_good_state=lambda bitstr: bitstr == "111",
+    post_processing=lambda bitstr: int(bitstr, 2),
+)
+
+grover = Grover(
+    growth_rate=1.2,
+    sampler=StatevectorSampler()
+)
+
+result = grover.amplify(problem)
+
+print("Top measurement:", result.top_measurement)
+print("Decoded assignment:", result.assignment)
+print("Tried powers:", result.iterations)
+```
+
+## Reference Implementation (PennyLane)
+
+PennyLane also provides an amplitude amplification template through
+`qml.AmplitudeAmplification`. This section is included only as a reference
+implementation for comparison with other quantum software frameworks. The main
+implementation path of this skill remains the UnitaryLab version described above.
+
+### Example A: Minimal PennyLane Amplitude Amplification Run (Grover Search)
+
+```python
+import pennylane as qml
+import numpy as np
+
+# Build the state-preparation operator U (uniform superposition over 3 qubits)
+@qml.prod
+def generator(wires):
+    for wire in wires:
+        qml.Hadamard(wires=wire)
+
+U = generator(wires=range(3))
+
+# Oracle that marks |2⟩ (binary 010) with a phase flip
+O = qml.FlipSign(2, wires=range(3))
+
+dev = qml.device("default.qubit")
+
+@qml.qnode(dev)
+def circuit():
+    generator(wires=range(3))                  # Prepare |Ψ⟩
+    qml.AmplitudeAmplification(U, O, iters=3)  # Amplify |2⟩
+    return qml.probs(wires=range(3))
+
+probs = circuit()
+
+print(np.round(probs, 3))
+# Expected: dominant probability at index 2
+```
+
+
+## Minimal Manual Implementation (UnitaryLab) 
 
 ```python
 from unitarylab.core import GateSequence

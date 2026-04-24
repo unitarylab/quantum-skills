@@ -170,7 +170,56 @@ print(f"Period r: {result['period']}")
 print(result['plot'])
 ```
 
-## Implementing Your Own Version
+
+## Reference Implementation (Classiq)
+
+Classiq can be used as a reference implementation for Shor-style period finding. It describes the modular multiplication based QPE workflow through high-level QMOD functions, automatic synthesis, and built-in modular arithmetic primitives.
+
+### Example A: Minimal Classiq Shor Period-Finding Run
+
+```python
+from classiq import *
+
+
+@qfunc
+def period_finding(n: CInt, a: CInt, x: QNum, phase_var: QNum):
+    x ^= 1
+    qpe_flexible(
+        lambda p: modular_multiply_constant_inplace(n, a**p, x),
+        phase_var,
+    )
+
+
+modulo_num = 21
+a_num = 11
+x_len = modulo_num.bit_length()
+phase_len = 2 * x_len
+
+
+@qfunc
+def main(phase_var: Output[QNum[phase_len, UNSIGNED, phase_len]]):
+    x = QNum()
+    allocate(x_len, x)
+    allocate(phase_var)
+
+    period_finding(modulo_num, a_num, x, phase_var)
+
+    drop(x)
+
+
+qprog = synthesize(
+    main,
+    preferences=Preferences(qasm3=True, optimization_level=1),
+    constraints=Constraints(optimization_parameter="width"),
+)
+
+sample_result = execute(qprog).get_sample_result()
+df = sample_result.dataframe
+print(df)
+```
+
+
+## Minimal Manual Implementation (UnitaryLab) 
 
 Below is a skeleton that reconstructs Shor's algorithm at the component level, matching the `ShorAlgorithm` structure in `algorithm.py`.
 
@@ -254,6 +303,9 @@ def shor_factor(N: int, max_retries: int = 15, backend: str = 'torch'):
 - `get_modular_matrix` — builds the $2^n \times 2^n$ permutation matrix for $|x\rangle \to |x \cdot \text{mult} \bmod N\rangle$. This is the `_build_modular_matrix_circuit` bypass used in the `'matrix'` method.
 - `build_shor_circuit` — assembles $H^{\otimes n_{\text{count}}}$ + controlled-$U^{2^j}$ gates + IQFT, the three-stage quantum phase estimation structure.
 - `shor_factor` — the outer retry loop: picks random $a$, builds + measures the circuit, applies continued fractions to extract period $r$, then computes $\gcd(a^{r/2}\pm 1, N)$.
+
+
+
 
 ## Debugging Tips
 

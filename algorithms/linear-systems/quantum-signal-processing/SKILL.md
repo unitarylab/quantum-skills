@@ -149,7 +149,7 @@ $$\langle 0|U_\Phi(x)|0\rangle = P(x)$$
 
 **Complexity:** The circuit uses $d+1$ single-qubit gates plus $2d+1$ $R_z$ gates — total $O(d)$ gates.
 
-## Hands-On Example
+## Hands-On Example (UnitaryLab)
 
 ```python
 from unitarylab.algorithms import QSPAlgorithm
@@ -164,7 +164,47 @@ for x_test in [0.0, 0.3, 0.7, 1.0]:
     print(f"x={x_test:.1f}: error={result['error']:.2e}, ideal_re={ideal.real:.4f}")
 ```
 
-## Implementing Your Own Version
+
+## Reference Implementation (PennyLane)
+
+The main implementation path in this project remains the **UnitaryLab QSP implementation** based on `QSPAlgorithm`, `GateSequence`, and alternating `Rz/Rx` signal-processing rotations.
+
+PennyLane is provided here only as a reference implementation for the more general **Quantum Singular Value Transformation (QSVT)** framework. Compared with the current UnitaryLab QSP example, PennyLane QSVT applies polynomial transformations to the singular values of a block-encoded matrix or operator.
+
+### Example A: Minimal PennyLane QSVT Run with Matrix Block Encoding
+
+```python
+import pennylane as qml
+import numpy as np
+
+# Hermitian input matrix A
+A = np.array([
+    [0.1, 0.2],
+    [0.2, -0.4],
+])
+
+# Polynomial P(x) = 0.2 + 0.3x^2
+# Coefficients are ordered from lowest to highest power.
+poly = np.array([0.2, 0.0, 0.3])
+
+dev = qml.device("default.qubit", wires=[0, 1])
+
+@qml.qnode(dev)
+def circuit():
+    qml.qsvt(
+        A,
+        poly,
+        encoding_wires=[0, 1],
+        block_encoding="embedding",
+    )
+    return qml.state()
+
+result = circuit()
+print(result)
+
+```
+
+## Minimal Manual Implementation (UnitaryLab) 
 
 The following Python skeleton reconstructs the key components: phase optimization and the alternating QSP circuit.
 

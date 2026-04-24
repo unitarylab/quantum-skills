@@ -164,7 +164,7 @@ From the measurement $(u, v)$:
 
 **Complexity:** $O(n^3)$ gates where $n = \lceil\log_2 P\rceil$. Classical best: sub-exponential $O(\exp(\sqrt{n\log n}))$ via index calculus.
 
-## Hands-On Example
+## Hands-On Example (UnitaryLab)
 
 ```python
 from unitarylab.algorithm import DiscreteLogAlgorithm
@@ -269,6 +269,115 @@ def solve_dlp(g: int, y: int, P: int, backend: str = 'torch'):
 - `modular_matrix` — same pattern as Shor: $2^n \times 2^n$ permutation for $|x\rangle \to |x \cdot \text{mult} \bmod P\rangle$.
 - `build_dlp_circuit` — two-register QPE: register $a$ accumulates powers of $g$, register $b$ accumulates powers of $y^{-1}$, both followed by IQFT.
 - `solve_dlp` — measures both registers, extracts phases, and uses continued fractions to recover the periods that encode $x$.
+
+
+
+## Reference Implementation (Classiq)
+
+Classiq provides a high-level QMOD implementation of the discrete logarithm algorithm. It uses `@qfunc` to define modular exponentiation, the discrete-log oracle, inverse `qft`, model creation, synthesis, and execution.
+
+This reference is useful for understanding how the Shor-style discrete logarithm workflow can be expressed through automatic circuit synthesis.
+
+### Example A: Minimal Classiq Discrete Logarithm Model
+
+```python
+from classiq import *
+from classiq.qmod.symbolic import ceiling, log
+
+
+@qfunc
+def modular_exponentiation(N: CInt, a: CInt, x: QArray, pw: QArray):
+    repeat(
+        count=pw.len,
+        iteration=lambda index: control(
+            pw[index],
+            lambda: modular_multiply_constant_inplace(
+                N,
+                a ** (2**index),
+                x,
+            ),
+        ),
+    )
+
+
+@qfunc
+def discrete_log_oracle(
+    g_generator: CInt,
+    x_element: CInt,
+    N_modulus: CInt,
+    alpha: QArray,
+    beta: QArray,
+    func_res: Output[QNum],
+) -> None:
+    allocate(ceiling(log(N_modulus, 2)), func_res)
+    func_res ^= 1
+
+    # Apply x^alpha mod N
+    modular_exponentiation(N_modulus, x_element, func_res, alpha)
+
+    # Apply g^beta mod N
+    modular_exponentiation(N_modulus, g_generator, func_res, beta)
+
+
+@qfunc
+def discrete_log(
+    g: CInt,
+    x: CInt,
+    N: CInt,
+    order: CInt,
+    alpha: Output[QArray],
+    beta: Output[QArray],
+    func_res: Output[QArray],
+) -> None:
+    reg_len = ceiling(log(order, 2))
+
+    allocate(reg_len, alpha)
+    allocate(reg_len, beta)
+
+    hadamard_transform(alpha)
+    hadamard_transform(beta)
+
+    discrete_log_oracle(g, x, N, alpha, beta, func_res)
+
+    invert(lambda: qft(alpha))
+    invert(lambda: qft(beta))
+
+
+MODULU_NUM = 5
+G_GENERATOR = 3
+X_LOG_ARG = 2
+ORDER = MODULU_NUM - 1
+
+
+@qfunc
+def main(
+    alpha: Output[QNum],
+    beta: Output[QNum],
+    func_res: Output[QNum],
+) -> None:
+    discrete_log(
+        G_GENERATOR,
+        X_LOG_ARG,
+        MODULU_NUM,
+        ORDER,
+        alpha,
+        beta,
+        func_res,
+    )
+
+
+qmod = create_model(
+    main,
+    constraints=Constraints(max_width=13),
+    preferences=Preferences(optimization_level=1),
+    execution_preferences=ExecutionPreferences(num_shots=4000),
+)
+
+qprog = synthesize(qmod)
+result = execute(qprog).result_value()
+print(result)
+
+```
 
 ## Debugging Tips
 

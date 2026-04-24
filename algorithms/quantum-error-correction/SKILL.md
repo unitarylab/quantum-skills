@@ -1,5 +1,5 @@
 ---
-name: pennylaneqldpc
+name: quantum-error-correction
 description: A clear and practical skill guide for learning and running a PennyLane-based qLDPC tutorial, from classical LDPC basics to CSS and Hypergraph Product code construction.
 ---
 

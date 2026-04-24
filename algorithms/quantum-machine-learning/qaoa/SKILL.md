@@ -112,8 +112,10 @@ print(result['plot'])
 **Data flow:** `edges` → `_get_h_cost()` → COBYLA(`obj_func`) → `opt_res.x` → final circuit → `argmax(|psi|²)` → bitstring → Max-Cut count → result dict.
 
 ## Understanding the Key Quantum Components
-$$H_C = \frac{1}{2}\sum_{(u,v)\in E}(Z_u Z_v - I)$$
-Implemented as: for each edge $(u,v)$, compute $ZZ + II$ Kronecker product applied to the $n$-qubit state. The ground state of $-H_C$ corresponds to the maximum cut.
+
+### 1. Cost Hamiltonian $H_C$
+$$H_C = -\frac{1}{2}\sum_{(u,v)\in E}(I - Z_u Z_v)$$
+Implemented as: for each edge $(u,v)$, embed the corresponding $Z_u Z_v$ interaction into the full $n$-qubit space using Kronecker products, together with the identity contribution required by the Max-Cut objective. The minimum-energy states of this cost Hamiltonian correspond to bit strings with larger cut values.
 
 ### 2. Cost Layer $e^{-i\gamma H_C}$
 For each edge $(u,v)$: `CX(u, v) → Rz(2γ, v) → CX(u, v)`. This implements $e^{-i\gamma Z_u Z_v}$ via phase kickback.
@@ -133,7 +135,7 @@ QAOA at depth $p$ achieves approximation ratio $\geq \alpha_p$ for Max-Cut, wher
 | README / Theory Concept | Code Object or Location |
 |---|---|
 | Initial state $|+\rangle^{\otimes n}$ | `for i in range(n_qubits): qc.h(i)` in `_build_circuit` |
-| Cost Hamiltonian $H_C = \sum_{(u,v)}Z_uZ_v$ | `_get_h_cost(edges, n_qubits)` — NumPy Kronecker sum |
+| Cost Hamiltonian $H_C = -\frac{1}{2}\sum_{(u,v)\in E}(I - Z_u Z_v)$ | `_get_h_cost(edges, n_qubits)` — builds the Max-Cut cost Hamiltonian in matrix form | 
 | Cost layer $e^{-i\gamma Z_uZ_v}$ | `cx(u,v) → rz(2*gamma, v) → cx(u,v)` per edge per layer |
 | Mixer layer $e^{-i\beta X_j}$ | `rx(2*beta, j)` for each qubit per layer |
 | Parameters $(\gamma_1,\ldots,\gamma_p, \beta_1,\ldots,\beta_p)$ | `params[:p]` = gammas, `params[p:]` = betas (flat array) |
@@ -141,9 +143,13 @@ QAOA at depth $p$ achieves approximation ratio $\geq \alpha_p$ for Max-Cut, wher
 | COBYLA optimization | `minimize(obj_func, x0, method='COBYLA')` |
 | Bitstring decoding | `best_idx = argmax(|psi|²)` → `format(best_idx, '0nb')` |
 | Max-Cut count | `len([(u,v) for (u,v) in edges if best_bits[u] != best_bits[v]])` |
-| Exact maximum energy $\lambda_\min(-H_C)$ | `np.linalg.eigvalsh(h_cost)[0]` (note: ground state of $H_C$ = minimum energy) |
+| Exact maximum energy $\lambda_{\min}(-H_C)$ | `np.linalg.eigvalsh(h_cost)[0]` (note: ground state of $H_C$ = minimum energy) |
 
-**Notes on implementation:** The cost Hamiltonian here is $H_C = \sum_{(u,v)} Z_u Z_v$ (without the $1/2(Z_uZ_v - I)$ normalization used in some formulations). The Max-Cut solution is found by taking the most-probable basis state from the final statevector — this is a greedy extraction, not a full measurement simulation.
+**Notes on implementation:** This skill consistently uses the Max-Cut cost Hamiltonian defined in the overview,
+$$
+H_C = -\frac{1}{2}\sum_{(u,v)\in E}(I - Z_u Z_v).
+$$
+The final Max-Cut solution is extracted from the most-probable basis state of the optimized statevector, which is a greedy decoding strategy rather than a full measurement-sampling workflow.
 
 ## Mathematical Deep Dive
 
@@ -151,13 +157,18 @@ QAOA at depth $p$ achieves approximation ratio $\geq \alpha_p$ for Max-Cut, wher
 $$|\psi(\gamma, \beta)\rangle = e^{-i\beta_p H_{\text{mix}}} e^{-i\gamma_p H_C} \cdots e^{-i\beta_1 H_{\text{mix}}} e^{-i\gamma_1 H_C} |+\rangle^{\otimes n}$$
 
 **Objective:**
-$$\min_{\gamma,\beta} \langle\psi(\gamma,\beta)|H_C|\psi(\gamma,\beta)\rangle = -\frac{1}{2}\sum_{(u,v)\in E}(1 - \langle Z_u Z_v\rangle)$$
+$$
+\min_{\gamma,\beta} \langle\psi(\gamma,\beta)|H_C|\psi(\gamma,\beta)\rangle
+\quad \text{with} \quad
+H_C = -\frac{1}{2}\sum_{(u,v)\in E}(I - Z_u Z_v)
+$$
+
 
 **Approximation ratio:** $r = \langle H_C\rangle_{\text{QAOA}} / C_{\text{max}}$ where $C_{\text{max}}$ is the true Max-Cut value.
 
 **Total parameters:** $2p$ real numbers ($p$ gammas + $p$ betas).
 
-## Hands-On Example
+## Hands-On Example (UnitaryLab)
 
 ```python
 from unitarylab.algorithms import QAOAAlgorithm
@@ -170,10 +181,48 @@ algo = QAOAAlgorithm(seed=0)
 result = algo.run(edges=edges, n_qubits=n_qubits, p_layers=2, max_iter=80)
 
 print(f"Cut value: {result['maxcut']}")
-print(f"Partition: {result['plots']['best_partition']}")
+print(f"Partition: {result['best_partition']}")
+```
+## Reference Implementation (Qiskit)
+
+The main implementation in this skill is based on the project’s own `QAOAAlgorithm`.  
+The following Qiskit example is provided only as a **reference implementation** for users who want to compare the workflow with the standard Qiskit QAOA interface.
+
+Qiskit provides a built-in `QAOA` class in `qiskit_algorithms.minimum_eigensolvers`, where the typical workflow is:
+
+1. Define a diagonal cost Hamiltonian.
+2. Instantiate `QAOA` with a sampler and a classical optimizer.
+3. Call `compute_minimum_eigenvalue(...)` to solve the optimization problem.
+
+### Minimal Qiskit Example
+
+```python
+from qiskit.primitives import StatevectorSampler
+from qiskit.quantum_info import SparsePauliOp
+from qiskit_algorithms.minimum_eigensolvers import QAOA
+from qiskit_algorithms.optimizers import COBYLA
+
+# Example 2-qubit diagonal cost Hamiltonian
+cost_op = SparsePauliOp.from_list([
+    ("ZZ", 1.0),
+    ("ZI", 0.5),
+    ("IZ", 0.5),
+])
+
+qaoa = QAOA(
+    sampler=StatevectorSampler(),
+    optimizer=COBYLA(),
+    reps=2,
+)
+
+result = qaoa.compute_minimum_eigenvalue(operator=cost_op)
+
+print("Eigenvalue:", result.eigenvalue)
+print("Best measurement:", result.best_measurement)
+print("Eigenstate:", result.eigenstate)
 ```
 
-## Implementing Your Own Version
+## Minimal Manual Implementation (UnitaryLab) 
 
 The following Python skeleton reconstructs the core QAOA components — the cost Hamiltonian builder, the QAOA circuit, and the hybrid optimization loop.
 
@@ -194,7 +243,8 @@ def build_cost_hamiltonian(edges, n_qubits: int) -> np.ndarray:
         ops[u] = Z; ops[v] = Z
         ZuZv = ops[0]
         for k in range(1, n_qubits): ZuZv = np.kron(ZuZv, ops[k])
-        H_c += ZuZv
+        identity = np.eye(dim, dtype=np.complex128)
+        H_c += -0.5 * (identity - ZuZv)
     return H_c
 
 def build_qaoa_circuit(params: np.ndarray, edges, n_qubits: int,
