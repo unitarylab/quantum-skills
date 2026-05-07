@@ -31,7 +31,7 @@ python ./scripts/algorithm.py
 - Born rule: measurement probabilities $p_\theta(x) = |\langle x|\psi(\theta)\rangle|^2$.
 - KL divergence; Parameter Shift Rule.
 - Adam optimizer.
-- `torch`, `numpy`, `GateSequence`.
+- `torch`, `numpy`, `Circuit`.
 
 ## Using the Provided Implementation
 
@@ -76,7 +76,7 @@ print(result['plot'])
 |---|---|---|
 | `status` | `str` | `'success'`. |
 | `loss_history` | `List[float]` | KL divergence at each epoch. |
-| `circuit` | `GateSequence` | Example ansatz circuit. |
+| `circuit` | `Circuit` | Example ansatz circuit. |
 | `circuit_path` | `str` | Path to circuit SVG. |
 | `plot_path` | `str` | Path to training curve PNG. |
 | `plot` | `str` | ASCII art result panel. |
@@ -97,7 +97,7 @@ print(result['plot'])
 
 **Helper Methods:**
 - **`_get_bas_dist(n_qubits)`** — Hardcoded BAS distribution: `valid = [0, 3, 5, 10, 12, 15]`; returns a tensor with uniform probability `1/6` over these 6 states and `0` elsewhere.
-- **`_build_circuit(theta, n_qubits, backend)`** — `GateSequence(n_qubits, backend=backend)`; per layer $l$: `ry(theta[l,q], q)` for all qubits (RY gates); then ring `cx(q, (q+1)%n_qubits)` for all qubits (skipped in last layer).
+- **`_build_circuit(theta, n_qubits, backend)`** — `Circuit(n_qubits, backend=backend)`; per layer $l$: `ry(theta[l,q], q)` for all qubits (RY gates); then ring `cx(q, (q+1)%n_qubits)` for all qubits (skipped in last layer).
 - **`_get_probs(theta, n_qubits, backend)`** — Calls `_build_circuit`, executes with `initial_state=|0⟩`, converts `|ψ|²` to a torch tensor of length `2^n_qubits`.
 
 **Data flow:** `_get_bas_dist()` → `target_probs` → training loop → `_get_probs()` (current + shift±) → KL gradient per `(l,q)` → Adam step → `final_probs` → `_generate_all_outputs()` → result dict.
@@ -174,12 +174,12 @@ The following skeleton reconstructs the QCBM circuit builder, Born-rule probabil
 # Simplified reconstruction — mirrors QCBMAlgorithm._build_circuit(), _get_probs(), training loop
 import numpy as np
 import torch
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 
 def build_circuit(theta: torch.Tensor, n_qubits: int,
-                  backend: str = 'torch') -> GateSequence:
+                  backend: str = 'torch') -> Circuit:
     """Ry-layer + CNOT-ring architecture, n_layers = theta.shape[0]."""
-    gs = GateSequence(n_qubits, backend=backend)
+    gs = Circuit(n_qubits, backend=backend)
     for l in range(theta.shape[0]):
         for q in range(n_qubits):
             gs.ry(float(theta[l, q]), q)

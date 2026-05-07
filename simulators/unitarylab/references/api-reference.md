@@ -8,7 +8,7 @@
 
 - [unitarylab (top-level)](#unitarylab-top-level)
 - [unitarylab.core](#unitarylabcore)
-  - [GateSequence](#gatesequence)
+  - [Circuit](#Circuit)
   - [Register](#register)
   - [ClassicalRegister](#classicalregister)
   - [State](#state)
@@ -40,7 +40,7 @@ The top-level `unitarylab` package re-exports the most commonly used symbols for
 | Symbol | Source | Description |
 |--------|--------|-------------|
 | `set_backend` | `unitarylab.backend` | Select the compute backend (`'torch'` or `'unitarylab'`) |
-| `GateSequence` | `unitarylab.core` | Quantum circuit container (see [GateSequence](#gatesequence)) |
+| `Circuit` | `unitarylab.core` | Quantum circuit container (see [Circuit](#Circuit)) |
 | `Register` | `unitarylab.core` | Quantum register (see [Register](#register)) |
 | `ClassicalRegister` | `unitarylab.core` | Classical register (see [ClassicalRegister](#classicalregister)) |
 | `QFT` | `unitarylab.library` | n-qubit Quantum Fourier Transform circuit |
@@ -66,14 +66,14 @@ Raises `ValueError` if an unsupported backend is specified. Falls back to `'torc
 ```python
 from unitarylab.core import <symbol>
 # or directly:
-from unitarylab import GateSequence, Register, ClassicalRegister, state_preparation
+from unitarylab import Circuit, Register, ClassicalRegister, state_preparation
 ```
 
 ---
 
-### GateSequence
+### Circuit
 
-#### `GateSequence(num_qubits, *classical_registers, name='Sequence')` or `GateSequence(*registers)`
+#### `Circuit(num_qubits, *classical_registers, name='Sequence')` or `Circuit(*registers)`
 
 Quantum circuit container. Wraps the backend gate-sequence implementation and adds register management, circuit composition, visualization, and execution.
 
@@ -81,9 +81,9 @@ Quantum circuit container. Wraps the backend gate-sequence implementation and ad
 
 | Form | Description |
 |------|-------------|
-| `GateSequence(n)` | Create a circuit with `n` qubits using a single auto-named quantum register `'q'` |
-| `GateSequence(n, cr1, cr2, ...)` | Same as above plus one or more `ClassicalRegister` objects |
-| `GateSequence(reg1, reg2, ...)` | Create a circuit from explicit `Register` / `ClassicalRegister` objects |
+| `Circuit(n)` | Create a circuit with `n` qubits using a single auto-named quantum register `'q'` |
+| `Circuit(n, cr1, cr2, ...)` | Same as above plus one or more `ClassicalRegister` objects |
+| `Circuit(reg1, reg2, ...)` | Create a circuit from explicit `Register` / `ClassicalRegister` objects |
 
 **Circuit management**
 
@@ -93,7 +93,7 @@ Quantum circuit container. Wraps the backend gate-sequence implementation and ad
 | `get_backend_type()` | str | Active backend name |
 | `update_name(name)` | — | Rename the circuit |
 | `data()` | list | Raw gate data of the underlying backend circuit |
-| `copy()` | `GateSequence` | Shallow copy of the circuit |
+| `copy()` | `Circuit` | Shallow copy of the circuit |
 | `add_register(register)` | — | Append a `Register` and assign global qubit indices |
 | `add_classical_register(cl_register)` | — | Append a `ClassicalRegister` |
 
@@ -185,12 +185,12 @@ Map `target` qubit(s) to `clbit` classical bit(s). Results are stored in the cor
 
 | Method | Return | Description |
 |--------|--------|-------------|
-| `dagger()` | `GateSequence` | Conjugate transpose |
-| `inverse()` | `GateSequence` | Inverse circuit |
-| `reverse()` | `GateSequence` | Gates in reverse order |
-| `decompose(times=1)` | `GateSequence` | Decompose composite gates |
-| `repeat(times=1)` | `GateSequence` | Repeat circuit `times` times |
-| `control(num_ctrl_qubits=1, control_sequence=None)` | `GateSequence` | Add `num_ctrl_qubits` control qubits |
+| `dagger()` | `Circuit` | Conjugate transpose |
+| `inverse()` | `Circuit` | Inverse circuit |
+| `reverse()` | `Circuit` | Gates in reverse order |
+| `decompose(times=1)` | `Circuit` | Decompose composite gates |
+| `repeat(times=1)` | `Circuit` | Repeat circuit `times` times |
+| `control(num_ctrl_qubits=1, control_sequence=None)` | `Circuit` | Add `num_ctrl_qubits` control qubits |
 
 **Execution**
 
@@ -295,7 +295,7 @@ Quantum statevector class backed by PyTorch tensors.
 
 ### state_preparation
 
-#### `state_preparation(v, backend='torch')` → `GateSequence`
+#### `state_preparation(v, backend='torch')` → `Circuit`
 
 Build a quantum circuit that prepares the normalized state vector `|v⟩` using recursive amplitude encoding.
 
@@ -306,7 +306,7 @@ Build a quantum circuit that prepares the normalized state vector `|v⟩` using 
 
 Raises `ValueError` if `v` is not unit-norm.
 
-The returned `GateSequence` has `log2(len(v))` qubits and can be directly appended into a larger circuit via `qc.append(...)` or `qc.initialize(...)`.
+The returned `Circuit` has `log2(len(v))` qubits and can be directly appended into a larger circuit via `qc.append(...)` or `qc.initialize(...)`.
 
 ---
 
@@ -358,7 +358,7 @@ Trotter-decomposition-based quantum differential operator. Inherits from `Trotte
 
 | Method | Return | Description |
 |--------|--------|-------------|
-| `.data()` → `(H1_func, H2_func)` | `(callable, callable)` | Return two callables, each taking a time step and returning a `GateSequence` circuit |
+| `.data()` → `(H1_func, H2_func)` | `(callable, callable)` | Return two callables, each taking a time step and returning a `Circuit` circuit |
 | `.dagger()` | `TrotterOperator` | Return Hermitian conjugate (time reversal) |
 | `op * scalar` | `TrotterOperator` | Scale time step by a scalar |
 
@@ -381,7 +381,7 @@ Base class for quantum Trotter operators. Manages multiple Trotter terms.
 
 | Method | Description |
 |--------|-------------|
-| `.data()` → `(H1_func, H2_func)` | Return two callables: given a time step, produce a `GateSequence` |
+| `.data()` → `(H1_func, H2_func)` | Return two callables: given a time step, produce a `Circuit` |
 | `.dagger()` | Return the inverse operator |
 | `op * scalar` / `scalar * op` | Scale time step |
 | `op1 + op2` | Merge two Trotter operators |
@@ -390,11 +390,11 @@ Base class for quantum Trotter operators. Manages multiple Trotter terms.
 
 ### Quantum Fourier Transform (QFT)
 
-#### `QFT(n, backend='torch')` → `GateSequence`
+#### `QFT(n, backend='torch')` → `Circuit`
 
 Construct an n-qubit Quantum Fourier Transform circuit.
 
-#### `IQFT(n, backend='torch')` → `GateSequence`
+#### `IQFT(n, backend='torch')` → `Circuit`
 
 Construct an n-qubit Inverse Quantum Fourier Transform circuit (dagger of QFT).
 
@@ -422,15 +422,15 @@ Applicable to ODE/PDE: `du/dt = A u + b`
 
 ---
 
-#### `schro_trotter(u0, H1=None, H2=None, Nt=1, na=3, R=4, order=1, point=0, b=None, theta=None)` → `(ndarray, GateSequence)`
+#### `schro_trotter(u0, H1=None, H2=None, Nt=1, na=3, R=4, order=1, point=0, b=None, theta=None)` → `(ndarray, Circuit)`
 
 Solve the Schrödingerization-lifted Schrödinger equation via a Trotter quantum circuit. Returns `(u(T), quantum circuit)`.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `u0` | ndarray | Initial condition vector |
-| `H1` | GateSequence \| None | Circuit for Hermitian part H₁ = (A+Aᵀ)/2 |
-| `H2` | GateSequence \| None | Circuit for anti-Hermitian part H₂ = (A-Aᵀ)/2i |
+| `H1` | Circuit \| None | Circuit for Hermitian part H₁ = (A+Aᵀ)/2 |
+| `H2` | Circuit \| None | Circuit for anti-Hermitian part H₂ = (A-Aᵀ)/2i |
 | `Nt` | int | Number of Trotter time steps |
 | `na` | int | Auxiliary p-direction qubits |
 | `R` | float | p-domain range [-πR, πR] |
@@ -497,7 +497,7 @@ Block-encode a given matrix and return a result object containing the quantum ci
 
 | Attribute | Description |
 |-----------|-------------|
-| `.circuit` | Quantum circuit encoding the matrix (`GateSequence`) |
+| `.circuit` | Quantum circuit encoding the matrix (`Circuit`) |
 | `.alpha` | Normalization coefficient such that A/alpha is block-encoded |
 | `.total_qubits` | Total number of qubits |
 | `.target_qubits` | Number of target (system) qubits |

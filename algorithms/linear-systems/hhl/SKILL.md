@@ -32,7 +32,7 @@ HHL proceeds in five steps:
 
 - QPE (Quantum Phase Estimation).
 - Matrix eigenvalues, Hermitian matrices, condition number.
-- Python: `numpy`, `GateSequence`, `State`, and `QPEAlgorithm` (from `fundamental_algorithm.qpe`).
+- Python: `numpy`, `Circuit`, `State`, and `QPEAlgorithm` (from `fundamental_algorithm.qpe`).
 
 ## Using the Provided Implementation
 
@@ -98,7 +98,7 @@ print(result['circuit_path'])        # SVG circuit diagram
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Matrix Pre-processing | Validates $A$ (Hermitian, power-of-2 dims); normalizes $b$; extracts eigenvalues; computes `t` to avoid phase wraparound; computes `k_start` and `scale_factor`; sets `signed_phase_mode` for matrices with negative eigenvalues | Adaptive parameter tuning |
-| 2 — Circuit Construction | Builds `GateSequence(1 + d + n_sys)` with ancilla at 0, phase at 1..d, system at d+1...; calls four sub-circuit builders (A–D) | Full HHL circuit assembly |
+| 2 — Circuit Construction | Builds `Circuit(1 + d + n_sys)` with ancilla at 0, phase at 1..d, system at d+1...; calls four sub-circuit builders (A–D) | Full HHL circuit assembly |
 | 3 — Simulation | `gs.execute()` → `np.asarray(final_state)` | Runs statevector simulation |
 | 4 — Post-Processing | `_postselect_solution_state(state_arr, scale_factor, d, n_sys)` extracts the ancilla=1 sub-state; computes `diff_norm` vs. `np.linalg.solve(A, b)` | Solution extraction and comparison |
 | 5 — Export | `gs.draw(filename=..., title=...)` | Saves SVG circuit diagram |
@@ -106,14 +106,14 @@ print(result['circuit_path'])        # SVG circuit diagram
 **Stage 2 — Four Sub-Circuit Steps:**
 
 - **Step A: State Preparation** — `gs.initialize(b_state, system_qubits)` loads normalized $b/\|b\|$ into the system register.
-- **Step B: QPE** — `_expi_hermitian(A, t)` computes $U = e^{iAt}$ numerically; `_unitary_circuit_from_matrix(U_mat)` wraps it in a `GateSequence` via `gs.unitary()`; `QPEAlgorithm().build_qpe_circuit(U_circ, d)` builds the full QPE sub-circuit; it is appended to `phase_qubits + system_qubits`.
+- **Step B: QPE** — `_expi_hermitian(A, t)` computes $U = e^{iAt}$ numerically; `_unitary_circuit_from_matrix(U_mat)` wraps it in a `Circuit` via `gs.unitary()`; `QPEAlgorithm().build_qpe_circuit(U_circ, d)` builds the full QPE sub-circuit; it is appended to `phase_qubits + system_qubits`.
 - **Step C: Controlled Reciprocal Rotation** — `_controlled_reciprocal_rotation(d, t, k_start, signed_phase)` builds the ancilla rotation circuit. For each phase integer $k$, it applies X-flips to phase bits to select the $k$-th computational basis state, computes rotation angle $2\arcsin(C/k)$, and applies `mcry(theta, controls, ancilla=0)`. Then unflips X gates. This creates a distinct controlled-Ry for each eigenvalue bin.
 - **Step D: Inverse QPE** — `gs.append(qpe_circ.dagger(), ...)` uncomputes the phase register, removing entanglement.
 
 **Helper Methods:**
 
 - **`_expi_hermitian(A, t)`** — Eigendecomposition: `np.linalg.eigh(A)` → `V @ diag(exp(i*2π*λ*t)) @ V†`.
-- **`_unitary_circuit_from_matrix(U, backend)`** — Wraps an $N\times N$ matrix as a `GateSequence` via `gs.unitary(U, range(n))`.
+- **`_unitary_circuit_from_matrix(U, backend)`** — Wraps an $N\times N$ matrix as a `Circuit` via `gs.unitary(U, range(n))`.
 - **`_controlled_reciprocal_rotation(d, t, k_start, signed_phase, backend)`** — Builds the ancilla rotation sub-circuit; handles both signed (negative eigenvalues) and unsigned phase modes.
 - **`_decode_signed_phase_index(k, d)`** — Converts raw QPE bin index to signed integer (negative for bins above `grid//2`).
 - **`_postselect_solution_state(state, scale, d, n)`** — Extracts the ancilla=1, phase=0 subspace: `state[1::2]` gives ancilla=1 slice; `[0::stride]` (with `stride = 2^d`) selects phase=0; scales by `scale_factor` to recover $A^{-1}b$.
@@ -121,7 +121,7 @@ print(result['circuit_path'])        # SVG circuit diagram
 **Data flow:** `(A, b)` → eigenvalue analysis → circuit assembly (A→B→C→D) → `execute()` → `_postselect_solution_state()` → `solution_quantum` → `_build_return()`.
 
 ## Understanding the Key Quantum Components
-The normalized vector $b/\|b\|$ is loaded into the system register using `GateSequence.initialize()`.
+The normalized vector $b/\|b\|$ is loaded into the system register using `Circuit.initialize()`.
 
 ### 2. Unitary Exponentiation ($U = e^{iAt}$)
 The Hermitian matrix $A$ is exponentiated to produce a unitary $U = e^{iAt}$. QPE is applied to $U$; eigenphases of $U$ encode eigenvalues of $A$ as $\phi_j = \lambda_j t / (2\pi)$.
@@ -200,7 +200,7 @@ The following Python skeleton reconstructs the five structural stages of the HHL
 ```python
 # Simplified reconstruction — mirrors HHLAlgorithm._expi_hermitian() and _unitary_circuit_from_matrix()
 import numpy as np
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 
 def expi_hermitian(A: np.ndarray, t: float) -> np.ndarray:
     """Compute U = exp(i*A*t) numerically via eigendecomposition."""
@@ -208,10 +208,10 @@ def expi_hermitian(A: np.ndarray, t: float) -> np.ndarray:
     exp_diag = np.exp(1j * eigenvalues * t)
     return (V * exp_diag) @ V.conj().T    # V @ diag(exp) @ V†
 
-def unitary_circuit(U_mat: np.ndarray, backend: str = 'torch') -> GateSequence:
-    """Wrap a unitary matrix as a GateSequence."""
+def unitary_circuit(U_mat: np.ndarray, backend: str = 'torch') -> Circuit:
+    """Wrap a unitary matrix as a Circuit."""
     n = int(np.log2(U_mat.shape[0]))
-    gs = GateSequence(n, backend=backend)
+    gs = Circuit(n, backend=backend)
     gs.unitary(U_mat, list(range(n)))
     return gs
 ```
@@ -222,7 +222,7 @@ def unitary_circuit(U_mat: np.ndarray, backend: str = 'torch') -> GateSequence:
 # Exact usage — calls QPEAlgorithm.build_qpe_circuit() as in the real implementation
 from unitarylab.algorithms import QPEAlgorithm
 
-def encode_eigenphases(U_circ: GateSequence, d: int, backend: str = 'torch') -> GateSequence:
+def encode_eigenphases(U_circ: Circuit, d: int, backend: str = 'torch') -> Circuit:
     """Build QPE sub-circuit for eigenvalue encoding."""
     return QPEAlgorithm().build_qpe_circuit(U_circ, d, prepare_target=None, backend=backend)
 ```
@@ -232,9 +232,9 @@ def encode_eigenphases(U_circ: GateSequence, d: int, backend: str = 'torch') -> 
 ```python
 # Simplified reconstruction — mirrors HHLAlgorithm._controlled_reciprocal_rotation()
 
-def controlled_reciprocal_rotation(d: int, k_start: int, backend: str = 'torch') -> GateSequence:
+def controlled_reciprocal_rotation(d: int, k_start: int, backend: str = 'torch') -> Circuit:
     """For each eigenvalue bin k, rotate ancilla by 2*arcsin(k_start/k)."""
-    gs = GateSequence(d + 1, backend=backend)   # d phase qubits + 1 ancilla
+    gs = Circuit(d + 1, backend=backend)   # d phase qubits + 1 ancilla
     ancilla = 0
     phase_qubits = list(range(1, d + 1))
     grid = 2 ** d
@@ -276,7 +276,7 @@ def extract_hhl_solution(state_arr: np.ndarray, d: int, n_sys: int, scale_factor
 # Simplified reconstruction illustrating overall HHL control flow
 
 import numpy as np
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 from unitarylab.algorithms import QPEAlgorithm
 
 def hhl_minimal(A, b, d, t=None, backend='torch'):

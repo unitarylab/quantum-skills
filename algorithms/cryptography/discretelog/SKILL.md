@@ -34,7 +34,7 @@ python ./scripts/algorithm.py
 - Quantum Fourier Transform and QPE.
 - Modular arithmetic, multiplicative order, modular inverse.
 - Continued fractions algorithm.
-- Python: `numpy`, `GateSequence`, `Register`, `ClassicalRegister`, `State`, `unitarylab.library.IQFT`.
+- Python: `numpy`, `Circuit`, `Register`, `ClassicalRegister`, `State`, `unitarylab.library.IQFT`.
 
 ## Using the Provided Implementation
 
@@ -152,7 +152,7 @@ From the measurement $(u, v)$:
 | Solve $sx \equiv -\text{target} \pmod{r}$ | `t_red * pow(s_red, -1, r_red) % r_red`; coset search over `d` solutions |
 | Verification: $g^x \equiv y \pmod{P}$ | `pow(g, x_test, P) == (y % P)` inside post-processing |
 
-**Notes on encapsulation:** The register address mapping (named registers → flat qubit indices) is handled by an inline `get_p()` closure inside `run()`, rather than a class-level method. This is because the three registers (reg_a, reg_b, reg_work) are passed as arguments to `GateSequence` and the gate methods still require flat indices. The post-processing is entirely classical and self-contained in `_classical_post_processing()`.
+**Notes on encapsulation:** The register address mapping (named registers → flat qubit indices) is handled by an inline `get_p()` closure inside `run()`, rather than a class-level method. This is because the three registers (reg_a, reg_b, reg_work) are passed as arguments to `Circuit` and the gate methods still require flat indices. The post-processing is entirely classical and self-contained in `_classical_post_processing()`.
 
 ## Mathematical Deep Dive
 
@@ -186,7 +186,7 @@ Below is a skeleton that reconstructs the discrete-log quantum circuit at the co
 import math
 from fractions import Fraction
 import numpy as np
-from unitarylab.core import GateSequence, Register, State
+from unitarylab.core import Circuit, Register, State
 from unitarylab.library import IQFT
 
 def modular_matrix(mult: int, P: int, n_work: int) -> np.ndarray:
@@ -199,7 +199,7 @@ def modular_matrix(mult: int, P: int, n_work: int) -> np.ndarray:
     return U.astype(complex)
 
 def build_dlp_circuit(g: int, y: int, P: int, n_count: int, n_work: int,
-                       backend: str = 'torch') -> GateSequence:
+                       backend: str = 'torch') -> Circuit:
     """
     Two-register QPE circuit for DLP g^x = y mod P.
     Register a (counts a): controlled g^{2^i} mod P
@@ -210,7 +210,7 @@ def build_dlp_circuit(g: int, y: int, P: int, n_count: int, n_work: int,
     ra = Register('a', n_count)
     rb = Register('b', n_count)
     rw = Register('w', n_work)
-    gs = GateSequence(ra, rb, rw, backend=backend)
+    gs = Circuit(ra, rb, rw, backend=backend)
 
     # Offset helpers to get flat qubit indices
     a_off, b_off, w_off = 0, n_count, 2 * n_count

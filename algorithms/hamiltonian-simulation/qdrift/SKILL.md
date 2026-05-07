@@ -125,7 +125,7 @@ def run(self, H_list, t, epsilon, n_qubits, backend='torch', algo_dir=None):
 |---|---|---|
 | `status` | `str` | `'success'`. |
 | `error` | `float` | Estimated approximation error. |
-| `circuit` | `GateSequence` | The assembled QDrift circuit (one random trajectory). |
+| `circuit` | `Circuit` | The assembled QDrift circuit (one random trajectory). |
 | `circuit_path` | `str` | Path to circuit SVG. |
 | `message` | `str` | Summary message. |
 | `plot` | `str` | ASCII art result panel. |

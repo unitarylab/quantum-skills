@@ -33,7 +33,7 @@ Simon's algorithm:
 
 - Hadamard gates and their effect on computational basis states.
 - XOR (bitwise addition mod 2) and binary linear algebra.
-- Python: `numpy`, `GateSequence`, `Register`, `ClassicalRegister`, `State`.
+- Python: `numpy`, `Circuit`, `Register`, `ClassicalRegister`, `State`.
 
 ## Using the Provided Implementation
 
@@ -84,7 +84,7 @@ print(result['plot'])         # ASCII result panel
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Validation | Extracts `n = len(s_target)`; checks for all-zero string | Guards against trivial inputs |
-| 2 — Circuit Construction | Creates `GateSequence(rx, ry, cqr)` with two `n`-qubit registers + classical register; applies `gs.h(rx[:])`, calls `_build_simon_oracle(gs, s_target)`, measures `ry` to `cqr`, applies `gs.h(rx[:])` again | Full Simon protocol circuit in 4 lines |
+| 2 — Circuit Construction | Creates `Circuit(rx, ry, cqr)` with two `n`-qubit registers + classical register; applies `gs.h(rx[:])`, calls `_build_simon_oracle(gs, s_target)`, measures `ry` to `cqr`, applies `gs.h(rx[:])` again | Full Simon protocol circuit in 4 lines |
 | 3 — Simulation | `gs.execute()` → `State(re_state)` → `state_obj.calculate_state(range(n))` | Runs mid-circuit-measurement simulation; extracts x-register basis dictionary |
 | 4 — Classical Post-Processing | `_get_basis_simple(state_list, n)` extracts $n-1$ linearly independent vectors; `_solve_simon_general(basis, n)` back-substitutes to recover `s` | $\mathbb{F}_2$ linear algebra |
 | 5 — Export | `gs.draw(filename=..., title=...)` | Saves SVG circuit diagram |
@@ -96,7 +96,7 @@ print(result['plot'])         # ASCII result panel
 - **`_solve_simon_general(basis_list, n)`** — Back-substitution over $\mathbb{F}_2$: finds the free variable index (the non-pivot position), sets it to 1, then resolves all pivot variables in reverse order.
 - **`_update_last_result` / `_build_return`** — Store runtime fields and package result dict.
 
-**Key design detail:** The circuit uses `Register`, `ClassicalRegister`, and `GateSequence` with mixed quantum/classical registers. The mid-circuit measurement (`gs.measure(ry[:], cqr[:])`) collapses the output register during simulation, which is why only the `'torch'` backend is supported.
+**Key design detail:** The circuit uses `Register`, `ClassicalRegister`, and `Circuit` with mixed quantum/classical registers. The mid-circuit measurement (`gs.measure(ry[:], cqr[:])`) collapses the output register during simulation, which is why only the `'torch'` backend is supported.
 
 **Data flow:** `s_target` → oracle construction → `execute()` → `State.calculate_state()` → basis extraction → back-substitution → `found_s` → `_build_return()`.
 
@@ -123,7 +123,7 @@ The measured bit-strings form a system of linear equations over $\mathbb{F}_2$. 
 
 | README / Theory Concept | Code Object or Location |
 |---|---|
-| Input register $|x\rangle$ | `rx = Register('x', n)`; `gs = GateSequence(rx, ry, cqr)` |
+| Input register $|x\rangle$ | `rx = Register('x', n)`; `gs = Circuit(rx, ry, cqr)` |
 | Output register $|y\rangle$ | `ry = Register('y', n)` |
 | Initial superposition $H^{\otimes n}|0\rangle^n$ | `gs.h(rx[:])` before oracle |
 | Oracle $U_f|x\rangle|0\rangle \to |x\rangle|f(x)\rangle$ | `_build_simon_oracle(gs, s_target)` — CNOT pattern |
@@ -304,7 +304,7 @@ def build_simon_oracle(gs, s: str, n: int):
 ```python
 # Exact usage example (uses actual API)
 from unitarylab.algorithms import SimonAlgorithm
-from unitarylab.core import GateSequence, Register, State
+from unitarylab.core import Circuit, Register, State
 
 def simon_circuit(s_target: str, backend: str = 'torch'):
     n = len(s_target)
@@ -312,7 +312,7 @@ def simon_circuit(s_target: str, backend: str = 'torch'):
     ry = Register('y', n)
     from unitarylab.core import ClassicalRegister
     cqr = ClassicalRegister('c', n)
-    gs = GateSequence(rx, ry, cqr, backend=backend)
+    gs = Circuit(rx, ry, cqr, backend=backend)
 
     # H on input
     for i in range(n): gs.h(i)

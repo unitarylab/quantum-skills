@@ -33,22 +33,22 @@ The `QPEAlgorithm` class also exposes `build_qpe_circuit()` for embedding QPE as
 
 - Understanding of controlled unitary gates.
 - Understanding of the Quantum Fourier Transform (QFT) and iQFT.
-- Python: `numpy`, `GateSequence`, `State`, project library `IQFT`.
+- Python: `numpy`, `Circuit`, `State`, project library `IQFT`.
 
 ## Using the Provided Implementation
 
 ```python
 from unitarylab.algorithms import QPEAlgorithm
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 import numpy as np
 
 # Build a 1-qubit unitary with known phase phi = 1/4
 # U = diag(1, e^{2pi*i*phi}) so with phi=0.25: U = diag(1, i) = S gate
-U = GateSequence(1, name="S_gate", backend='torch')
+U = Circuit(1, name="S_gate", backend='torch')
 U.s(0)   # S gate has phase e^{i*pi/2} = e^{2pi*i*0.25}
 
 # Prepare eigenstate |1> (eigenstate of S is |1> with eigenvalue i=e^{i*pi/2})
-prepare_psi = GateSequence(1, name="prep_1", backend='torch')
+prepare_psi = Circuit(1, name="prep_1", backend='torch')
 prepare_psi.x(0)   # |0> -> |1>
 
 algo = QPEAlgorithm()
@@ -68,9 +68,9 @@ print(result['circuit_path'])   # SVG circuit diagram path
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `U` | `GateSequence` | required | Unitary operator whose phase is to be estimated. |
+| `U` | `Circuit` | required | Unitary operator whose phase is to be estimated. |
 | `d` | `int` | required | Number of phase-register qubits. Precision is $1/2^d$. |
-| `prepare_target` | `GateSequence` or `None` | `None` | Circuit preparing the eigenstate $\|\psi\rangle$. Defaults to $\|0\rangle$ if `None`. |
+| `prepare_target` | `Circuit` or `None` | `None` | Circuit preparing the eigenstate $\|\psi\rangle$. Defaults to $\|0\rangle$ if `None`. |
 | `backend` | `str` | `'torch'` | Simulation backend. Forces `'torch'`. |
 | `algo_dir` | `str` or `None` | `None` | Directory to save SVG circuit diagram. |
 
@@ -85,7 +85,7 @@ print(result['circuit_path'])   # SVG circuit diagram path
 |---|---|---|
 | `estimated_phase` | `float` | Estimated phase as a decimal in $[0, 1)$. |
 | `confidence_probability` | `float` | the `brest_prob`, Probability of the best-fit phase bit-string. |
-| `circuit` | `GateSequence` | The full QPE circuit object. |
+| `circuit` | `Circuit` | The full QPE circuit object. |
 | `circuit_path` | `str` | Path to the saved SVG circuit diagram. |
 | `message` | `str` | Summary with estimated phase value. |
 | `plot` | `str` | ASCII art result panel. |
@@ -118,9 +118,9 @@ This method is the core algorithmic component, designed to be called by other al
 - **`_update_last_result` / `_build_return`** — Store runtime fields and package result dict with ASCII panel.
 - `State.probabilities_dict(phase_qubits, endian='little', threshold=...)` — called in Stage 4 to extract phase register marginals from the full statevector.
 
-**Data flow:** `U` → `build_qpe_circuit()` → `GateSequence` → `execute()` → `State.probabilities_dict()` → `phi_est` → `_build_return()`.
+**Data flow:** `U` → `build_qpe_circuit()` → `Circuit` → `execute()` → `State.probabilities_dict()` → `phi_est` → `_build_return()`.
 
-**Note:** `build_qpe_circuit()` can be called directly without `run()` to obtain the `GateSequence` for embedding in a parent algorithm.
+**Note:** `build_qpe_circuit()` can be called directly without `run()` to obtain the `Circuit` for embedding in a parent algorithm.
 
 ## Understanding the Key Quantum Components
 The $d$ phase qubits are initialized to $|0\rangle^d$ and Hadamard-transformed:
@@ -139,7 +139,7 @@ $$\frac{1}{\sqrt{2^d}}\sum_{j=0}^{2^d-1} e^{2\pi i\phi j}|j\rangle \otimes |\psi
 The iQFT transforms the phase-encoded register to: if $\phi = k_0/2^d$ exactly, the output is $|k_0\rangle$ with probability 1. In general, the probability peaks near the closest $d$-bit approximation of $\phi$.
 
 ### 5. Subroutine Usage
-`QPEAlgorithm.build_qpe_circuit(U, d, prepare_target, backend)` returns a standalone `GateSequence` for embedding QPE in other algorithms (e.g., HHL uses this directly).
+`QPEAlgorithm.build_qpe_circuit(U, d, prepare_target, backend)` returns a standalone `Circuit` for embedding QPE in other algorithms (e.g., HHL uses this directly).
 
 ## Theory-to-Code Mapping
 
@@ -152,7 +152,7 @@ The iQFT transforms the phase-encoded register to: if $\phi = k_0/2^d$ exactly, 
 | Phase readout $\phi = k_0/2^d$ | `int(best_bits_str, 2) / (2 ** d)` in Stage 4 |
 | Probability of best phase | `best_prob = sorted_phases[0][1]` from `state_obj.probabilities_dict()` |
 | Phase precision $\delta\phi = 1/2^d$ | Implicit: determined by number of bits `d` in phase register |
-| Subroutine for HHL / QAE | `build_qpe_circuit()` returns a standalone `GateSequence` embeddable externally |
+| Subroutine for HHL / QAE | `build_qpe_circuit()` returns a standalone `Circuit` embeddable externally |
 
 **Notes on encapsulation:** The iQFT is sourced from `unitarylab.library.IQFT` rather than constructed inline, unlike the amplitude estimation implementation which builds it locally. The controlled-unitary power is realized by looping `2^k` repetitions of `cU`, not by general unitary exponential; this is correct but exponentially expensive in `d`. The `endian='little'` argument in `probabilities_dict()` ensures the least-significant bit is on the left, consistent with the register ordering.
 
@@ -172,14 +172,14 @@ When $\phi = k_0/2^d$ exactly, the sum equals $\delta_{k', k_0}$ and the measure
 
 ```python
 from unitarylab.algorithms import QPEAlgorithm
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 import numpy as np
 
 # Estimate phase of T gate (T|1> = e^{i*pi/4}|1>, phi = 1/8 = 0.125)
-U = GateSequence(1, name="T_gate", backend='torch')
+U = Circuit(1, name="T_gate", backend='torch')
 U.t(0)
 
-prepare_psi = GateSequence(1, name="prep1", backend='torch')
+prepare_psi = Circuit(1, name="prep1", backend='torch')
 prepare_psi.x(0)  # |1> is eigenstate of T with phase pi/4
 
 algo = QPEAlgorithm()
@@ -316,12 +316,12 @@ Official reference:
 ## Minimal Manual Implementation (UnitaryLab) 
 
 ```python
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 from unitarylab.library import IQFT
 
-def qpe_circuit(U: GateSequence, d: int, prepare_target=None, backend='torch'):
+def qpe_circuit(U: Circuit, d: int, prepare_target=None, backend='torch'):
     n_target = U.get_num_qubits()
-    gs = GateSequence(d + n_target, backend=backend)
+    gs = Circuit(d + n_target, backend=backend)
     phase = list(range(d))
     target = list(range(d, d + n_target))
 

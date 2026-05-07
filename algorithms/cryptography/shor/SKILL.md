@@ -35,7 +35,7 @@ Two circuit methods are supported:
 - Quantum Fourier Transform (QFT) and inverse QFT.
 - Modular arithmetic and Euler's theorem.
 - Continued fractions algorithm.
-- Python: `numpy`, `GateSequence`, `State`, `unitarylab.library.QFT`, `unitarylab.library.IQFT`.
+- Python: `numpy`, `Circuit`, `State`, `unitarylab.library.QFT`, `unitarylab.library.IQFT`.
 
 ## Using the Provided Implementation
 
@@ -93,7 +93,7 @@ print(result['message'])       # Summary
 |---|---|---|
 | Pre-check | Handles `N % 2 == 0` and `gcd(a, N) > 1` cases without any quantum circuit | Classical short-circuit for trivial cases |
 | 1 — Parameter Setup | Picks random `a`; computes `n_work`, `n_count = 2 * N.bit_length()`, `total_qubits` | Determines qubit counts for the chosen method |
-| 2 — Circuit Construction | Creates `GateSequence(total_qubits)`; applies H to counting register; sets work register to $|1\rangle$ via `gs.x(n_count)`; calls `_build_modular_matrix_circuit` or `_build_modular_operator_circuit`; appends `IQFT(n_count)` | Builds the QPE circuit for period finding |
+| 2 — Circuit Construction | Creates `Circuit(total_qubits)`; applies H to counting register; sets work register to $|1\rangle$ via `gs.x(n_count)`; calls `_build_modular_matrix_circuit` or `_build_modular_operator_circuit`; appends `IQFT(n_count)` | Builds the QPE circuit for period finding |
 | 3 — Simulation | `gs.execute()` → `State(result_vector)` → `state.measure(range(n_count), endian='little')` | Single-shot measurement of counting register |
 | 4 — Classical Post-Processing | `phase = measure_int / 2^n_count`; `Fraction(phase).limit_denominator(N).denominator` gives `r`; checks `r % 2 == 0`; computes `gcd(a^(r/2)±1, N)` | Continued fractions + factor extraction |
 | 5 — Export | `gs.draw(filename=..., title=...)` (only on success) | Saves SVG circuit diagram |
@@ -111,7 +111,7 @@ print(result['message'])       # Summary
 - `_Ph(n, a, gs)` / `_Controlled_Ph(n, a, gs, ctrl, data)` — Apply phase rotations in QFT domain.
 - `_update_last_result` / `_build_return` — Store runtime fields and package result dict.
 
-**Data flow:** `N` → random `a` → circuit method dispatch → `GateSequence` → `execute()` → `state.measure()` → continued fractions → `gcd()` → factors → `_build_return()`.
+**Data flow:** `N` → random `a` → circuit method dispatch → `Circuit` → `execute()` → `state.measure()` → continued fractions → `gcd()` → factors → `_build_return()`.
 
 ## Understanding the Key Quantum Components
 The $n_{\text{count}} = 2 \cdot \lfloor\log_2 N\rfloor$ counting qubits are placed in uniform superposition via Hadamard:
@@ -228,7 +228,7 @@ Below is a skeleton that reconstructs Shor's algorithm at the component level, m
 import math, random
 from fractions import Fraction
 import numpy as np
-from unitarylab.core import GateSequence, State
+from unitarylab.core import Circuit, State
 from unitarylab.library import IQFT
 
 def get_modular_matrix(mult: int, N: int, n_work: int) -> np.ndarray:
@@ -241,10 +241,10 @@ def get_modular_matrix(mult: int, N: int, n_work: int) -> np.ndarray:
     return U.astype(complex)
 
 def build_shor_circuit(a: int, N: int, n_count: int, n_work: int,
-                        backend: str = 'torch') -> GateSequence:
+                        backend: str = 'torch') -> Circuit:
     """Construct the quantum phase-estimation circuit for order finding."""
     total = n_count + n_work
-    gs = GateSequence(total, backend=backend)
+    gs = Circuit(total, backend=backend)
 
     # 1. Superpose counting register; set work register to |1>
     gs.h(range(n_count))

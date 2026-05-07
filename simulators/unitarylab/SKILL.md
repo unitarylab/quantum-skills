@@ -146,7 +146,7 @@ python -c "import unitarylab; print('UnitaryLab OK')"
 
 Before executing user code, confirm:
 ```bash
-python -c "from unitarylab import GateSequence; print('OK')"
+python -c "from unitarylab import Circuit; print('OK')"
 ```
 If this prints `OK`, proceed. If it raises `ModuleNotFoundError`, go back to Step 3.
 
@@ -156,9 +156,9 @@ If this prints `OK`, proceed. If it raises `ModuleNotFoundError`, go back to Ste
 
 ```python
 import numpy as np
-from unitarylab import GateSequence
+from unitarylab import Circuit
 
-qc = GateSequence(2)
+qc = Circuit(2)
 qc.h(0)
 qc.cx(0, 1)
 

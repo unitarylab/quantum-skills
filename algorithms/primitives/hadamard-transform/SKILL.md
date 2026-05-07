@@ -29,7 +29,7 @@ The algorithm supports two modes:
 ## Prerequisites
 
 - Basic single-qubit Hadamard gate: $H = \frac{1}{\sqrt{2}}\begin{pmatrix}1&1\\1&-1\end{pmatrix}$
-- Python: `numpy`, `GateSequence`.
+- Python: `numpy`, `Circuit`.
 
 ## Using the Provided Implementation
 
@@ -83,7 +83,7 @@ print(result2['status'])         # 'ok' if H^2 recovers original state
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Validation | Checks `n_qubits >= 1`, validates `mode` string | Guards against invalid inputs |
-| 2 — Circuit Construction | Creates `GateSequence(n_qubits)`; dispatches on mode: `'superposition'` calls `_apply_hadamard_layer` once; `'reflexive_test'` generates random state via `numpy` and calls `gs.initialize(psi, target)`, then calls `_apply_hadamard_layer` **twice** | Builds the transform circuit appropriate to each mode |
+| 2 — Circuit Construction | Creates `Circuit(n_qubits)`; dispatches on mode: `'superposition'` calls `_apply_hadamard_layer` once; `'reflexive_test'` generates random state via `numpy` and calls `gs.initialize(psi, target)`, then calls `_apply_hadamard_layer` **twice** | Builds the transform circuit appropriate to each mode |
 | 3 — Simulation | `gs.execute()` → `_as_statevector(raw_result)` | Runs statevector simulation; wraps result as `numpy` array |
 | 4 — Post-Processing | `'superposition'`: calls `_probabilities(state_vector)` to compute bitstring→prob dict and checks uniformity; `'reflexive_test'`: computes `np.allclose(state_vector, original_state)` | Verifies algorithm correctness based on mode |
 | 5 — Export | `gs.draw(filename=..., title=...)` | Saves SVG circuit diagram |
@@ -97,7 +97,7 @@ print(result2['status'])         # 'ok' if H^2 recovers original state
 
 **Key design note:** In `'reflexive_test'` mode, the random initial state is generated with `numpy` and loaded into the circuit via `gs.initialize(original_state, target=target_qubits)`. The state is stored in a local variable `original_state` for comparison after two H-layer applications.
 
-**Data flow (superposition):** `n_qubits` → `GateSequence` → `_apply_hadamard_layer` → `execute()` → `_probabilities()` → uniformity check → `_build_return()`.  
+**Data flow (superposition):** `n_qubits` → `Circuit` → `_apply_hadamard_layer` → `execute()` → `_probabilities()` → uniformity check → `_build_return()`.  
 **Data flow (reflexive_test):** random `psi` → `gs.initialize(psi)` → two `_apply_hadamard_layer()` calls → `execute()` → `np.allclose(result, psi)` → `_build_return()`.
 
 ## Understanding the Key Quantum Components
@@ -123,7 +123,7 @@ When the input is $|0\rangle^n$, the Hadamard transform equals the Quantum Fouri
 | README / Theory Concept | Code Object or Location |
 |---|---|
 | $n$-qubit Hadamard transform $H^{\otimes n}$ | `_apply_hadamard_layer(gs, target_qubits)` — one `gs.h(q)` per qubit |
-| Starting state $|0\rangle^n$ | Default: `GateSequence` starts in $|0\rangle^n$ without explicit init |
+| Starting state $|0\rangle^n$ | Default: `Circuit` starts in $|0\rangle^n$ without explicit init |
 | Arbitrary initial state (reflexive test) | `gs.initialize(original_state, target=target_qubits)` |
 | Self-inverse property $H^2 = I$ | `'reflexive_test'` mode: `_apply_hadamard_layer` called twice; verified via `np.allclose()` |
 | Uniform output probability $1/2^n$ | Checked in post-processing via `np.isclose(p, 1/2^n, atol=1e-5)` |
@@ -160,11 +160,11 @@ result2 = algo.run(n_qubits=4, mode='reflexive_test', backend='torch')
 ## Implementing Your Own Version
 
 ```python
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 
-def hadamard_transform(n: int, backend: str = 'torch') -> GateSequence:
+def hadamard_transform(n: int, backend: str = 'torch') -> Circuit:
     """Apply H to all n qubits."""
-    gs = GateSequence(n, name=f"H^{n}", backend=backend)
+    gs = Circuit(n, name=f"H^{n}", backend=backend)
     for q in range(n):
         gs.h(q)
     return gs

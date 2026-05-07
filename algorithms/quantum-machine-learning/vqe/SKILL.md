@@ -31,7 +31,7 @@ python ./scripts/algorithm.py
 
 - Variational principle: $E_0 \leq \langle\psi(\theta)|H|\psi(\theta)\rangle$ for all $\theta$.
 - Pauli operator measurement; COBYLA gradient-free optimization.
-- `torch`, `numpy`, `scipy.optimize`, `GateSequence`.
+- `torch`, `numpy`, `scipy.optimize`, `Circuit`.
 
 ## Using the Provided Implementation
 
@@ -66,7 +66,7 @@ print(result['plot'])
 | `n_qubits` | `int` | `2` | Number of qubits. Fixed Hamiltonian uses 2; changing this changes the circuit but not the Hamiltonian. |
 | `n_layers` | `int` | `3` | Number of variational Ry+CX layers. More layers = more expressive ansatz. |
 | `max_iter` | `int` | `150` | Maximum COBYLA iterations. |
-| `backend` | `str` | `'torch'` | Simulation backend for `GateSequence`. |
+| `backend` | `str` | `'torch'` | Simulation backend for `Circuit`. |
 | `algo_dir` | `str\|None` | `None` | Directory to save loss curve PNG and circuit SVG. |
 
 ## Return Fields
@@ -77,7 +77,7 @@ print(result['plot'])
 | `energy` | `float` | VQE optimized ground-state energy estimate. |
 | `exact_energy` | `float` | Exact ground state energy (computed by `torch.linalg.eigvalsh`). |
 | `loss_history` | `List[float]` | Energy at each COBYLA iteration. |
-| `circuit` | `GateSequence` | Final ansatz circuit at optimal parameters. |
+| `circuit` | `Circuit` | Final ansatz circuit at optimal parameters. |
 | `circuit_path` | `str` | Path to circuit SVG diagram. |
 | `plot_path` | `str` | Path to loss curve PNG. |
 | `plot` | `str` | ASCII art result panel. |
@@ -99,7 +99,7 @@ print(result['plot'])
 **Helper Methods:**
 
 - **`_get_hamiltonian()`** — Constructs Ising $H = ZZ - 0.5XI - 0.5IX$ using `torch.kron()`. Returns a `(4,4)` complex128 tensor. Hardcoded for 2-qubit Ising.
-- **`_build_circuit(params_flat, n_qubits, n_layers, backend)`** — Reshapes `params_flat` to `(n_qubits, n_layers)`, creates `GateSequence(n_qubits, backend=backend)`, applies `ry(params[q,l], q)` per qubit per layer, then `cx(0, 1)` per layer.
+- **`_build_circuit(params_flat, n_qubits, n_layers, backend)`** — Reshapes `params_flat` to `(n_qubits, n_layers)`, creates `Circuit(n_qubits, backend=backend)`, applies `ry(params[q,l], q)` per qubit per layer, then `cx(0, 1)` per layer.
 - **`obj_func(p_flat)` (closure in `run`)** — Called by COBYLA at each iteration. Rebuilds circuit, calls `qc.execute(initial_state=|0⟩)`, converts result to PyTorch tensor, computes `(psi† H psi).real`.
 - **`_generate_outputs(history, ...)`** — Saves three files: circuit diagram, energy convergence plot (matplotlib), and observables bar chart.
 
@@ -275,7 +275,7 @@ The following Python skeleton reconstructs the VQE core components — the Hamil
 import numpy as np
 import torch
 from scipy.optimize import minimize
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 
 def build_ising_hamiltonian() -> torch.Tensor:
     """2-qubit Ising H = ZZ - 0.5*XI - 0.5*IX."""
@@ -285,10 +285,10 @@ def build_ising_hamiltonian() -> torch.Tensor:
     return torch.kron(Z, Z) - 0.5*torch.kron(X, I) - 0.5*torch.kron(I, X)
 
 def build_vqe_ansatz(params_flat: np.ndarray, n_qubits: int, n_layers: int,
-                     backend: str = 'torch') -> GateSequence:
+                     backend: str = 'torch') -> Circuit:
     """Ry+CX ansatz: for each layer, Ry per qubit then CX(0,1)."""
     params = params_flat.reshape(n_qubits, n_layers)
-    qc = GateSequence(n_qubits, backend=backend)
+    qc = Circuit(n_qubits, backend=backend)
     for l in range(n_layers):
         for q in range(n_qubits):
             qc.ry(float(params[q, l]), q)   # variational rotation

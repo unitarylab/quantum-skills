@@ -1,12 +1,12 @@
 """Amplitude Amplification — boost probability of target states."""
 
 from unitarylab.algorithms import AmplitudeAmplificationAlgorithm
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 
 
 def example_2qubit():
     """Amplify |00> from a 2-qubit uniform superposition (initial p=0.25)."""
-    U = GateSequence(2, name="PrepU", backend="torch")
+    U = Circuit(2, name="PrepU", backend="torch")
     U.h(0)
     U.h(1)
 
@@ -29,7 +29,7 @@ def example_2qubit():
 
 def example_3qubit():
     """Amplify |000> from a 3-qubit uniform superposition (initial p=0.125)."""
-    U = GateSequence(3, name="PrepU", backend="torch")
+    U = Circuit(3, name="PrepU", backend="torch")
     for q in range(3):
         U.h(q)
 

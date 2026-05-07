@@ -31,16 +31,16 @@ QAE combines Grover/Amplitude Amplification with Quantum Phase Estimation (QPE):
 
 - Understanding of Grover iteration (oracle + diffuser).
 - Understanding of Quantum Phase Estimation (QPE) and the inverse QFT.
-- Python: `numpy`, `GateSequence`, `Register`.
+- Python: `numpy`, `Circuit`, `Register`.
 
 ## Using the Provided Implementation
 
 ```python
 from unitarylab.algorithms import AmplitudeEstimationAlgorithm
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 
 # Build state preparation U (data register only, no ancilla)
-U = GateSequence(2, name="PrepU", backend='torch')
+U = Circuit(2, name="PrepU", backend='torch')
 U.ry(1.1, 0)
 U.cx(0, 1)
 
@@ -62,7 +62,7 @@ print(result['circuit_path'])         # SVG circuit diagram path
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `U` | `GateSequence` | required | State preparation circuit on data qubits (no ancilla). |
+| `U` | `Circuit` | required | State preparation circuit on data qubits (no ancilla). |
 | `good_zero_qubits` | `List[int]` | required | Indices of qubits that must be $|0\rangle$ to define the good state. |
 | `d` | `int` | `6` | Number of qubits in the phase register. Precision scales as $\delta a \approx \pi/2^d$. |
 | `backend` | `str` | `'torch'` | Simulation backend. Implementation forces `'torch'`. |
@@ -101,7 +101,7 @@ print(result['circuit_path'])         # SVG circuit diagram path
 
 **Helper Methods:**
 
-- **`_grover_operator_from_zero_oracle(U, good_zero_qubits)`** — Builds a single Grover iteration `G` as a `GateSequence(n_data+1)`. Calls `_phase_oracle_all_zeros` (good-state phase flip), then `_diffusion_about_prepared_state` (reflection about $|\psi\rangle$). Appends a global phase correction (`X` + kickback ancilla) so that controlled-`G` functions correctly in QPE.
+- **`_grover_operator_from_zero_oracle(U, good_zero_qubits)`** — Builds a single Grover iteration `G` as a `Circuit(n_data+1)`. Calls `_phase_oracle_all_zeros` (good-state phase flip), then `_diffusion_about_prepared_state` (reflection about $|\psi\rangle$). Appends a global phase correction (`X` + kickback ancilla) so that controlled-`G` functions correctly in QPE.
 - **`_qpe_circuit(G, d, prepare_target)`** — Constructs the full QPE circuit. Appends state prep to target register, applies H to all phase qubits, applies controlled-`G^(2^k)` for each phase qubit `k`, then appends the iQFT via `_iqft_circuit(d)`.
 - **`_iqft_circuit(n, do_swaps)`** — Builds the inverse QFT circuit directly from Hadamard gates and controlled-phase rotations `mcp`. Qubit-swap reversal is applied first.
 - **`_phase_oracle_all_zeros(gs, zero_qubits, ancilla)`** — Phase-kickback oracle: prepares ancilla in $|-\rangle$, X-flips `zero_qubits`, applies MCX, unflips, unprepares ancilla. Same as amplitude amplification's oracle.
@@ -145,9 +145,9 @@ $$\hat{a} = \sin^2(\pi\phi)$$
 
 | README / Theory Concept | Code Object or Location |
 |---|---|
-| State $|\psi\rangle = U|0\rangle$ | `prepare = GateSequence(n_data+1)`; `prepare.append(U, data_indices)` |
+| State $|\psi\rangle = U|0\rangle$ | `prepare = Circuit(n_data+1)`; `prepare.append(U, data_indices)` |
 | Good state: all `good_zero_qubits` in $|0\rangle$ | `good_zero_qubits` → `_phase_oracle_all_zeros(zero_qubits=good_zero_qubits)` |
-| Grover operator $Q$ | `_grover_operator_from_zero_oracle(U, good_zero_qubits)` → returns `G` as a `GateSequence` |
+| Grover operator $Q$ | `_grover_operator_from_zero_oracle(U, good_zero_qubits)` → returns `G` as a `Circuit` |
 | Global phase correction $(-1)$ | X-kick on ancilla appended at end of `_grover_operator_from_zero_oracle` |
 | QPE phase register ($d$ bits) | `phase = list(range(d))` in `_qpe_circuit()`; Hadamard applied to all `d` bits |
 | Controlled $Q^{2^k}$ applications | Inner loop `for _ in range(2**k): gs.append(cU, ...)` in `_qpe_circuit()` |
@@ -157,7 +157,7 @@ $$\hat{a} = \sin^2(\pi\phi)$$
 | Phase histogram | `_phase_histogram(statevector, d)` — marginalizes all non-phase qubits |
 | Query complexity $O(1/\epsilon)$ | Implicit: `d` phase bits → $2^d$ controlled-`G` total applications → accuracy $\pi/2^d$ |
 
-**Notes on encapsulation:** The iQFT is built directly from `mcp` and `h` gates in `_iqft_circuit()` rather than calling an external library. The Grover operator and QPE circuit are both fully self-contained `GateSequence` objects that can be inspected or drawn independently. The phase folding and $\sin^2$ recovery are purely classical post-processing steps after simulation.
+**Notes on encapsulation:** The iQFT is built directly from `mcp` and `h` gates in `_iqft_circuit()` rather than calling an external library. The Grover operator and QPE circuit are both fully self-contained `Circuit` objects that can be inspected or drawn independently. The phase folding and $\sin^2$ recovery are purely classical post-processing steps after simulation.
 
 ## Mathematical Deep Dive
 
@@ -175,14 +175,14 @@ $$\delta a \approx \pi \cdot \delta\phi = \frac{\pi}{2^d}$$
 
 ```python
 from unitarylab.algorithms import AmplitudeEstimationAlgorithm
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 import numpy as np
 
 # True success probability: p = cos^2(pi/8) ≈ 0.854
 # Single qubit state: |psi> = cos(theta)|0> + sin(theta)|1>
 # Good state: qubit 0 in |0>
 theta = np.pi / 8
-U = GateSequence(1, name="prep", backend='torch')
+U = Circuit(1, name="prep", backend='torch')
 U.ry(2 * theta, 0)  # cos(theta)|0> + sin(theta)|1>; good = |0>, p = cos^2(theta)
 
 algo = AmplitudeEstimationAlgorithm()
@@ -290,10 +290,10 @@ The following Python skeleton reconstructs the key components of the QAE algorit
 ```python
 # Simplified reconstruction — mirrors AmplitudeEstimationAlgorithm._iqft_circuit()
 import numpy as np
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 
-def build_iqft(n: int, do_swaps: bool = True, backend: str = 'torch') -> GateSequence:
-    gs = GateSequence(n, name=f"iQFT_{n}", backend=backend)
+def build_iqft(n: int, do_swaps: bool = True, backend: str = 'torch') -> Circuit:
+    gs = Circuit(n, name=f"iQFT_{n}", backend=backend)
     if do_swaps:
         for i in range(n // 2):
             gs.swap(i, n - 1 - i)
@@ -310,9 +310,9 @@ def build_iqft(n: int, do_swaps: bool = True, backend: str = 'torch') -> GateSeq
 ```python
 # Simplified reconstruction — mirrors AmplitudeEstimationAlgorithm._grover_operator_from_zero_oracle()
 
-def build_phase_oracle(n_data: int, good_zero_qubits: list, backend: str = 'torch') -> GateSequence:
+def build_phase_oracle(n_data: int, good_zero_qubits: list, backend: str = 'torch') -> Circuit:
     """Phase-kickback oracle: flips phase of states where good_zero_qubits are all |0>."""
-    gs = GateSequence(n_data + 1, backend=backend)
+    gs = Circuit(n_data + 1, backend=backend)
     ancilla = n_data
     # 1. Prepare ancilla in |->
     gs.x(ancilla); gs.h(ancilla)
@@ -327,12 +327,12 @@ def build_phase_oracle(n_data: int, good_zero_qubits: list, backend: str = 'torc
     gs.h(ancilla); gs.x(ancilla)
     return gs
 
-def build_grover_operator(U: GateSequence, good_zero_qubits: list, backend: str = 'torch') -> GateSequence:
+def build_grover_operator(U: Circuit, good_zero_qubits: list, backend: str = 'torch') -> Circuit:
     """Single Grover iteration G = Diffuser ∘ Oracle, with global phase correction."""
     n_data = U.get_num_qubits()
     ancilla = n_data
     data = list(range(n_data))
-    gs = GateSequence(n_data + 1, name="GroverIter", backend=backend)
+    gs = Circuit(n_data + 1, name="GroverIter", backend=backend)
     # Oracle
     oracle = build_phase_oracle(n_data, good_zero_qubits, backend)
     gs.append(oracle, list(range(n_data + 1)))
@@ -353,11 +353,11 @@ def build_grover_operator(U: GateSequence, good_zero_qubits: list, backend: str 
 ```python
 # Simplified reconstruction — mirrors AmplitudeEstimationAlgorithm._qpe_circuit()
 
-def build_qpe_circuit(G: GateSequence, d: int,
-                      prepare_target=None, backend: str = 'torch') -> GateSequence:
+def build_qpe_circuit(G: Circuit, d: int,
+                      prepare_target=None, backend: str = 'torch') -> Circuit:
     """QPE circuit: controlled-G^(2^k) powers + iQFT on phase register."""
     n_target = G.get_num_qubits()
-    gs = GateSequence(d + n_target, name=f"QPE_d{d}", backend=backend)
+    gs = Circuit(d + n_target, name=f"QPE_d{d}", backend=backend)
     phase = list(range(d))
     target = list(range(d, d + n_target))
 
@@ -397,7 +397,7 @@ def qae_full(U, good_zero_qubits, d, backend='torch'):
     """End-to-end QAE: returns estimated amplitude."""
     G = build_grover_operator(U, good_zero_qubits, backend)
     n_data = U.get_num_qubits()
-    prepare = GateSequence(n_data + 1, backend=backend)
+    prepare = Circuit(n_data + 1, backend=backend)
     prepare.append(U, list(range(n_data)))
     qpe_circ = build_qpe_circuit(G, d, prepare_target=prepare, backend=backend)
     state = qpe_circ.execute()

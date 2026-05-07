@@ -2,17 +2,17 @@
 
 import numpy as np
 from unitarylab.algorithms import LCUAlgorithm
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 
 
 def example_h_plus_x():
     """Apply M = 0.6*H + 0.4*X to a single qubit starting in |0>."""
     n_sys = 1
 
-    U0 = GateSequence(n_sys, backend="torch")
+    U0 = Circuit(n_sys, backend="torch")
     U0.h(0)
 
-    U1 = GateSequence(n_sys, backend="torch")
+    U1 = Circuit(n_sys, backend="torch")
     U1.x(0)
 
     algo = LCUAlgorithm()
@@ -37,13 +37,13 @@ def example_pauli_mix():
     """Apply M = 0.5*I + 0.3*Z + 0.2*X to |+>."""
     n_sys = 1
 
-    U_I = GateSequence(n_sys, backend="torch")  # Identity (no gates)
-    U_Z = GateSequence(n_sys, backend="torch")
+    U_I = Circuit(n_sys, backend="torch")  # Identity (no gates)
+    U_Z = Circuit(n_sys, backend="torch")
     U_Z.z(0)
-    U_X = GateSequence(n_sys, backend="torch")
+    U_X = Circuit(n_sys, backend="torch")
     U_X.x(0)
 
-    prep = GateSequence(n_sys, backend="torch")
+    prep = Circuit(n_sys, backend="torch")
     prep.h(0)
 
     algo = LCUAlgorithm()

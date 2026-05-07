@@ -33,7 +33,7 @@ The phase sequence $\Phi$ is optimized (via L-BFGS-B) to approximate the target 
 
 - Single-qubit rotations: $R_z$, $R_x$.
 - Polynomial approximation concepts (Chebyshev expansion).
-- Python: `numpy`, `scipy.optimize`, `GateSequence`, `Register`.
+- Python: `numpy`, `scipy.optimize`, `Circuit`, `Register`.
 
 ## Using the Provided Implementation
 
@@ -74,7 +74,7 @@ print(result['plot'])          # ASCII result panel
 |---|---|---|
 | `status` | `str` | `'success'`. |
 | `error` | `float` | Absolute approximation error $|$QSP$(x) - e^{-i\tau x}|$ at `x_value`. |
-| `circuit` | `GateSequence` | The built QSP circuit. |
+| `circuit` | `Circuit` | The built QSP circuit. |
 | `circuit_path` | `str` | Path to saved SVG circuit diagram. |
 | `message` | `str` | Result summary including error. |
 | `plot` | `str` | ASCII art result panel. |
@@ -88,7 +88,7 @@ print(result['plot'])          # ASCII result panel
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Phase Optimization | `_find_phases(target_tau, degree)` — runs L-BFGS-B minimization | Computes the QSP phase sequence $\Phi$ numerically |
-| 2 — Circuit Construction | Creates `GateSequence(Register('q', 1))`; applies `gs.rz(2*phases[0], 0)` as initial phase; loops `degree` times applying `gs.rx(2*theta, 0)` (signal) then `gs.rz(2*phases[k], 0)` (phase rotation) | Builds the alternating signal/phase circuit |
+| 2 — Circuit Construction | Creates `Circuit(Register('q', 1))`; applies `gs.rz(2*phases[0], 0)` as initial phase; loops `degree` times applying `gs.rx(2*theta, 0)` (signal) then `gs.rz(2*phases[k], 0)` (phase rotation) | Builds the alternating signal/phase circuit |
 | 3 — Simulation | `gs.execute()` → `final_state[0]` | Runs statevector evolution of the single qubit |
 | 4 — Post-Processing | Compares `qsp_val = final_state[0]` to `ideal_val = exp(-i*tau*x_value)` | Computes absolute approximation error |
 | 5 — Export | `gs.draw(filename=..., title=...)` | Saves SVG circuit diagram |
@@ -104,9 +104,9 @@ Rz(2φ₀) → Rx(2θ) → Rz(2φ₁) → Rx(2θ) → Rz(2φ₂) → ... → Rx(
 ```
 Total gates: `2d + 1`. The `theta = arccos(clip(x_value, -1, 1))` is a fixed parameter computed from `x_value`.
 
-**Important implementation note:** The simulation in `_find_phases` uses explicit 2×2 matrix products (NumPy) — not the `GateSequence` engine — so the optimization is fully classical and independent of the backend.
+**Important implementation note:** The simulation in `_find_phases` uses explicit 2×2 matrix products (NumPy) — not the `Circuit` engine — so the optimization is fully classical and independent of the backend.
 
-**Data flow:** `(target_tau, degree)` → `_find_phases()` → `phases` array → `GateSequence` with Rz/Rx gates → `execute()` → `final_state[0]` → `abs_error` vs. `ideal_val` → result dict.
+**Data flow:** `(target_tau, degree)` → `_find_phases()` → `phases` array → `Circuit` with Rz/Rx gates → `execute()` → `final_state[0]` → `abs_error` vs. `ideal_val` → result dict.
 
 ## Understanding the Key Quantum Components
 $$W(x) = \begin{pmatrix} x & i\sqrt{1-x^2} \\ i\sqrt{1-x^2} & x \end{pmatrix}$$
@@ -167,7 +167,7 @@ for x_test in [0.0, 0.3, 0.7, 1.0]:
 
 ## Reference Implementation (PennyLane)
 
-The main implementation path in this project remains the **UnitaryLab QSP implementation** based on `QSPAlgorithm`, `GateSequence`, and alternating `Rz/Rx` signal-processing rotations.
+The main implementation path in this project remains the **UnitaryLab QSP implementation** based on `QSPAlgorithm`, `Circuit`, and alternating `Rz/Rx` signal-processing rotations.
 
 PennyLane is provided here only as a reference implementation for the more general **Quantum Singular Value Transformation (QSVT)** framework. Compared with the current UnitaryLab QSP example, PennyLane QSVT applies polynomial transformations to the singular values of a block-encoded matrix or operator.
 
@@ -251,14 +251,14 @@ def find_qsp_phases(tau: float, d: int, seed: int = 42) -> np.ndarray:
 
 ```python
 # Simplified reconstruction — mirrors QSPAlgorithm.run() Stage 2 and Stage 3
-from unitarylab.core import GateSequence, Register
+from unitarylab.core import Circuit, Register
 import numpy as np
 
-def build_qsp_circuit(phases: np.ndarray, x_value: float, backend: str = 'torch') -> GateSequence:
+def build_qsp_circuit(phases: np.ndarray, x_value: float, backend: str = 'torch') -> Circuit:
     """Construct the QSP circuit: Rz(2φ₀) → [Rx(2θ) → Rz(2φₖ)] × d."""
     d = len(phases) - 1
     theta = float(np.arccos(np.clip(x_value, -1.0, 1.0)))
-    gs = GateSequence(Register('q', 1), backend=backend)
+    gs = Circuit(Register('q', 1), backend=backend)
     # Initial phase rotation
     gs.rz(2 * phases[0], 0)
     for k in range(1, d + 1):

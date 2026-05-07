@@ -32,7 +32,7 @@ python ./scripts/algorithm.py
 - Pauli-Z expectation values as classifier logits.
 - Parameter Shift Rule for quantum gradients.
 - Adam optimizer; cross-entropy loss.
-- `torch`, `numpy`, `sklearn`, `GateSequence`.
+- `torch`, `numpy`, `sklearn`, `Circuit`.
 
 ## Using the Provided Implementation
 
@@ -79,7 +79,7 @@ print(result['plot'])
 | `accuracy` | `float` | Final test set accuracy (fraction in [0, 1]). |
 | `loss_history` | `List[float]` | Training loss per epoch. |
 | `acc_history` | `List[float]` | Test accuracy per epoch. |
-| `circuit` | `GateSequence` | Example circuit (first training sample). |
+| `circuit` | `Circuit` | Example circuit (first training sample). |
 | `circuit_path` | `str` | Path to circuit SVG. |
 | `plot_path` | `str` | Path to training curve PNG. |
 | `plot` | `str` | ASCII art result panel. |
@@ -102,7 +102,7 @@ print(result['plot'])
 
 - **`_load_iris_data()`** — Loads `sklearn.datasets.load_iris()`, applies `StandardScaler`, normalizes to $[-\pi/2, \pi/2]$, and stratified 80/20 splits. Returns PyTorch tensors.
 - **`_get_observable(target, total)`** — Builds the $Z_\text{target} \otimes I_\text{rest}$ matrix via `torch.kron`.
-- **`_build_circuit(x, theta, backend)`** — Creates `GateSequence(4, backend=backend)`. Per layer $l$: `ry(x[q], q)` for each qubit (data encoding), `ry(theta[q,l], q)` (variational), then `cx(q, (q+1)%4)` entanglement (all but last layer).
+- **`_build_circuit(x, theta, backend)`** — Creates `Circuit(4, backend=backend)`. Per layer $l$: `ry(x[q], q)` for each qubit (data encoding), `ry(theta[q,l], q)` (variational), then `cx(q, (q+1)%4)` entanglement (all but last layer).
 - **`_get_batch_logits(x_batch, theta, observables, backend)`** — Loops over samples: builds circuit, executes, converts to PyTorch, computes `(psi† obs psi).real` for each observable. Returns `(batch_size, 3)` logit tensor.
 - **`_evaluate(x_test, y_test, theta, observables, backend)`** — Same as logits computation but returns argmax accuracy.
 
@@ -178,10 +178,10 @@ The following skeleton reconstructs the VQC data-reuploading circuit and Paramet
 # Simplified reconstruction — mirrors VQCAlgorithm._build_circuit(), _get_batch_logits()
 import numpy as np
 import torch
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 
 def build_circuit(x: np.ndarray, theta: torch.Tensor,
-                  backend: str = 'torch') -> GateSequence:
+                  backend: str = 'torch') -> Circuit:
     """
     Data re-uploading VQC for n_qubits=4 (Iris features).
     theta shape: (n_qubits, n_layers).
@@ -189,7 +189,7 @@ def build_circuit(x: np.ndarray, theta: torch.Tensor,
     """
     n_qubits = theta.shape[0]
     n_layers = theta.shape[1]
-    gs = GateSequence(n_qubits, backend=backend)
+    gs = Circuit(n_qubits, backend=backend)
     for l in range(n_layers):
         for q in range(n_qubits):
             gs.rz(float(x[q % len(x)]), q)       # encode feature

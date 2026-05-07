@@ -31,7 +31,7 @@ python ./scripts/algorithm.py
 - Graph theory (Max-Cut); Ising Hamiltonians.
 - QAOA variational ansatz; Trotterized cost/mixer gates.
 - COBYLA gradient-free optimizer.
-- `numpy`, `torch`, `networkx`, `scipy.optimize`, `GateSequence`.
+- `numpy`, `torch`, `networkx`, `scipy.optimize`, `Circuit`.
 
 ## Using the Provided Implementation
 
@@ -83,7 +83,7 @@ print(result['plot'])
 | `best_partition` | `str` | Bit string encoding the optimal partition. |
 | `optimal_params` | `np.ndarray` | Optimized $[\gamma_1,\ldots,\gamma_p,\beta_1,\ldots,\beta_p]$. |
 | `loss_history` | `List[float]` | $\langle H_C\rangle$ per iteration. |
-| `circuit` | `GateSequence` | QAOA circuit at optimal parameters. |
+| `circuit` | `Circuit` | QAOA circuit at optimal parameters. |
 | `circuit_path` | `str` | Path to circuit SVG. |
 | `plot_path` | `str` | Path to training curve PNG. |
 | `plot` | `str` | ASCII art result panel. |
@@ -105,7 +105,7 @@ print(result['plot'])
 **Helper Methods:**
 
 - **`_get_h_cost(edges, n_qubits)`** — For each edge `(u,v)`: builds $Z_u \otimes Z_v$ via `np.kron` with identity padding; accumulates into `h_cost` matrix. Returns `(2^n, 2^n)` complex128 array.
-- **`_build_circuit(params, n_qubits, edges, backend)`** — Creates `GateSequence(n_qubits, backend=backend)`. Applies `H` to all qubits (initial $|+\rangle^{\otimes n}$). Loops `p` QAOA layers: for each edge, applies `CX(u,v) → Rz(2γ, v) → CX(u,v)`; for each qubit, applies `Rx(2β, j)`.
+- **`_build_circuit(params, n_qubits, edges, backend)`** — Creates `Circuit(n_qubits, backend=backend)`. Applies `H` to all qubits (initial $|+\rangle^{\otimes n}$). Loops `p` QAOA layers: for each edge, applies `CX(u,v) → Rz(2γ, v) → CX(u,v)`; for each qubit, applies `Rx(2β, j)`.
 - **`obj_func(p_flat)` (closure)** — Called by COBYLA. Calls `_build_circuit`, then `qc.execute(initial_state=|0⟩)`; `np.real(psi.conj().T @ h_cost @ psi)`.
 - **`_generate_outputs`** — Saves three plots: circuit, energy convergence, and NetworkX Max-Cut graph.
 
@@ -230,7 +230,7 @@ The following Python skeleton reconstructs the core QAOA components — the cost
 # Simplified reconstruction — mirrors QAOAAlgorithm._get_h_cost(), _build_circuit(), and obj_func()
 import numpy as np
 from scipy.optimize import minimize
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 
 def build_cost_hamiltonian(edges, n_qubits: int) -> np.ndarray:
     """Build H_C = sum_{(u,v) in E} Z_u Z_u as a (2^n x 2^n) matrix."""
@@ -248,11 +248,11 @@ def build_cost_hamiltonian(edges, n_qubits: int) -> np.ndarray:
     return H_c
 
 def build_qaoa_circuit(params: np.ndarray, edges, n_qubits: int,
-                        backend: str = 'torch') -> GateSequence:
+                        backend: str = 'torch') -> Circuit:
     """QAOA circuit: H^n initial state → p layers of cost + mixer gates."""
     p = len(params) // 2
     gammas, betas = params[:p], params[p:]
-    qc = GateSequence(n_qubits, backend=backend)
+    qc = Circuit(n_qubits, backend=backend)
     for i in range(n_qubits): qc.h(i)           # uniform superposition |+>^n
     for layer in range(p):
         # Cost layer: e^{-i*gamma*Z_u*Z_v} via CX-Rz-CX

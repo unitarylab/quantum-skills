@@ -123,7 +123,7 @@ def run(self, grouped_paulis, total_time, backend='torch', algo_dir=None):
 | Key | Type | Description |
 |---|---|---|
 | `status` | `str` | `'success'`. |
-| `circuit` | `GateSequence` | The assembled Trotter circuit. |
+| `circuit` | `Circuit` | The assembled Trotter circuit. |
 | `plot` | `str` | ASCII art result panel. |
 
 ## Understanding the Core Components

@@ -38,20 +38,20 @@ The core circuit (for mode `'expectation'`):
 ## Prerequisites
 
 - Quantum gates: H, S, $S^\dagger$, controlled-U.
-- Python: `numpy`, `GateSequence`, `State`.
+- Python: `numpy`, `Circuit`, `State`.
 
 ## Using the Provided Implementation
 
 ```python
 from unitarylab.algorithms import HadamardTestAlgorithm
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 import numpy as np
 
 # Example: estimate Re(<+|RZ(0.8)|+>) = cos(0.4)
-U = GateSequence(1, name="RZ_0.8", backend='torch')
+U = Circuit(1, name="RZ_0.8", backend='torch')
 U.rz(0.8, 0)
 
-prepare_psi = GateSequence(1, name="|+>", backend='torch')
+prepare_psi = Circuit(1, name="|+>", backend='torch')
 prepare_psi.h(0)
 
 algo = HadamardTestAlgorithm()
@@ -72,9 +72,9 @@ print(result_im['est_val'])   # ≈ -sin(0.4) ≈ -0.3894
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `mode` | `str` | `'expectation'` | One of `'expectation'`, `'swap_test'`, `'phase_estimation'`. |
-| `U` | `GateSequence` or `None` | `None` | Unitary operator. Required for `'expectation'` and `'phase_estimation'`. |
-| `prepare_psi` | `GateSequence` or `None` | `None` | Prepares $\|\psi\rangle$. Required for `'swap_test'` and optional for others. |
-| `prepare_phi` | `GateSequence` or `None` | `None` | Prepares $\|\phi\rangle$. Required only for `'swap_test'`. |
+| `U` | `Circuit` or `None` | `None` | Unitary operator. Required for `'expectation'` and `'phase_estimation'`. |
+| `prepare_psi` | `Circuit` or `None` | `None` | Prepares $\|\psi\rangle$. Required for `'swap_test'` and optional for others. |
+| `prepare_phi` | `Circuit` or `None` | `None` | Prepares $\|\phi\rangle$. Required only for `'swap_test'`. |
 | `imag` | `bool` | `False` | If `True`, estimates imaginary part (inserts $S^\dagger$ before ancilla). Only valid for `'expectation'`. |
 | `shots` | `int` | `20000` | Number of measurement samples for statistical estimation. |
 | `backend` | `str` | `'torch'` | Simulation backend. `'torch'` required. |
@@ -103,7 +103,7 @@ print(result_im['est_val'])   # ≈ -sin(0.4) ≈ -0.3894
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Validation | Checks `mode` string and required parameters per mode | Prevents invalid mode / missing input combinations |
-| 2 — Circuit Construction | Dispatches to `_build_hadamard_test_circuit()` based on mode; for `swap_test` builds joint prep and U_swap; for `phase_estimation` builds both real and imag circuits | Creates one or two `GateSequence` objects stored in `circuits` dict |
+| 2 — Circuit Construction | Dispatches to `_build_hadamard_test_circuit()` based on mode; for `swap_test` builds joint prep and U_swap; for `phase_estimation` builds both real and imag circuits | Creates one or two `Circuit` objects stored in `circuits` dict |
 | 3 — Simulation + Sampling | For each circuit: `circ.execute()` → `State.probabilities_dict([0])` → extracts `p0_exact`; simulates shot noise via `numpy.random.binomial(shots, p0_exact)` | Runs statevector simulation; converts ancilla probabilities to noisy `<Z>` estimate |
 | 4 — Post-Processing | Accumulates `measurements` from `<Z> = p0 - p1`; computes final `est_val` per mode | Expectation: returns `<Z>` directly; Swap test: clips to `[0,1]`; Phase estimation: calls `_estimate_phi_from_real_imag()` |
 | 5 — Export | `circ.draw(filename=..., title=...)` for each circuit | Saves SVG circuit diagram(s) |
@@ -153,7 +153,7 @@ So $|\langle\phi|\psi\rangle|^2 = 2p(0) - 1$.
 | Phase $\phi = \text{atan2}(\text{Im}, \text{Re}) / 2\pi$ | `_estimate_phi_from_real_imag(re_est, im_est)` |
 | Return value `estimated_value` | `est_val` in `_build_return()` — single float for all modes |
 
-**Notes on encapsulation:** The swap test is implemented by constructing a new `U_swap` from SWAP gates and a joint preparation `GateSequence`, then running the exact same `_build_hadamard_test_circuit` code path. No special circuit structure is needed for the swap test case beyond this reuse. Shot noise is applied as a post-simulation binomial sampling; the underlying statevector probability is exact.
+**Notes on encapsulation:** The swap test is implemented by constructing a new `U_swap` from SWAP gates and a joint preparation `Circuit`, then running the exact same `_build_hadamard_test_circuit` code path. No special circuit structure is needed for the swap test case beyond this reuse. Shot noise is applied as a post-simulation binomial sampling; the underlying statevector probability is exact.
 
 ## Mathematical Deep Dive
 
@@ -174,15 +174,15 @@ $$|e^{i\phi}| = \sqrt{\text{Re}^2 + \text{Im}^2}, \quad \phi = \text{atan2}(\tex
 
 ```python
 from unitarylab.algorithms import HadamardTestAlgorithm
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 import numpy as np
 
 # Swap test: estimate |<phi|psi>|^2
 n = 2
-prep_phi = GateSequence(n, name="phi", backend='torch')
+prep_phi = Circuit(n, name="phi", backend='torch')
 prep_phi.h(0); prep_phi.h(1)  # |++>
 
-prep_psi = GateSequence(n, name="psi", backend='torch')
+prep_psi = Circuit(n, name="psi", backend='torch')
 prep_psi.h(0); prep_psi.cx(0, 1)  # Bell state
 
 algo = HadamardTestAlgorithm()
@@ -197,7 +197,7 @@ print(f"Overlap^2: {result['estimated_value']:.4f}")
 # |<Bell|++>|^2 = |(<00|+<11|)/sqrt(2) * (|++>)|^2 = 0.5
 
 # Phase estimation mode
-U2 = GateSequence(1, name="T_gate", backend='torch')
+U2 = Circuit(1, name="T_gate", backend='torch')
 U2.t(0)  # T|0> = |0> so <0|T|0> = 1
 result2 = algo.run(mode='phase_estimation', U=U2, shots=20000)
 print(result2['estimated_value'])
@@ -206,12 +206,12 @@ print(result2['estimated_value'])
 ## Implementing Your Own Version
 
 ```python
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 from typing import Optional
 
-def hadamard_test_circuit(U: GateSequence, prepare_psi=None, imag=False) -> GateSequence:
+def hadamard_test_circuit(U: Circuit, prepare_psi=None, imag=False) -> Circuit:
     n = U.get_num_qubits()
-    qc = GateSequence(1 + n, name="HadamardTest")
+    qc = Circuit(1 + n, name="HadamardTest")
     anc = 0
     tgt = list(range(1, 1 + n))
 

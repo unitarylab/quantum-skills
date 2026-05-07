@@ -4,7 +4,7 @@ Compares classical Schrodingerization solver with Trotter quantum circuit.
 """
 
 import numpy as np
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 from unitarylab.library import schro_classical, schro_trotter
 from unitarylab.library.differential_operator import TDiff
 from unitarylab.library.differential_operator.classical_matrices import (
@@ -57,7 +57,7 @@ def main():
     func1_x = TDiff(nx_q, dx, order=2, boundary=bd).data()[0]
     func1_y = TDiff(nx_q, dx, order=2, boundary=bd).data()[0]
 
-    H1 = GateSequence(2 * nx_q)
+    H1 = Circuit(2 * nx_q)
     H1.append(func1_x(ax * dt_trotter / R), list(range(nx_q)))
     H1.append(func1_y(ay * dt_trotter / R), list(range(nx_q, 2 * nx_q)))
 

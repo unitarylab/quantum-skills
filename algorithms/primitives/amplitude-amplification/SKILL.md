@@ -22,7 +22,7 @@ python ./scripts/algorithm.py
 ## Overview
 
 The algorithm works by:
-1. Preparing the initial state $|\psi\rangle = U|0\rangle$ using a user-supplied `GateSequence` $U$.
+1. Preparing the initial state $|\psi\rangle = U|0\rangle$ using a user-supplied `Circuit` $U$.
 2. Defining a "good" state condition: qubits listed in `good_zero_qubits` must all be in state $|0\rangle$.
 3. Repeating Grover iterations: each iteration applies an **oracle** (phase-flipper for good states) followed by a **diffuser** (reflection about $|\psi\rangle$).
 4. Measuring the amplified probability in the data register.
@@ -35,17 +35,17 @@ or set manually via `reps`.
 
 - Familiarity with quantum gates: H, X, multi-controlled-X (MCX), CX.
 - Understanding of quantum state vectors and measurement probabilities.
-- Python: `numpy`, project core classes `GateSequence`, `Register`, `State`.
+- Python: `numpy`, project core classes `Circuit`, `Register`, `State`.
 
 ## Using the Provided Implementation
 
 ```python
 from unitarylab.algorithms import AmplitudeAmplificationAlgorithm
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 
 # Prepare state U such that some target qubits land in |0>
 # Example: 2-qubit state preparation
-U = GateSequence(2, name="PrepU", backend='torch')
+U = Circuit(2, name="PrepU", backend='torch')
 U.ry(0.6, 0)   # Partially rotates qubit 0
 U.cx(0, 1)     # Entangles
 
@@ -66,7 +66,7 @@ print(result['status'])           # 'ok' if amplification succeeded
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `U` | `GateSequence` | required | State preparation circuit (excludes ancilla qubit). |
+| `U` | `Circuit` | required | State preparation circuit (excludes ancilla qubit). |
 | `good_zero_qubits` | `List[int]` | required | Indices of data qubits that define the good state by being $\|0\rangle$. |
 | `p` | `float` | required | Estimated initial success probability. Must satisfy $0 < p < 1$. |
 | `reps` | `int` or `None` | `None` | Manual override for number of Grover iterations. If `None`, computed from `p`. |
@@ -97,7 +97,7 @@ print(result['status'])           # 'ok' if amplification succeeded
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Resolution | `n_data = U.get_num_qubits()`; `ancilla = n_data`; calls `_get_optimal_iterations(p)` if `reps is None` | Converts user-supplied probability into Grover iteration count $k$ |
-| 2 — Circuit Construction | Creates `GateSequence(n_data+1)`, appends `U`, then loops `reps` times appending oracle and diffuser | Builds the full amplitude amplification circuit layer by layer |
+| 2 — Circuit Construction | Creates `Circuit(n_data+1)`, appends `U`, then loops `reps` times appending oracle and diffuser | Builds the full amplitude amplification circuit layer by layer |
 | 3 — Simulation Execution | `gs.execute()` → `State(re_state)` → `state_obj.calculate_state(data_qubits)` | Runs the statevector simulation; marginalizes ancilla to get data-register probabilities |
 | 4 — Post-Processing | Iterates `state_basis_dict`; sums probability for states where all `good_zero_qubits == '0'` | Classically extracts `target_prob`; sets `is_success = (target_prob > p)` |
 | 5 — Export | `gs.draw(filename=..., title=...)` | Saves SVG circuit diagram |
@@ -109,12 +109,12 @@ print(result['status'])           # 'ok' if amplification succeeded
 - **`_build_diffuser(gs, U, data_qubits, ancilla)`** — Implements the Grover diffuser as `U†` → `_build_oracle(all data_qubits)` → `U`. This reflects the state about $U|0\rangle^n$. It reuses `_build_oracle` on the full data register, which is the $2|0^n\rangle\langle 0^n|-I$ reflection.
 - **`_update_last_result` / `_build_return`** — Store all runtime data into `self.last_result` and package the result dict (including the ASCII panel rendered by `format_result_ascii()`).
 
-**Data flow:** `U` (user input) → `GateSequence` circuit → `execute()` → `State.calculate_state()` → `target_prob` → `_build_return()` → result dict.
+**Data flow:** `U` (user input) → `Circuit` circuit → `execute()` → `State.calculate_state()` → `target_prob` → `_build_return()` → result dict.
 
 ## Understanding the Key Quantum Components
 
 ### 1. State Preparation ($U$)
-The user-supplied `GateSequence` $U$ acts on the data register to prepare:
+The user-supplied `Circuit` $U$ acts on the data register to prepare:
 $$U|0\rangle^n = \sqrt{p}|\text{good}\rangle + \sqrt{1-p}|\text{bad}\rangle$$
 One ancilla qubit is appended automatically at index `n_data`.
 
@@ -175,19 +175,19 @@ Query complexity: $O(1/\sqrt{p})$, quadratic speedup over classical $O(1/p)$.
 ## Hands-On Example (UnitaryLab)
 ```python
 from unitarylab.algorithms import AmplitudeAmplificationAlgorithm
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 import numpy as np
 
 # Build a 3-qubit state with small success probability
 # Target: qubits 0 and 1 in |0> simultaneously
-U = GateSequence(3, name="MyPrep", backend='torch')
+U = Circuit(3, name="MyPrep", backend='torch')
 U.ry(0.3, 0)   # rotates qubit 0 slightly away from |0>
 U.ry(0.3, 1)
 U.ry(1.5, 2)   # qubit 2 not in target condition
 
 # Initial success probability ≈ cos^2(0.15) * cos^2(0.15) ≈ 0.956 * 0.956 ≈ 0.91
 # Use a smaller angle for a more interesting demo: p ~ 0.05
-U2 = GateSequence(3, name="LowProb", backend='torch')
+U2 = Circuit(3, name="LowProb", backend='torch')
 U2.ry(1.4, 0)
 U2.ry(1.4, 1)
 
@@ -304,15 +304,15 @@ print(np.round(probs, 3))
 ## Minimal Manual Implementation (UnitaryLab) 
 
 ```python
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 import math
 
-def amplitude_amplification(U: GateSequence, good_zero_qubits, p: float, backend='torch'):
+def amplitude_amplification(U: Circuit, good_zero_qubits, p: float, backend='torch'):
     n_data = U.get_num_qubits()
     ancilla = n_data
     reps = max(1, round(math.pi / (4 * math.asin(math.sqrt(p))) - 0.5))
 
-    gs = GateSequence(n_data + 1, backend=backend)
+    gs = Circuit(n_data + 1, backend=backend)
     gs.append(U, list(range(n_data)))
 
     for _ in range(reps):

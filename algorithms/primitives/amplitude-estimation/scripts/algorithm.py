@@ -1,12 +1,12 @@
 """Quantum Amplitude Estimation (QAE) — estimate success probability of a circuit."""
 
 from unitarylab.algorithms import AmplitudeEstimationAlgorithm
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 
 
 def example_uniform():
     """Estimate p(|00>) in a 2-qubit uniform state.  Expected p ~ 0.25."""
-    U = GateSequence(2, name="PrepU", backend="torch")
+    U = Circuit(2, name="PrepU", backend="torch")
     U.h(0)
     U.h(1)
 
@@ -29,7 +29,7 @@ def example_uniform():
 
 def example_biased():
     """Estimate p for a biased single-qubit Ry preparation."""
-    U = GateSequence(2, name="PrepU", backend="torch")
+    U = Circuit(2, name="PrepU", backend="torch")
     U.ry(1.1, 0)
     U.cx(0, 1)
 

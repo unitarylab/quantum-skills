@@ -29,21 +29,21 @@ The LCU circuit has three components:
 
 - Controlled unitary gates.
 - Ancilla qubits and post-selection.
-- Python: `numpy`, `GateSequence`, `State`.
+- Python: `numpy`, `Circuit`, `State`.
 
 ## Using the Provided Implementation
 
 ```python
 from unitarylab.algorithms import LCUAlgorithm
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 import numpy as np
 
 # Build two unitary operators U0, U1
 n_sys = 1
-U0 = GateSequence(n_sys, backend='torch')
+U0 = Circuit(n_sys, backend='torch')
 U0.h(0)         # Hadamard
 
-U1 = GateSequence(n_sys, backend='torch')
+U1 = Circuit(n_sys, backend='torch')
 U1.x(0)         # Pauli-X
 
 # Apply M = 0.6*H + 0.4*X to system
@@ -66,9 +66,9 @@ print(result['circuit_path'])   # SVG circuit diagram
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `alphas` | `List[float]` | required | Non-negative weights $\alpha_j$ for each unitary $U_j$. |
-| `unitaries` | `List[GateSequence]` | required | List of unitary circuits $U_j$. Must have the same number of qubits as `n_sys`. |
+| `unitaries` | `List[Circuit]` | required | List of unitary circuits $U_j$. Must have the same number of qubits as `n_sys`. |
 | `n_sys` | `int` | required | Number of qubits in the system (data) register. |
-| `initial_state` | `GateSequence` or `None` | `None` | Circuit preparing the initial system state. Defaults to $\|0\rangle^{n_{\text{sys}}}$. |
+| `initial_state` | `Circuit` or `None` | `None` | Circuit preparing the initial system state. Defaults to $\|0\rangle^{n_{\text{sys}}}$. |
 | `backend` | `str` | `'torch'` | Simulation backend. `'torch'` recommended. |
 | `algo_dir` | `str` or `None` | `None` | Directory to save SVG circuit diagram. |
 
@@ -96,7 +96,7 @@ print(result['circuit_path'])   # SVG circuit diagram
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Setup | Validates `len(alphas)==len(unitaries)`; computes `m`, `n_anc = ceil(log2(m))`, `s_norm = sum(alphas)` | Determines ancilla size |
-| 2 — Circuit Construction | Creates `GateSequence(n_anc + n_sys)`; optionally appends `initial_state` to system; calls `_build_V`, `_build_select`, `V_circ.dagger()` in sequence | Assembles full PREPARE → SELECT → UNPREPARE circuit |
+| 2 — Circuit Construction | Creates `Circuit(n_anc + n_sys)`; optionally appends `initial_state` to system; calls `_build_V`, `_build_select`, `V_circ.dagger()` in sequence | Assembles full PREPARE → SELECT → UNPREPARE circuit |
 | 3 — Simulation | `qc.execute()` → `State(np.asarray(raw_result))` | Runs statevector simulation |
 | 4 — Post-Processing | `state_obj.probabilities_dict(anc_qubits, endian='little')` → extracts probability of `'0'*n_anc` | Computes LCU success probability |
 | 5 — Export | `qc.draw(filename=..., title=...)` | Saves SVG circuit diagram |
@@ -159,11 +159,11 @@ To boost $P$, apply amplitude amplification $O(s/\|M|\psi\rangle\|)$ times.
 
 ```python
 from unitarylab.algorithms import LCUAlgorithm
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 
 n_sys = 2
-I_circ = GateSequence(n_sys, backend='torch')   # Identity
-X0_circ = GateSequence(n_sys, backend='torch')
+I_circ = Circuit(n_sys, backend='torch')   # Identity
+X0_circ = Circuit(n_sys, backend='torch')
 X0_circ.x(0)
 
 algo = LCUAlgorithm()
@@ -187,9 +187,9 @@ The following Python skeleton reconstructs the three structural components of LC
 ```python
 # Simplified reconstruction — mirrors LCUAlgorithm._build_V() and _state_preparation_tree()
 import numpy as np
-from unitarylab.core import GateSequence
+from unitarylab.core import Circuit
 
-def build_prepare(alphas, n_anc: int, backend: str = 'torch') -> GateSequence:
+def build_prepare(alphas, n_anc: int, backend: str = 'torch') -> Circuit:
     """Build V|0> = sum_j sqrt(alpha_j/s)|j> on ancilla register."""
     s = sum(alphas)
     m = len(alphas)
@@ -201,7 +201,7 @@ def build_prepare(alphas, n_anc: int, backend: str = 'torch') -> GateSequence:
     # The real implementation calls _state_preparation_tree() which does this recursively
     # For a flat 2-element case:
     if m == 2:
-        gs = GateSequence(n_anc, backend=backend)
+        gs = Circuit(n_anc, backend=backend)
         theta = 2 * np.arctan2(state[1], state[0])
         gs.ry(theta, 0)
         return gs
@@ -214,10 +214,10 @@ def build_prepare(alphas, n_anc: int, backend: str = 'torch') -> GateSequence:
 ```python
 # Simplified reconstruction — mirrors LCUAlgorithm._build_select()
 
-def build_select(unitaries, n_anc: int, n_sys: int, backend: str = 'torch') -> GateSequence:
+def build_select(unitaries, n_anc: int, n_sys: int, backend: str = 'torch') -> Circuit:
     """SELECT = sum_j |j><j|_anc ⊗ U_j: apply U_j conditional on ancilla=|j>."""
     m = len(unitaries)
-    gs = GateSequence(n_anc + n_sys, backend=backend)
+    gs = Circuit(n_anc + n_sys, backend=backend)
     sys_qubits = list(range(n_anc, n_anc + n_sys))
     anc_qubits = list(range(n_anc))
     for j, U_j in enumerate(unitaries):
@@ -235,7 +235,7 @@ def lcu_circuit(alphas, unitaries, n_sys: int, initial_state=None, backend: str 
     """Full LCU circuit: PREPARE ⊗ I |psi> → SELECT → UNPREPARE ⊗ I."""
     m = len(alphas)
     n_anc = int(np.ceil(np.log2(max(m, 2))))
-    gs = GateSequence(n_anc + n_sys, backend=backend)
+    gs = Circuit(n_anc + n_sys, backend=backend)
 
     anc_qubits = list(range(n_anc))
     sys_qubits = list(range(n_anc, n_anc + n_sys))

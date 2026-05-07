@@ -130,7 +130,7 @@ The Schrödingerization framework can be referred to in './Schr_skills.markdown'
 func1 = TDiff(nx, dx, 2, boundary=bd).data()[0]
 D1 = lambda a: func1(a * dt/R)
 
-H1 = GateSequence(2*nx)
+H1 = Circuit(2*nx)
 H1.append(D1(a1), range(nx))      # x-direction
 H1.append(D1(a2), range(nx, 2*nx))# y-direction
 ```

@@ -32,7 +32,7 @@ python ./scripts/algorithm.py
 
 - Parameterized quantum circuits (PQC); angle encoding.
 - Supervised learning concepts; cross-entropy or MSE loss.
-- `numpy`, `GateSequence`, `Register`.
+- `numpy`, `Circuit`, `Register`.
 
 ## Using the Provided Implementation
 
@@ -88,7 +88,7 @@ print(result['plot'])
 | `status` | `str` | `'success'`. |
 | `accuracy` | `float` | Final training accuracy. |
 | `loss_history` | `List[float]` | Loss per epoch. |
-| `circuit` | `GateSequence` | Example PQC circuit (first training sample). |
+| `circuit` | `Circuit` | Example PQC circuit (first training sample). |
 | `circuit_path` | `str` | Path to circuit SVG. |
 | `plot_path` | `str` | Path to training curve PNG. |
 | `plot` | `str` | ASCII art result panel. |
@@ -102,7 +102,7 @@ print(result['plot'])
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Initialization | Validates `num_classes <= 2^n_qubits`; initializes `self.params = np.random.uniform(0, 2π, (layers, n_qubits, 3))` | Parameter array shape `(L, N, 3)` for Rx/Rz/Ry per qubit per layer |
-| 2 — Circuit Mapping | Creates `GateSequence(Register('q', n_qubits), backend=backend)`; calls `_build_vqc_layer(gs, x_train[0], ...)` for visualization | Architecture preview only |
+| 2 — Circuit Mapping | Creates `Circuit(Register('q', n_qubits), backend=backend)`; calls `_build_vqc_layer(gs, x_train[0], ...)` for visualization | Architecture preview only |
 | 3 — Training Loop | For each epoch/sample: computes `prediction = label + Gaussian_noise * exp(-epoch/10)`; MSE loss simulation; no actual quantum gradient | **Simplified training placeholder** |
 | 4 — Evaluation | `final_acc = 1/num_classes + (1 - 1/num_classes) * (1 - min(1, final_loss))` | Derived accuracy estimate (not actual measurement) |
 | 5 — Export | `gs.draw(filename=circuit_path)` | Saves SVG circuit diagram |
@@ -182,9 +182,9 @@ The following skeleton reconstructs the PQC architecture and training loop from 
 ```python
 # Simplified reconstruction — mirrors QNNAlgorithm._build_vqc_layer() and training loop
 import numpy as np
-from unitarylab.core import GateSequence, Register
+from unitarylab.core import Circuit, Register
 
-def build_vqc_layer(gs: GateSequence, x: np.ndarray, params: np.ndarray,
+def build_vqc_layer(gs: Circuit, x: np.ndarray, params: np.ndarray,
                     n_qubits: int, layers: int, n_features: int):
     """
     Build PQC in-place: for each layer,
@@ -206,7 +206,7 @@ def qnn_forward(x: np.ndarray, params: np.ndarray,
                 n_features: int, backend: str = 'torch') -> np.ndarray:
     """Evaluate the PQC and return the output state probability vector."""
     reg = Register('q', n_qubits)
-    gs  = GateSequence(reg, backend=backend)
+    gs  = Circuit(reg, backend=backend)
     build_vqc_layer(gs, x, params, n_qubits, layers, n_features)
     sv = gs.execute()  # returns complex state vector
     return np.abs(np.asarray(sv).flatten())**2  # measurement probabilities
@@ -231,7 +231,7 @@ def train_qnn_minimal(x_train: np.ndarray, y_train: np.ndarray,
 
 **Component roles**:
 - `build_vqc_layer` — faithfully mirrors `_build_vqc_layer()` from `algorithm.py`: data-reuploading Rx encoding per qubit × layer, followed by trainable Rz+Ry rotation pair and a CNOT entanglement chain.
-- `qnn_forward` — wraps the forward pass: builds a fresh `GateSequence`, executes it to get a statevector, and returns the Born-rule measurement probability vector.
+- `qnn_forward` — wraps the forward pass: builds a fresh `Circuit`, executes it to get a statevector, and returns the Born-rule measurement probability vector.
 - A full training loop would use **Parameter Shift** (`params[l,i,0] ± π/2`) to compute exact analytical gradients; this is the same pattern as `QCBMAlgorithm`.
 
 ## Debugging Tips

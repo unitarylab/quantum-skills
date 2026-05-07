@@ -2,14 +2,14 @@
 
 ## Creating a Quantum Circuit
 
-Create circuits using the `GateSequence` class:
+Create circuits using the `Circuit` class:
 
 ```python
-from unitarylab import GateSequence
+from unitarylab import Circuit
 import numpy as np
 
 # Create a circuit with 4 qubits
-qc = GateSequence(4)
+qc = Circuit(4)
 ```
 ## Single-Qubit Gates
 
@@ -118,7 +118,7 @@ qc.crz(np.pi / 7, 2, 1) # CRZ gate, control bit 2, target bit 1, rotates π/7 ar
 
 ```python
 
-qc = GateSequence(4, name="multi_control_test") # Create a 4-qubit circuit for multi-control gate testing
+qc = Circuit(4, name="multi_control_test") # Create a 4-qubit circuit for multi-control gate testing
 ```
 
 ### Multi-control fixed gate
@@ -150,7 +150,7 @@ It can also be used together with control qubits and a specified `control_sequen
 
 Applying a Custom Unitary Matrix
 ```python
-gs = GateSequence(n + 1)  # Create an (n+1)-qubit circuit for custom unitary testing
+gs = Circuit(n + 1)  # Create an (n+1)-qubit circuit for custom unitary testing
 
 U = np.random.randn(2**n, 2**n) + 1j * np.random.randn(2**n, 2**n)
 U = (U + U.conj().T) / 2
@@ -166,7 +166,7 @@ def test_gs_unitary_apply(n):
     U = expm(1j * U)
 
     # Create an (n+1)-qubit circuit
-    gs = GateSequence(n + 1)
+    gs = Circuit(n + 1)
 
     # Apply U to the first n qubits, using qubit n as a control qubit with control state '0'
     gs.unitary(U, range(n), n, '0')
@@ -203,7 +203,7 @@ test_gs_unitary_apply(1)
 The `measure()` method is used to measure one or more qubits in the circuit.
 
 ```python
-qc = GateSequence(2, name="measure_test")  # Create a 2-qubit circuit for measurement testing
+qc = Circuit(2, name="measure_test")  # Create a 2-qubit circuit for measurement testing
 
 qc.h(0)  # Apply a Hadamard gate to qubit 0 before measurement
 
@@ -219,12 +219,12 @@ for i, g in enumerate(data):
 
 ## Circuit Transformations
 
-The `GateSequence` class provides several transformation methods for modifying or deriving new circuits from an existing circuit, such as `copy()`, `dagger()`, `reverse()`, `inverse()`, `repeat()`, and `decompose()`.
+The `Circuit` class provides several transformation methods for modifying or deriving new circuits from an existing circuit, such as `copy()`, `dagger()`, `reverse()`, `inverse()`, `repeat()`, and `decompose()`.
 
 ```python
 
 # Building the Original Circuit
-qc = GateSequence(2, name="transform_test")  # Create a 2-qubit circuit for circuit transformation testing
+qc = Circuit(2, name="transform_test")  # Create a 2-qubit circuit for circuit transformation testing
 
 qc.h(0)  # Apply a Hadamard gate to qubit 0
 
@@ -252,7 +252,7 @@ qs_decompose = qc.decompose(1)  # Decompose the circuit to the specified level
 The `control()` method is used to convert an existing circuit into a controlled circuit by adding one or more control qubits.
 
 ```python
-qc = GateSequence(1, name="sub")  # Create a 1-qubit subcircuit
+qc = Circuit(1, name="sub")  # Create a 1-qubit subcircuit
 
 # Building the Original Subcircuit
 qc.h(0)  # Apply a Hadamard gate to qubit 0
@@ -277,8 +277,8 @@ print("Name of the controlled circuit:", ctrl_qc.name)` # Print the name of the 
 The `append()` and `prepend()` methods are used to attach an existing subcircuit to the end or the beginning of another circuit.
 
 ```python
-qc = GateSequence(3, name="main")  # Create a 3-qubit main circuit
-sub_qc = GateSequence(1, name="sub")  # Create a 1-qubit subcircuit
+qc = Circuit(3, name="main")  # Create a 3-qubit main circuit
+sub_qc = Circuit(1, name="sub")  # Create a 1-qubit subcircuit
 
 # Building the Subcircuit
 sub_qc.h(0)  # Apply a Hadamard gate to qubit 0 of the subcircuit
@@ -306,7 +306,7 @@ for g in qc.data():
 The `initialize()`, `execute()`, and `get_matrix()` methods are used to set the initial quantum state, run the circuit, and retrieve the unitary matrix representation of the circuit.
 
 ```python
-qc = GateSequence(1, name="exec_test")  # Create a 1-qubit circuit for execution testing
+qc = Circuit(1, name="exec_test")  # Create a 1-qubit circuit for execution testing
 
 # Initializing the Quantum State
 v = np.array([0, 1], dtype=complex)  # Define the initial state vector |1⟩
@@ -328,7 +328,7 @@ matrix = qc.get_matrix()  # Get the matrix representation of the circuit
 The `draw()` method is used to visualize the structure of a quantum circuit.
 
 ```python
-qc = GateSequence(2, name="draw_test")  # Create a 2-qubit circuit for drawing
+qc = Circuit(2, name="draw_test")  # Create a 2-qubit circuit for drawing
 
 # Building a Simple Circuit
 
@@ -344,23 +344,23 @@ qc.draw() # Draw the circuit
 
 ## Exception Handling
 
-The `GateSequence` class should raise exceptions when invalid inputs are provided, such as invalid qubit indices, non-unitary matrices, or mismatched control sequences.
+The `Circuit` class should raise exceptions when invalid inputs are provided, such as invalid qubit indices, non-unitary matrices, or mismatched control sequences.
 
 ### Exception Examples
 
 ```python
 # SWAP on the same qubit should raise an error
-qs = GateSequence(2)
+qs = Circuit(2)
 qs.swap(0, 0)  # Invalid SWAP operation: the two target qubits must be different
 
 
 # Non-unitary matrix should raise an error
-qs = GateSequence(1)
+qs = Circuit(1)
 bad_u = np.array([[1, 1],
                   [0, 1]], dtype=complex)
 qs.unitary(bad_u, [0])  # Invalid unitary operation: the input matrix is not unitary
 
 # control_sequence length mismatch should raise an error
-qs = GateSequence(3)
+qs = Circuit(3)
 qs.mcx([0, 1], 2, control_sequence="1")  # Invalid control sequence: length does not match the number of control qubits
 ```
