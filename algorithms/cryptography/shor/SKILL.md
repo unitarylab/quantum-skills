@@ -161,7 +161,7 @@ yields non-trivial factors of $N$.
 ## Hands-On Example
 
 ```python
-from unitarylab.algorithm import ShorAlgorithm
+from unitarylab.algorithms import ShorAlgorithm
 
 algo = ShorAlgorithm()
 result = algo.run(N=15, method='matrix', backend='torch', max_retries=20)
