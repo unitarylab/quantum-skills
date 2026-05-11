@@ -1,7 +1,7 @@
 """Taylor Series Hamiltonian Simulation — approximate e^{-iHt} via LCU of Taylor-expanded Pauli terms."""
 
 import numpy as np
-from unitarylab.algorithms import TaylorAlgorithm
+from unitarylab-algorithms import TaylorAlgorithm
 
 
 def main():

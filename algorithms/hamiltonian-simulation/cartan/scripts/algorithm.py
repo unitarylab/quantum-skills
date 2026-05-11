@@ -1,5 +1,5 @@
 import numpy as np
-from unitarylab.algorithms import CartanDecompositionAlgorithm
+from unitarylab-algorithms import CartanDecompositionAlgorithm
 
 # ─────────────────────────────────────────────
 # Example 1: 2-qubit (4×4) Heisenberg-like Hamiltonian

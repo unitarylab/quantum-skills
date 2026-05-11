@@ -68,7 +68,7 @@ After using this skill, you should be able to:
 ### Quick Start Example
 
 ```python
-from unitarylab.algorithms import SuzukiTrotterAlgorithm
+from unitarylab-algorithms import SuzukiTrotterAlgorithm
 
 # 2-qubit Heisenberg-like Hamiltonian as grouped Pauli terms
 # Each group is a list of (pauli_string, coefficient) tuples
@@ -206,7 +206,7 @@ Interpretation:
 Use a parameter sweep to visualize tradeoffs.
 
 ```python
-from unitarylab.algorithms import SuzukiTrotterAlgorithm
+from unitarylab-algorithms import SuzukiTrotterAlgorithm
 
 # 2-qubit Hamiltonian as grouped Pauli terms
 grouped_paulis = [

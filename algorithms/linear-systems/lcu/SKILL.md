@@ -34,7 +34,7 @@ The LCU circuit has three components:
 ## Using the Provided Implementation
 
 ```python
-from unitarylab.algorithms import LCUAlgorithm
+from unitarylab-algorithms import LCUAlgorithm
 from unitarylab.core import Circuit
 import numpy as np
 
@@ -158,7 +158,7 @@ To boost $P$, apply amplitude amplification $O(s/\|M|\psi\rangle\|)$ times.
 ## Hands-On Example
 
 ```python
-from unitarylab.algorithms import LCUAlgorithm
+from unitarylab-algorithms import LCUAlgorithm
 from unitarylab.core import Circuit
 
 n_sys = 2

@@ -38,7 +38,7 @@ The phase sequence $\Phi$ is optimized (via L-BFGS-B) to approximate the target 
 ## Using the Provided Implementation
 
 ```python
-from unitarylab.algorithms import QSPAlgorithm
+from unitarylab-algorithms import QSPAlgorithm
 
 algo = QSPAlgorithm(seed=42)
 result = algo.run(
@@ -152,7 +152,7 @@ $$\langle 0|U_\Phi(x)|0\rangle = P(x)$$
 ## Hands-On Example (UnitaryLab)
 
 ```python
-from unitarylab.algorithms import QSPAlgorithm
+from unitarylab-algorithms import QSPAlgorithm
 import numpy as np
 
 algo = QSPAlgorithm(seed=0)

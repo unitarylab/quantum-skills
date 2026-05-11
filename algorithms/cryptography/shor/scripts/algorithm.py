@@ -1,6 +1,6 @@
 """Shor's Algorithm — factor a composite integer."""
 
-from unitarylab.algorithms import ShorAlgorithm
+from unitarylab-algorithms import ShorAlgorithm
 
 
 def example_factor_15():

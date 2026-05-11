@@ -1,6 +1,6 @@
 """Trotter-Suzuki Hamiltonian Simulation — approximate e^{-iHt} via product formulas."""
 
-from unitarylab.algorithms import SuzukiTrotterAlgorithm
+from unitarylab-algorithms import SuzukiTrotterAlgorithm
 
 
 def main():

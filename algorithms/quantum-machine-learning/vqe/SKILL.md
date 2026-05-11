@@ -36,7 +36,7 @@ python ./scripts/algorithm.py
 ## Using the Provided Implementation
 
 ```python
-from unitarylab.algorithms import VQEAlgorithm
+from unitarylab-algorithms import VQEAlgorithm
 
 algo = VQEAlgorithm(seed=42)
 result = algo.run(
@@ -153,7 +153,7 @@ The variational principle guarantees $E(\theta) \geq E_0$ for all $\theta$. As o
 ## Hands-On Example (UnitaryLab)
 
 ```python
-from unitarylab.algorithms import VQEAlgorithm
+from unitarylab-algorithms import VQEAlgorithm
 
 algo = VQEAlgorithm(seed=0)
 result = algo.run(n_qubits=2, n_layers=4, max_iter=200)

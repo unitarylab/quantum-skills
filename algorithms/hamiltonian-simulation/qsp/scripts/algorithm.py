@@ -11,7 +11,7 @@ Covers:
 """
 
 import numpy as np
-from unitarylab.algorithms import QSPHSAlgorithm
+from unitarylab-algorithms import QSPHSAlgorithm
 
 # ---------------------------------------------------------------------------
 # Hamiltonian definition

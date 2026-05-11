@@ -19,7 +19,7 @@
   - [Schrödingerization Solvers (schrodingerization)](#schrödingerization-solvers-schrodingerization)
   - [Equation Parser (equation\_parser)](#equation-parser-equation_parser)
   - [Block Encoding (block\_encoding)](#block-encoding-block_encoding)
-- [unitarylab.algorithms](#unitarylabalgorithms)
+- [unitarylab-algorithms](#unitarylabalgorithms)
   - [PDE Solvers (schrodingerization)](#pde-solvers-schrodingerization)
   - [Quantum Cryptology (cryptology)](#quantum-cryptology-cryptology)
   - [Hamiltonian Simulation (hamiltonian\_simulation)](#hamiltonian-simulation-hamiltonian_simulation)
@@ -516,10 +516,10 @@ Block-encode a given matrix and return a result object containing the quantum ci
 
 ---
 
-## unitarylab.algorithms
+## unitarylab-algorithms
 
 ```python
-from unitarylab.algorithms import <symbol>
+from unitarylab-algorithms import <symbol>
 ```
 
 ---

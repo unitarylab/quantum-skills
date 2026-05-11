@@ -66,7 +66,7 @@ After using this skill, you should be able to:
 ### Quick Start Example
 
 ```python
-from unitarylab.algorithms import QDriftAlgorithm
+from unitarylab-algorithms import QDriftAlgorithm
 
 # 2-qubit Hamiltonian as (pauli_string, coefficient) list
 H_list = [
@@ -190,7 +190,7 @@ Interpretation:
 Measure variance across seeds and step counts.
 
 ```python
-from unitarylab.algorithms import QDriftAlgorithm
+from unitarylab-algorithms import QDriftAlgorithm
 
 H_list = [
     ("ZI", 0.35),

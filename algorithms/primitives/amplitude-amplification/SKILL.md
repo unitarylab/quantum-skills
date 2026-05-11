@@ -40,7 +40,7 @@ or set manually via `reps`.
 ## Using the Provided Implementation
 
 ```python
-from unitarylab.algorithms import AmplitudeAmplificationAlgorithm
+from unitarylab-algorithms import AmplitudeAmplificationAlgorithm
 from unitarylab.core import Circuit
 
 # Prepare state U such that some target qubits land in |0>
@@ -174,7 +174,7 @@ Query complexity: $O(1/\sqrt{p})$, quadratic speedup over classical $O(1/p)$.
 
 ## Hands-On Example (UnitaryLab)
 ```python
-from unitarylab.algorithms import AmplitudeAmplificationAlgorithm
+from unitarylab-algorithms import AmplitudeAmplificationAlgorithm
 from unitarylab.core import Circuit
 import numpy as np
 

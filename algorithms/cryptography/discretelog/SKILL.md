@@ -39,7 +39,7 @@ python ./scripts/algorithm.py
 ## Using the Provided Implementation
 
 ```python
-from unitarylab.algorithms import DiscreteLogAlgorithm
+from unitarylab-algorithms import DiscreteLogAlgorithm
 
 algo = DiscreteLogAlgorithm()
 result = algo.run(
@@ -167,7 +167,7 @@ From the measurement $(u, v)$:
 ## Hands-On Example (UnitaryLab)
 
 ```python
-from unitarylab.algorithms import DiscreteLogAlgorithm
+from unitarylab-algorithms import DiscreteLogAlgorithm
 
 # Solve 3^x ≡ 6 (mod 7): answer is x=3 since 3^3=27=3*7+6
 algo = DiscreteLogAlgorithm()

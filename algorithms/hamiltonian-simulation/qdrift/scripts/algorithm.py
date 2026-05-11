@@ -1,6 +1,6 @@
 """QDrift Hamiltonian Simulation — randomized Pauli sampling for e^{-iHt}."""
 
-from unitarylab.algorithms import QDriftAlgorithm
+from unitarylab-algorithms import QDriftAlgorithm
 
 
 def main():

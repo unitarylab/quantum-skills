@@ -1,6 +1,6 @@
 """QAOA — Quantum Approximate Optimization for Max-Cut."""
 
-from unitarylab.algorithms import QAOAAlgorithm
+from unitarylab-algorithms import QAOAAlgorithm
 
 
 def main():

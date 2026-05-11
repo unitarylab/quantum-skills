@@ -40,7 +40,7 @@ Two circuit methods are supported:
 ## Using the Provided Implementation
 
 ```python
-from unitarylab.algorithms import ShorAlgorithm
+from unitarylab-algorithms import ShorAlgorithm
 
 algo = ShorAlgorithm()
 result = algo.run(
@@ -161,7 +161,7 @@ yields non-trivial factors of $N$.
 ## Hands-On Example
 
 ```python
-from unitarylab.algorithms import ShorAlgorithm
+from unitarylab-algorithms import ShorAlgorithm
 
 algo = ShorAlgorithm()
 result = algo.run(N=15, method='matrix', backend='torch', max_retries=20)

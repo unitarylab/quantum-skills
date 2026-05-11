@@ -36,7 +36,7 @@ QAE combines Grover/Amplitude Amplification with Quantum Phase Estimation (QPE):
 ## Using the Provided Implementation
 
 ```python
-from unitarylab.algorithms import AmplitudeEstimationAlgorithm
+from unitarylab-algorithms import AmplitudeEstimationAlgorithm
 from unitarylab.core import Circuit
 
 # Build state preparation U (data register only, no ancilla)
@@ -174,7 +174,7 @@ $$\delta a \approx \pi \cdot \delta\phi = \frac{\pi}{2^d}$$
 ## Hands-On Example (UnitaryLab)
 
 ```python
-from unitarylab.algorithms import AmplitudeEstimationAlgorithm
+from unitarylab-algorithms import AmplitudeEstimationAlgorithm
 from unitarylab.core import Circuit
 import numpy as np
 
