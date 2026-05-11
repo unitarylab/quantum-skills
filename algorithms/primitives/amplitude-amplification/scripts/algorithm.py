@@ -1,6 +1,6 @@
 """Amplitude Amplification — boost probability of target states."""
 
-from unitarylab-algorithms import AmplitudeAmplificationAlgorithm
+from unitarylab_algorithms import AmplitudeAmplificationAlgorithm
 from unitarylab.core import Circuit
 
 

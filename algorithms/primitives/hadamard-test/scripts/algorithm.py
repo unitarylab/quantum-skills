@@ -1,6 +1,6 @@
 """Hadamard Test — estimate expectation values and state overlaps."""
 
-from unitarylab-algorithms import HadamardTestAlgorithm
+from unitarylab_algorithms import HadamardTestAlgorithm
 from unitarylab.core import Circuit
 
 

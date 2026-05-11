@@ -63,7 +63,7 @@ After using this skill, you should be able to:
 
 ```python
 import numpy as np
-from unitarylab-algorithms import QSPHSAlgorithm
+from unitarylab_algorithms import QSPHSAlgorithm
 
 # 2x2 Hermitian Hamiltonian
 H = np.array([[2, 1],
@@ -220,7 +220,7 @@ Sweep `degree` and `t` to observe accuracy vs. circuit depth trade-offs.
 
 ```python
 import numpy as np
-from unitarylab-algorithms import QSPHSAlgorithm
+from unitarylab_algorithms import QSPHSAlgorithm
 
 H = np.array([[2, 1],
               [1, 3]], dtype=complex)

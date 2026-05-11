@@ -1,6 +1,6 @@
 """Quantum Signal Processing (QSP) — polynomial approximation of exp(-i*tau*x)."""
 
-from unitarylab-algorithms import QSPAlgorithm
+from unitarylab_algorithms import QSPAlgorithm
 
 
 def example_low_degree():

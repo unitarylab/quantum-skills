@@ -43,7 +43,7 @@ The core circuit (for mode `'expectation'`):
 ## Using the Provided Implementation
 
 ```python
-from unitarylab-algorithms import HadamardTestAlgorithm
+from unitarylab_algorithms import HadamardTestAlgorithm
 from unitarylab.core import Circuit
 import numpy as np
 
@@ -173,7 +173,7 @@ $$|e^{i\phi}| = \sqrt{\text{Re}^2 + \text{Im}^2}, \quad \phi = \text{atan2}(\tex
 ## Hands-On Example
 
 ```python
-from unitarylab-algorithms import HadamardTestAlgorithm
+from unitarylab_algorithms import HadamardTestAlgorithm
 from unitarylab.core import Circuit
 import numpy as np
 

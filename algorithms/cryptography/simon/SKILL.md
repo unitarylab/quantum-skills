@@ -38,7 +38,7 @@ Simon's algorithm:
 ## Using the Provided Implementation
 
 ```python
-from unitarylab-algorithms import SimonAlgorithm
+from unitarylab_algorithms import SimonAlgorithm
 
 algo = SimonAlgorithm()
 result = algo.run(
@@ -153,7 +153,7 @@ Each measured $y$ satisfies $y \cdot s = 0 \pmod 2$.
 ## Hands-On Example
 
 ```python
-from unitarylab-algorithms import SimonAlgorithm
+from unitarylab_algorithms import SimonAlgorithm
 
 # Test with a 6-bit hidden string
 algo = SimonAlgorithm()
@@ -303,7 +303,7 @@ def build_simon_oracle(gs, s: str, n: int):
 
 ```python
 # Exact usage example (uses actual API)
-from unitarylab-algorithms import SimonAlgorithm
+from unitarylab_algorithms import SimonAlgorithm
 from unitarylab.core import Circuit, Register, State
 
 def simon_circuit(s_target: str, backend: str = 'torch'):

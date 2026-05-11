@@ -34,7 +34,7 @@ The algorithm supports two modes:
 ## Using the Provided Implementation
 
 ```python
-from unitarylab-algorithms import HadamardTransformAlgorithm
+from unitarylab_algorithms import HadamardTransformAlgorithm
 
 algo = HadamardTransformAlgorithm()
 
@@ -142,7 +142,7 @@ Norm preservation: $\|H^{\otimes n}|x\rangle\|^2 = \sum_{y}|(-1)^{x\cdot y}/\sqr
 ## Hands-On Example
 
 ```python
-from unitarylab-algorithms import HadamardTransformAlgorithm
+from unitarylab_algorithms import HadamardTransformAlgorithm
 import numpy as np
 
 algo = HadamardTransformAlgorithm()

@@ -37,7 +37,7 @@ HHL proceeds in five steps:
 ## Using the Provided Implementation
 
 ```python
-from unitarylab-algorithms import HHLAlgorithm
+from unitarylab_algorithms import HHLAlgorithm
 import numpy as np
 
 # 2x2 Hermitian system
@@ -171,7 +171,7 @@ $$|x\rangle = \frac{1}{\mathcal{N}}\sum_j \frac{Cb_j}{\lambda_j}|u_j\rangle, \qu
 ## Hands-On Example
 
 ```python
-from unitarylab-algorithms import HHLAlgorithm
+from unitarylab_algorithms import HHLAlgorithm
 import numpy as np
 
 # 4x4 example (requires 2 system qubits)
@@ -220,7 +220,7 @@ def unitary_circuit(U_mat: np.ndarray, backend: str = 'torch') -> Circuit:
 
 ```python
 # Exact usage — calls QPEAlgorithm.build_qpe_circuit() as in the real implementation
-from unitarylab-algorithms import QPEAlgorithm
+from unitarylab_algorithms import QPEAlgorithm
 
 def encode_eigenphases(U_circ: Circuit, d: int, backend: str = 'torch') -> Circuit:
     """Build QPE sub-circuit for eigenvalue encoding."""
@@ -277,7 +277,7 @@ def extract_hhl_solution(state_arr: np.ndarray, d: int, n_sys: int, scale_factor
 
 import numpy as np
 from unitarylab.core import Circuit
-from unitarylab-algorithms import QPEAlgorithm
+from unitarylab_algorithms import QPEAlgorithm
 
 def hhl_minimal(A, b, d, t=None, backend='torch'):
     n_sys = int(np.log2(len(b)))

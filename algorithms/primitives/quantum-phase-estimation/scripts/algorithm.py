@@ -1,7 +1,7 @@
 """Quantum Phase Estimation (QPE) — estimate eigenphase of a unitary operator."""
 
 import numpy as np
-from unitarylab-algorithms import QPEAlgorithm
+from unitarylab_algorithms import QPEAlgorithm
 from unitarylab.core import Circuit
 
 

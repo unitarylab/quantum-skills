@@ -1,7 +1,7 @@
 """LCU — apply a linear combination of unitaries M = sum(alpha_j * U_j)."""
 
 import numpy as np
-from unitarylab-algorithms import LCUAlgorithm
+from unitarylab_algorithms import LCUAlgorithm
 from unitarylab.core import Circuit
 
 

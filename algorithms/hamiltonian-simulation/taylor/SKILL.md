@@ -190,7 +190,7 @@ def run(self, H: np.ndarray, t: float, error: float, degree: int = 15) -> dict:
 
 ```python
 import numpy as np
-from unitarylab-algorithms import TaylorAlgorithm
+from unitarylab_algorithms import TaylorAlgorithm
 
 # 2×2 Hermitian Hamiltonian
 H = np.array([[2, 1],
@@ -214,7 +214,7 @@ print("Frobenius error:", algo.output["Frobenius norm of error"])
 
 ```python
 import numpy as np
-from unitarylab-algorithms import TaylorAlgorithm
+from unitarylab_algorithms import TaylorAlgorithm
 
 H = np.array([[2, 1],
               [1, 3]], dtype=complex)

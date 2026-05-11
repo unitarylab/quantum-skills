@@ -1,7 +1,7 @@
 """QNN — Quantum Neural Network for binary classification."""
 
 import numpy as np
-from unitarylab-algorithms import QNNAlgorithm
+from unitarylab_algorithms import QNNAlgorithm
 
 
 def main():

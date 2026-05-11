@@ -36,7 +36,7 @@ python ./scripts/algorithm.py
 ## Using the Provided Implementation
 
 ```python
-from unitarylab-algorithms import QCBMAlgorithm
+from unitarylab_algorithms import QCBMAlgorithm
 
 algo = QCBMAlgorithm(seed=42)
 result = algo.run(
@@ -156,7 +156,7 @@ $$\frac{\partial \mathcal{L}}{\partial \theta_{l,q}} = \frac{1}{2}\left[\mathcal
 ## Hands-On Example
 
 ```python
-from unitarylab-algorithms import QCBMAlgorithm
+from unitarylab_algorithms import QCBMAlgorithm
 import numpy as np
 
 for seed in [42, 123, 7]:

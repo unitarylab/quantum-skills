@@ -37,7 +37,7 @@ python ./scripts/algorithm.py
 ## Using the Provided Implementation
 
 ```python
-from unitarylab-algorithms import VQCAlgorithm
+from unitarylab_algorithms import VQCAlgorithm
 
 algo = VQCAlgorithm(seed=42)
 result = algo.run(
@@ -159,7 +159,7 @@ $$\nabla_\theta E = \frac{1}{2}[E(\theta+\pi/2) - E(\theta-\pi/2)]$$
 ## Hands-On Example
 
 ```python
-from unitarylab-algorithms import VQCAlgorithm
+from unitarylab_algorithms import VQCAlgorithm
 
 # Deeper model for better accuracy
 algo = VQCAlgorithm(seed=7)

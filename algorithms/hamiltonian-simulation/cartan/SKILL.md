@@ -134,7 +134,7 @@ The algorithm also records structured output accessible via `self.output`:
 
 ```python
 import numpy as np
-from unitarylab-algorithms import CartanDecompositionAlgorithm
+from unitarylab_algorithms import CartanDecompositionAlgorithm
 
 # Define a 2x2 real symmetric Hamiltonian
 H = np.array([[2.0, 1.0],

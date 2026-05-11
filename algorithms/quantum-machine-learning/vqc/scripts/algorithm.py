@@ -1,6 +1,6 @@
 """VQC — Variational Quantum Classifier on the Iris dataset."""
 
-from unitarylab-algorithms import VQCAlgorithm
+from unitarylab_algorithms import VQCAlgorithm
 
 
 def main():

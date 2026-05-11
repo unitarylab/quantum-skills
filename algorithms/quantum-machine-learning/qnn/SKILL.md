@@ -38,7 +38,7 @@ python ./scripts/algorithm.py
 
 ```python
 import numpy as np
-from unitarylab-algorithms import QNNAlgorithm
+from unitarylab_algorithms import QNNAlgorithm
 
 # Synthetic binary classification data
 np.random.seed(0)
@@ -160,7 +160,7 @@ $$U(\theta, x) = \prod_{l=1}^{L}\left[\prod_{q} R_x(\theta_{l,q,0})R_y(\theta_{l
 ```python
 import numpy as np
 from sklearn.datasets import load_iris
-from unitarylab-algorithms import QNNAlgorithm
+from unitarylab_algorithms import QNNAlgorithm
 
 iris = load_iris()
 X = iris.data[:, :2]    # first 2 features

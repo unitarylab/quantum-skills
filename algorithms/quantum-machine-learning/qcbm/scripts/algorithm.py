@@ -1,6 +1,6 @@
 """QCBM — Quantum Circuit Born Machine for learning Bars-and-Stripes distribution."""
 
-from unitarylab-algorithms import QCBMAlgorithm
+from unitarylab_algorithms import QCBMAlgorithm
 
 
 def main():

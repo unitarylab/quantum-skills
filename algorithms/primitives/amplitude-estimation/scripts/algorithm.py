@@ -1,6 +1,6 @@
 """Quantum Amplitude Estimation (QAE) — estimate success probability of a circuit."""
 
-from unitarylab-algorithms import AmplitudeEstimationAlgorithm
+from unitarylab_algorithms import AmplitudeEstimationAlgorithm
 from unitarylab.core import Circuit
 
 

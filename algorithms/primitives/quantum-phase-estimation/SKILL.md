@@ -38,7 +38,7 @@ The `QPEAlgorithm` class also exposes `build_qpe_circuit()` for embedding QPE as
 ## Using the Provided Implementation
 
 ```python
-from unitarylab-algorithms import QPEAlgorithm
+from unitarylab_algorithms import QPEAlgorithm
 from unitarylab.core import Circuit
 import numpy as np
 
@@ -171,7 +171,7 @@ When $\phi = k_0/2^d$ exactly, the sum equals $\delta_{k', k_0}$ and the measure
 ## Hands-On Example (UnitaryLab)
 
 ```python
-from unitarylab-algorithms import QPEAlgorithm
+from unitarylab_algorithms import QPEAlgorithm
 from unitarylab.core import Circuit
 import numpy as np
 
