@@ -89,7 +89,7 @@ quantum-skills/
 |   +-- quantum-error-correction/ # qLDPC, CSS codes
 |
 +-- simulators/                 # Simulator selection & installation guides
-    +-- unitarylab/             # Recommended — pre-built wheels included
+    +-- unitarylab/             # Recommended
     +-- qiskit/
     +-- pennylane/
 ```
