@@ -90,7 +90,6 @@ quantum-skills/
 |
 +-- simulators/                 # Simulator selection & installation guides
     +-- unitarylab/             # Recommended — pre-built wheels included
-    |   +-- dist/               # .whl files for Win / macOS / Linux
     +-- qiskit/
     +-- pennylane/
 ```
@@ -215,8 +214,7 @@ quantum-skills/
 |   +-- quantum-error-correction/ # qLDPC、CSS 码
 |
 +-- simulators/                 # 模拟器选型与安装指南
-    +-- unitarylab/             # 推荐 — 内含预编译 wheel
-    |   +-- dist/               # Win / macOS / Linux .whl 文件
+    +-- unitarylab/             # 推荐
     +-- qiskit/
     +-- pennylane/
 ```

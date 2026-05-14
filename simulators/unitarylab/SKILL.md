@@ -156,7 +156,7 @@ print(probs)  # expected: [0.5, 0.0, 0.0, 0.5]
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `ModuleNotFoundError: unitarylab` | Wheel not installed in active environment. | Run `pip install ./dist/unitarylab-*.whl` in the active env. |
+| `ModuleNotFoundError: unitarylab` | Wheel not installed in active environment. | Run `pip install unitarylab` in the active env. |
 | `Wheel is not supported on this platform` | Wrong wheel for your OS/architecture, or wrong Python version. | Use Python 3.11 and pick the correct wheel: `win_amd64` (Windows), `macosx_11_0_arm64` (macOS), or `linux_x86_64` (Linux). |
 | Wrong conda environment active | `conda activate` not run. | Run `conda activate unitarylab-env` before executing. |
 | `unitarylab` imports but results are wrong | Initial state not copied before passing to `execute()`. | Always pass `initial_state.copy()` to preserve the original. |
