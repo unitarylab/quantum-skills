@@ -2,7 +2,7 @@
 
 ## Introduction
 
-`CircuitInfo` is a powerful helper class for analyzing quantum gate circuits. It takes a gate sequence object `gs`, extracts the gate data and the number of qubits, and provides comprehensive analytical capabilities:
+`CircuitInfo` is a powerful helper class for analyzing quantum gate circuits. It takes a gate sequence object `qc`, extracts the gate data and the number of qubits, and provides comprehensive analytical capabilities:
 
 - **Circuit Overview**: Basic statistics including qubit count, gate count, and circuit depth
 - **Gate Statistics**: Detailed analysis of gate types and counts (single-qubit, two-qubit, multi-qubit, parameterized)
@@ -21,15 +21,15 @@ This tool is essential for quickly obtaining circuit structure information when 
 from unitarylab import Circuit
 import numpy as np
 
-gs = Circuit(4)
+qc = Circuit(4)
 
-gs.x(0)
-gs.cx(0, 1)
-gs.h(0)
-gs.rz(np.pi / 4, 1)
-gs.mcx([0,1],3)
+qc.x(0)
+qc.cx(0, 1)
+qc.h(0)
+qc.rz(np.pi / 4, 1)
+qc.mcx([0,1],3)
 
-gs.analyze()
+qc.analyze()
 
 ```
 
@@ -132,7 +132,7 @@ Layer 3
 ### 2. Display Circuit Overview
 
 ```python
-info = gs.analyze(show=False)
+info = qc.analyze(show=False)
 
 
 info.show("overview") 

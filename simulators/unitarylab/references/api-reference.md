@@ -11,14 +11,18 @@
   - [Circuit](#Circuit)
   - [Register](#register)
   - [ClassicalRegister](#classicalregister)
-  - [State](#state)
-  - [state\_preparation](#state_preparation)
 - [unitarylab.library](#unitarylablibrary)
+  - [Quantum Fourier Transform (QFT / IQFT)](#quantum-fourier-transform-qft)
+  - [Quantum Phase Estimation (QPE)](#quantum-phase-estimation-qpe)
+  - [Linear Combination of Unitaries (LCU)](#linear-combination-of-unitaries-lcu)
+  - [Quantum Signal Processing (QSP)](#quantum-signal-processing-qsp)
+  - [Quantum Singular Value Transformation (QSVT)](#quantum-singular-value-transformation-qsvt)
+  - [Block Encoding (block\_encode)](#block-encoding-block_encoding)
+  - [Hamiltonian Simulation (hamiltonian\_simulation)](#hamiltonian-simulation-hamiltonian_simulation)
+  - [Linear System Solver (solve)](#linear-system-solver-solve)
   - [Differential Operators (differential\_operator)](#differential-operators-differential_operator)
-  - [Quantum Fourier Transform (QFT)](#quantum-fourier-transform-qft)
   - [Schrödingerization Solvers (schrodingerization)](#schrödingerization-solvers-schrodingerization)
   - [Equation Parser (equation\_parser)](#equation-parser-equation_parser)
-  - [Block Encoding (block\_encoding)](#block-encoding-block_encoding)
 - [unitarylab_algorithms](#unitarylabalgorithms)
   - [PDE Solvers (schrodingerization)](#pde-solvers-schrodingerization)
   - [Quantum Cryptology (cryptology)](#quantum-cryptology-cryptology)
@@ -39,25 +43,11 @@ The top-level `unitarylab` package re-exports the most commonly used symbols for
 
 | Symbol | Source | Description |
 |--------|--------|-------------|
-| `set_backend` | `unitarylab.backend` | Select the compute backend (`'torch'` or `'unitarylab'`) |
 | `Circuit` | `unitarylab.core` | Quantum circuit container (see [Circuit](#Circuit)) |
 | `Register` | `unitarylab.core` | Quantum register (see [Register](#register)) |
 | `ClassicalRegister` | `unitarylab.core` | Classical register (see [ClassicalRegister](#classicalregister)) |
 | `QFT` | `unitarylab.library` | n-qubit Quantum Fourier Transform circuit |
 | `IQFT` | `unitarylab.library` | n-qubit Inverse Quantum Fourier Transform circuit |
-| `state_preparation` | `unitarylab.core` | State-preparation circuit builder (see [state\_preparation](#state_preparation)) |
-
----
-
-#### `set_backend(backend='torch')`
-
-Select the global compute backend. Must be called before constructing any circuit.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `backend` | str | Backend name: `'torch'` (default) or `'unitarylab'` |
-
-Raises `ValueError` if an unsupported backend is specified. Falls back to `'torch'` automatically when the requested backend is unavailable.
 
 ---
 
@@ -66,7 +56,7 @@ Raises `ValueError` if an unsupported backend is specified. Falls back to `'torc
 ```python
 from unitarylab.core import <symbol>
 # or directly:
-from unitarylab import Circuit, Register, ClassicalRegister, state_preparation
+from unitarylab import Circuit, Register, ClassicalRegister
 ```
 
 ---
@@ -293,23 +283,6 @@ Quantum statevector class backed by PyTorch tensors.
 
 ---
 
-### state_preparation
-
-#### `state_preparation(v, backend='torch')` → `Circuit`
-
-Build a quantum circuit that prepares the normalized state vector `|v⟩` using recursive amplitude encoding.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `v` | array-like | Normalized state vector; length must be a power of 2 |
-| `backend` | str | Backend for the returned circuit (default `'torch'`) |
-
-Raises `ValueError` if `v` is not unit-norm.
-
-The returned `Circuit` has `log2(len(v))` qubits and can be directly appended into a larger circuit via `qc.append(...)` or `qc.initialize(...)`.
-
----
-
 ## unitarylab.library
 
 ```python
@@ -390,13 +363,182 @@ Base class for quantum Trotter operators. Manages multiple Trotter terms.
 
 ### Quantum Fourier Transform (QFT)
 
-#### `QFT(n, backend='torch')` → `Circuit`
+#### `QFT(n)` → `Circuit`
 
 Construct an n-qubit Quantum Fourier Transform circuit.
 
-#### `IQFT(n, backend='torch')` → `Circuit`
+#### `IQFT(n)` → `Circuit`
 
 Construct an n-qubit Inverse Quantum Fourier Transform circuit (dagger of QFT).
+
+---
+
+### Quantum Phase Estimation (QPE)
+
+```python
+from unitarylab.library import QPE
+```
+
+#### `QPE(U, d, prepare_target=None, return_circuit=False)`
+
+Estimates the eigenphase φ of unitary `U` such that `U|ψ⟩ = e^{2πiφ}|ψ⟩`, using a `d`-qubit phase register (precision 1/2^d).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `U` | `Circuit` | Unitary circuit whose phase is estimated |
+| `d` | int | Number of phase-register qubits; precision = `1/2^d` |
+| `prepare_target` | `Circuit` \| None | Circuit preparing the eigenstate `|ψ⟩`; defaults to `|0⟩` |
+| `return_circuit` | bool | If `True`, return only the constructed `Circuit` without executing |
+
+**Returns** `(circuit, phi_est, probability)` — the QPE circuit, the estimated phase in `[0, 1)`, and its measurement probability.  
+If `return_circuit=True`, returns only the `Circuit`.
+
+---
+
+### Linear Combination of Unitaries (LCU)
+
+```python
+from unitarylab.library import LCU
+```
+
+#### `LCU(decompositions)` → `Circuit`
+
+Builds a quantum circuit implementing `A = Σⱼ αⱼ Uⱼ` using the LCU technique (PREPARE + SELECT + PREPARE†).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `decompositions` | list[tuple[Circuit, float]] | List of `(unitary_circuit, coefficient)` pairs; all circuits must have the same qubit count; coefficients must be finite and positive |
+
+**Returns** a `Circuit` acting on ancilla + system qubits that block-encodes `A / ‖α‖₁`.
+
+---
+
+### Quantum Signal Processing (QSP)
+
+```python
+from unitarylab.library import QSP, QSP_hamiltonian_simulation
+```
+
+#### `QSP(U, n, m, coef, parity, eps=1e-12, maxiter=200, is_coef_cheby=False)` → `Circuit`
+
+Builds a QSP circuit that applies a polynomial transformation to a block-encoded unitary.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `U` | `Circuit` | Block-encoding unitary circuit |
+| `n` | int | Number of register (system) qubits |
+| `m` | int | Number of auxiliary qubits |
+| `coef` | array-like | Polynomial coefficients (monomial or Chebyshev basis) |
+| `parity` | int | Parity of the target polynomial: `0` = even, `1` = odd |
+| `eps` | float | Convergence tolerance for the phase solver |
+| `maxiter` | int | Maximum phase-solver iterations |
+| `is_coef_cheby` | bool | If `True`, `coef` is already in the Chebyshev basis |
+
+**Returns** a `Circuit` on `n + m + 1` qubits.
+
+---
+
+#### `QSP_hamiltonian_simulation(U_H, n, alpha, m, t, epsilon, beta, flag)` → `Circuit`
+
+Simulates `exp(−iHt)` or `exp(iHt)` via QSP, given a `(alpha, m, 0)`-block-encoding `U_H` of Hamiltonian `H`.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `U_H` | `Circuit` | Block-encoding circuit of the Hamiltonian |
+| `n` | int | Number of register (system) qubits |
+| `alpha` | float | Block-encoding normalization factor |
+| `m` | int | Number of auxiliary qubits in the block encoding |
+| `t` | float | Evolution time |
+| `epsilon` | float | Approximation error |
+| `beta` | float | Normalization parameter for the output block-encoding |
+| `flag` | int | Sign flag: `0` for `exp(−iHt)`, `1` for `exp(iHt)` |
+
+**Returns** a `Circuit` that is a `(2/beta, m+2, epsilon)`-block-encoding of the time-evolution operator.
+
+---
+
+### Quantum Singular Value Transformation (QSVT)
+
+```python
+from unitarylab.library import QSVT
+```
+
+#### `QSVT(H, function, target_error=1e-6, block_encoding_method='nagy')` → `QSVTResult`
+
+Applies a scalar function `f(H)` to a Hermitian matrix `H` using the QSVT framework. Complex-valued functions are handled by splitting into real and imaginary parts.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `H` | `np.ndarray` | Hermitian matrix |
+| `function` | `Callable` | Scalar function `f(x)`; applied element-wise to singular values |
+| `target_error` | float | Desired approximation error for polynomial fitting |
+| `block_encoding_method` | str | Block-encoding backend: `'nagy'` (default) or `'fable'` |
+
+**Returns** a `QSVTResult` object with `.circuit`, `.result_matrix`, and error metrics.
+
+---
+
+### Hamiltonian Simulation (hamiltonian_simulation)
+
+```python
+from unitarylab.library import hamiltonian_simulation
+```
+
+#### `hamiltonian_simulation(H, t, method='trotter', target_error=1e-6, **kwargs)` → `HamiltonianSimulationResult`
+
+Unified interface for Hamiltonian time-evolution. Constructs a circuit approximating `exp(−iHt)` using the selected method.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `H` | `np.ndarray` | Square Hermitian matrix (dimension must be a power of 2, or padded automatically) |
+| `t` | float | Evolution time |
+| `method` | str | Simulation algorithm (see table below) |
+| `target_error` | float | Target precision (stored in result; some methods use it for step selection) |
+| `**kwargs` | — | Method-specific arguments |
+
+**Available methods:**
+
+| `method` | Algorithm |
+|----------|-----------|
+| `'trotter'` (default) | First/second-order Trotter–Suzuki product formula |
+| `'qdrift'` | Randomized qDRIFT channel |
+| `'taylor'` | Taylor-series truncation |
+| `'qsp'` or `'qsvt'` | QSP / QSVT block-encoding approach |
+| `'cartan-lax'` | Cartan decomposition via Lax-pair |
+| `'cartan-optimization'` | Cartan decomposition via optimization |
+
+**Returns** a `HamiltonianSimulationResult` with `.circuit`, `.exact_matrix`, `.approx_matrix`, and `.error`.
+
+---
+
+### Linear System Solver (solve)
+
+```python
+from unitarylab.library import solve
+```
+
+#### `solve(A, b, method='hhl', **kwargs)` → `LinearSolverResult`
+
+Quantum linear-system solver for `Ax = b`.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `A` | `np.ndarray` | Coefficient matrix |
+| `b` | `np.ndarray` | Right-hand-side vector |
+| `method` | str | Solver algorithm (see table below) |
+| `**kwargs` | — | Method-specific arguments |
+
+**Available methods:**
+
+| `method` | Algorithm | Extra kwargs |
+|----------|-----------|-------------|
+| `'hhl'` (default) | Harrow–Hassidim–Lloyd; requires Hermitian `A` | `d` (phase qubits, default 8), `t` (evolution time, auto if `None`) |
+| `'qsvt'` or `'qsvt_qlsa'` | QSVT-based quantum linear algebra | `epsilon` (polynomial accuracy, default 0.01) |
+| `'schro'` | Schrödingerization (auto select) | — |
+| `'schro_trotter'` | Schrödingerization via Trotter circuit | — |
+| `'schro_classical'` | Schrödingerization via matrix exponentiation | — |
+
+**Returns** a `LinearSolverResult` with `.solution`, `.matrix`, `.rhs`, `.circuit`, `.scaling_factor`.
 
 ---
 

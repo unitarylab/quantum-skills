@@ -2,14 +2,23 @@
 
 ## Creating a Quantum Circuit
 
-Create circuits using the `Circuit` class:
+Create circuits using the `Circuit` class. Three constructor forms are supported:
 
 ```python
-from unitarylab import Circuit
+from unitarylab import Circuit, Register, ClassicalRegister
 import numpy as np
 
-# Create a circuit with 4 qubits
+# Form 1: integer — n-qubit circuit, initial state |0...0⟩
 qc = Circuit(4)
+
+# Form 2: Register and ClassicalRegister objects
+qr = Register('qr', 2)
+cr = ClassicalRegister('cr', 2)
+qc = Circuit(qr, cr)
+
+# Form 3: state vector — initial state set to the given vector (must be length 2^n)
+sv = np.array([0, 1, 0, 0], dtype=complex)
+qc = Circuit(sv)
 ```
 ## Single-Qubit Gates
 
@@ -317,7 +326,13 @@ qc.initialize(v, [0])  # Initialize qubit 0 to the state |1⟩
 qc.h(0)  # Apply a Hadamard gate to qubit 0
 
 # Executing the Circuit
-result = qc.execute()  # Execute the circuit and return the resulting quantum state
+# execute() returns an ExecutionResult object, not a raw array
+result = qc.execute()           # execute from |0...0⟩
+result = qc.execute(initial_state=np.array([0, 1], dtype=complex))  # from a given state
+
+state = result.state            # final statevector (1-D complex ndarray)
+probs = result.probabilities    # dict {bitstring: probability} over all basis states
+classical = result.classical_results_map  # {classical_bit_index: measured_value}
 
 # Getting the Circuit Matrix
 matrix = qc.get_matrix()  # Get the matrix representation of the circuit

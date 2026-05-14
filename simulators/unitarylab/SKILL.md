@@ -51,26 +51,6 @@ Skip installation when:
 
 ---
 
-## Installation Steps (run only when needed)
-
-### Available Wheels
-Pre-built wheels for all major platforms are located in this skill folder:
-
-```
-./dist/unitarylab-0.1.0-cp311-cp311-win_amd64.whl        ← Windows x86-64
-./dist/unitarylab-0.1.0-cp311-cp311-macosx_11_0_arm64.whl ← macOS (Apple Silicon / arm64)
-./dist/unitarylab-0.1.0-cp311-cp311-linux_x86_64.whl      ← Linux x86-64
-```
-
-**Compatibility requirements:**
-| Requirement | Value |
-|-------------|-------|
-| Python | 3.11 exactly |
-| OS | Windows x64, macOS 11+ (arm64), or Linux x86-64 |
-| Architecture | platform-specific (see table above) |
-
-Select the wheel that matches your OS and architecture. Python 3.10 and 3.12 are not supported.
-
 ### Step-by-Step Installation
 
 ### Install `uv` First (before any `uv ...` command)
@@ -105,19 +85,11 @@ uv --version
 
 #### Using `uv` (Recommended)
 
-Replace `<WHEEL>` with the wheel file that matches your OS:
-
-| OS | Wheel filename |
-|----|----------------|
-| Windows x64 | `unitarylab-0.1.0-cp311-cp311-win_amd64.whl` |
-| macOS (arm64) | `unitarylab-0.1.0-cp311-cp311-macosx_11_0_arm64.whl` |
-| Linux x86-64 | `unitarylab-0.1.0-cp311-cp311-linux_x86_64.whl` |
-
+download via pip
 ```bash
 # Ensure `uv` is installed first (see section above)
 uv venv --python 3.11
-uv pip install ./dist/<WHEEL>
-uv pip install numpy scipy scikit-learn matplotlib
+uv pip install unitarylab
 uv run python -c "import unitarylab; print('UnitaryLab OK')"
 ```
 
@@ -129,8 +101,8 @@ conda create -n unitarylab-env python=3.11
 # Step 2 — Activate it
 conda activate unitarylab-env
 
-# Step 3 — Install UnitaryLab from the local wheel matching your OS (see table above)
-python -m pip install ./dist/<WHEEL>
+# Step 3 — Install UnitaryLab from the pip matching your OS
+python -m pip install unitarylab
 
 # Step 4 — Verify installation
 python -c "import unitarylab; print('UnitaryLab OK')"
@@ -188,6 +160,40 @@ print(probs)  # expected: [0.5, 0.0, 0.0, 0.5]
 | `Wheel is not supported on this platform` | Wrong wheel for your OS/architecture, or wrong Python version. | Use Python 3.11 and pick the correct wheel: `win_amd64` (Windows), `macosx_11_0_arm64` (macOS), or `linux_x86_64` (Linux). |
 | Wrong conda environment active | `conda activate` not run. | Run `conda activate unitarylab-env` before executing. |
 | `unitarylab` imports but results are wrong | Initial state not copied before passing to `execute()`. | Always pass `initial_state.copy()` to preserve the original. |
+
+---
+
+## Library API Quick Reference
+
+> **Agent instruction:** Before writing any code that calls a high-level quantum algorithm, scan this table first to find the right symbol. Then open `./references/api-reference.md` → `unitarylab.library` for the full parameter list and return types.
+
+All high-level quantum algorithms are in `unitarylab.library`:
+
+```python
+from unitarylab.library import <symbol>
+```
+
+| Symbol | Key signature | What it does |
+|--------|--------------|--------------|
+| `QFT` | `QFT(n)` | Returns an `n`-qubit QFT `Circuit` |
+| `IQFT` | `IQFT(n)` | Returns an `n`-qubit inverse QFT `Circuit` (dagger of QFT) |
+| `QPE` | `QPE(U, d, prepare_target=None, return_circuit=False)` | Quantum Phase Estimation — estimates the phase of unitary `U` using `d` ancilla qubits; returns `(circuit, phi_est, probability)` |
+| `LCU` | `LCU(decompositions)` | Linear Combination of Unitaries — implements `A = Σ αⱼ Uⱼ` from a list of `(Circuit, coeff)` pairs |
+| `QSP` | `QSP(U, n, m, coef, parity, ...)` | Quantum Signal Processing — builds a circuit that applies a polynomial transformation to a block-encoded unitary |
+| `QSP_hamiltonian_simulation` | `QSP_hamiltonian_simulation(U_H, n, alpha, m, t, epsilon, beta, flag)` | Hamiltonian simulation via QSP; approximates `exp(−iHt)` from a block-encoding `U_H` of `H` |
+| `QSVT` | `QSVT(H, function, target_error=1e-6, block_encoding_method='nagy')` | Quantum Singular Value Transformation — applies a scalar function `f(H)` to Hermitian matrix `H`; returns `QSVTResult` |
+| `block_encode` | `block_encode(matrix, method='fable', eps=1e-3, verbose=False)` | Block-encodes a matrix; returns `BlockEncodingResult` (`.circuit`, `.alpha`, `.get_encoded_matrix()`, …) |
+| `hamiltonian_simulation` | `hamiltonian_simulation(H, t, method='trotter', target_error=1e-6, **kwargs)` | Simulate `exp(−iHt)` for Hermitian `H`; available methods: `'trotter'`, `'qdrift'`, `'taylor'`, `'qsp'`/`'qsvt'`, `'cartan-lax'`, `'cartan-optimization'` |
+| `solve` | `solve(A, b, method='hhl', **kwargs)` | Quantum linear-system solver for `Ax = b`; methods: `'hhl'` (default), `'qsvt'`, `'schro'`, `'schro_trotter'`, `'schro_classical'` |
+
+**Choose a function:**
+- Need to encode a matrix into a circuit? → `block_encode`
+- Need to evolve a Hamiltonian in time? → `hamiltonian_simulation`
+- Need to solve a linear system? → `solve`
+- Need phase estimation on a known unitary? → `QPE`
+- Need a polynomial function of a matrix? → `QSVT`
+- Need to decompose an operator as a sum of unitaries? → `LCU`
+- Need QFT as a sub-circuit? → `QFT` / `IQFT`
 
 ---
 
