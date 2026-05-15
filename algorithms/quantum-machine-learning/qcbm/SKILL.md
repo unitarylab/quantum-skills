@@ -179,14 +179,14 @@ from unitarylab.core import Circuit
 def build_circuit(theta: torch.Tensor, n_qubits: int,
                   backend: str = 'torch') -> Circuit:
     """Ry-layer + CNOT-ring architecture, n_layers = theta.shape[0]."""
-    gs = Circuit(n_qubits, backend=backend)
+    qc = Circuit(n_qubits, backend=backend)
     for l in range(theta.shape[0]):
         for q in range(n_qubits):
-            gs.ry(float(theta[l, q]), q)
+            qc.ry(float(theta[l, q]), q)
         if l < theta.shape[0] - 1:
             for q in range(n_qubits):
-                gs.cx(q, (q + 1) % n_qubits)  # ring entanglement
-    return gs
+                qc.cx(q, (q + 1) % n_qubits)  # ring entanglement
+    return qc
 
 def get_probs(theta: torch.Tensor, n_qubits: int,
               backend: str = 'torch') -> torch.Tensor:

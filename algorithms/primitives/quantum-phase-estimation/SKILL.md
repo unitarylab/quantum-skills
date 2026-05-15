@@ -100,9 +100,9 @@ print(result['circuit_path'])   # SVG circuit diagram path
 |---|---|---|
 | 1 — Parameter Setup | Extracts `n_target`, computes `total_qubits = d + n_target` | Establishes qubit layout: phase (`d` qubits) + target (`n_target` qubits) |
 | 2 — Circuit Construction | Calls `self.build_qpe_circuit(U, d, prepare_target, backend=backend)` | Delegates all circuit building to the reusable helper |
-| 3 — Simulation | `gs.execute()` → `np.asarray(final_state)` → `State(state_arr)` | Runs statevector simulation; wraps result in a `State` object |
+| 3 — Simulation | `qc.execute()` → `np.asarray(final_state)` → `State(state_arr)` | Runs statevector simulation; wraps result in a `State` object |
 | 4 — Phase Extraction | `state_obj.probabilities_dict(phase_qubits, endian='little', threshold=1e-8)` → picks best bit-string → `phi_est = int(bits,2) / 2^d` | Marginalizes target register; converts binary readout to decimal phase |
-| 5 — Export | `gs.draw(filename=..., title=...)` | Saves SVG circuit diagram |
+| 5 — Export | `qc.draw(filename=..., title=...)` | Saves SVG circuit diagram |
 
 **`build_qpe_circuit(U, d, prepare_target, backend)` — Reusable Circuit Builder:**
 
@@ -145,8 +145,8 @@ The iQFT transforms the phase-encoded register to: if $\phi = k_0/2^d$ exactly, 
 
 | README / Theory Concept | Code Object or Location |
 |---|---|
-| Phase register $|0\rangle^d$ → $H^{\otimes d}$ | `for q in phase_qubits: gs.h(q)` in `build_qpe_circuit()` |
-| Eigenstate preparation $|\psi\rangle$ | `prepare_target` appended via `gs.append(prepare_target, target_qubits)` |
+| Phase register $|0\rangle^d$ → $H^{\otimes d}$ | `for q in phase_qubits: qc.h(q)` in `build_qpe_circuit()` |
+| Eigenstate preparation $|\psi\rangle$ | `prepare_target` appended via `qc.append(prepare_target, target_qubits)` |
 | Controlled $U^{2^k}$ | `cU = U.control(1, '1')` repeated `2^k` times per phase qubit `k` |
 | Inverse QFT | `IQFT(d, backend)` from `unitarylab.library`, appended to `phase_qubits` |
 | Phase readout $\phi = k_0/2^d$ | `int(best_bits_str, 2) / (2 ** d)` in Stage 4 |
@@ -321,23 +321,23 @@ from unitarylab.library import IQFT
 
 def qpe_circuit(U: Circuit, d: int, prepare_target=None, backend='torch'):
     n_target = U.get_num_qubits()
-    gs = Circuit(d + n_target, backend=backend)
+    qc = Circuit(d + n_target, backend=backend)
     phase = list(range(d))
     target = list(range(d, d + n_target))
 
     if prepare_target is not None:
-        gs.append(prepare_target, target)
+        qc.append(prepare_target, target)
 
     for q in phase:
-        gs.h(q)
+        qc.h(q)
 
     cU = U.control(1)
     for k in range(d):
         for _ in range(2 ** k):
-            gs.append(cU, target + [phase[k]])
+            qc.append(cU, target + [phase[k]])
 
-    gs.append(IQFT(d, backend=backend), phase)
-    return gs
+    qc.append(IQFT(d, backend=backend), phase)
+    return qc
 ```
 
 ## Debugging Tips

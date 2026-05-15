@@ -88,10 +88,10 @@ print(result['plot'])          # ASCII result panel
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Phase Optimization | `_find_phases(target_tau, degree)` — runs L-BFGS-B minimization | Computes the QSP phase sequence $\Phi$ numerically |
-| 2 — Circuit Construction | Creates `Circuit(Register('q', 1))`; applies `gs.rz(2*phases[0], 0)` as initial phase; loops `degree` times applying `gs.rx(2*theta, 0)` (signal) then `gs.rz(2*phases[k], 0)` (phase rotation) | Builds the alternating signal/phase circuit |
-| 3 — Simulation | `gs.execute()` → `final_state[0]` | Runs statevector evolution of the single qubit |
+| 2 — Circuit Construction | Creates `Circuit(Register('q', 1))`; applies `qc.rz(2*phases[0], 0)` as initial phase; loops `degree` times applying `qc.rx(2*theta, 0)` (signal) then `qc.rz(2*phases[k], 0)` (phase rotation) | Builds the alternating signal/phase circuit |
+| 3 — Simulation | `qc.execute()` → `final_state[0]` | Runs statevector evolution of the single qubit |
 | 4 — Post-Processing | Compares `qsp_val = final_state[0]` to `ideal_val = exp(-i*tau*x_value)` | Computes absolute approximation error |
-| 5 — Export | `gs.draw(filename=..., title=...)` | Saves SVG circuit diagram |
+| 5 — Export | `qc.draw(filename=..., title=...)` | Saves SVG circuit diagram |
 
 **Helper Methods:**
 
@@ -130,13 +130,13 @@ over $2d+1$ Chebyshev sample points $x_j = \cos\left(\frac{(2j-1)\pi}{4\tilde{d}
 
 | README / Theory Concept | Code Object or Location |
 |---|---|
-| Signal operator $W(x)$ = $R_x(2\theta)$ | `gs.rx(2 * theta, 0)` where `theta = arccos(x_value)` |
-| Phase rotations $e^{i\phi_k Z}$ = $R_z(2\phi_k)$ | `gs.rz(2 * phases[k], 0)` in the main loop |
-| Initial phase $\phi_0$ | `gs.rz(2 * phases[0], 0)` before loop |
+| Signal operator $W(x)$ = $R_x(2\theta)$ | `qc.rx(2 * theta, 0)` where `theta = arccos(x_value)` |
+| Phase rotations $e^{i\phi_k Z}$ = $R_z(2\phi_k)$ | `qc.rz(2 * phases[k], 0)` in the main loop |
+| Initial phase $\phi_0$ | `qc.rz(2 * phases[0], 0)` before loop |
 | Phase sequence $\Phi = (\phi_0, \ldots, \phi_d)$ | `phases` returned by `_find_phases()` — `(d+1)` floats |
 | Target function $e^{-i\tau x}$ | `ideal_val = np.exp(-1j * target_tau * x_value)` in Stage 4 |
 | Loss function minimization | `minimize(loss, ...)` with `method='L-BFGS-B'` in `_find_phases()` |
-| $(0,0)$ matrix element $\langle 0|U_\Phi(x)|0\rangle$ | `final_state[0]` after `gs.execute()` |
+| $(0,0)$ matrix element $\langle 0|U_\Phi(x)|0\rangle$ | `final_state[0]` after `qc.execute()` |
 | Approximation error at test point | `abs_error = abs(qsp_val - ideal_val)` |
 | Sample points $x_j = \cos((2j-1)\pi/(4\tilde d))$ | `x_samples = np.linspace(-1, 1, 2*d+1)` (uniform, not Chebyshev nodes) |
 
@@ -258,13 +258,13 @@ def build_qsp_circuit(phases: np.ndarray, x_value: float, backend: str = 'torch'
     """Construct the QSP circuit: Rz(2φ₀) → [Rx(2θ) → Rz(2φₖ)] × d."""
     d = len(phases) - 1
     theta = float(np.arccos(np.clip(x_value, -1.0, 1.0)))
-    gs = Circuit(Register('q', 1), backend=backend)
+    qc = Circuit(Register('q', 1), backend=backend)
     # Initial phase rotation
-    gs.rz(2 * phases[0], 0)
+    qc.rz(2 * phases[0], 0)
     for k in range(1, d + 1):
-        gs.rx(2 * theta, 0)      # signal operator W(x) = Rx(2*arccos(x))
-        gs.rz(2 * phases[k], 0)  # phase rotation
-    return gs
+        qc.rx(2 * theta, 0)      # signal operator W(x) = Rx(2*arccos(x))
+        qc.rz(2 * phases[k], 0)  # phase rotation
+    return qc
 
 # Full QSP pipeline
 def qsp_approximate(tau: float, d: int, x_value: float, backend: str = 'torch'):

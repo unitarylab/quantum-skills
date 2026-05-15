@@ -189,15 +189,15 @@ def build_circuit(x: np.ndarray, theta: torch.Tensor,
     """
     n_qubits = theta.shape[0]
     n_layers = theta.shape[1]
-    gs = Circuit(n_qubits, backend=backend)
+    qc = Circuit(n_qubits, backend=backend)
     for l in range(n_layers):
         for q in range(n_qubits):
-            gs.rz(float(x[q % len(x)]), q)       # encode feature
-            gs.ry(float(theta[q, l]), q)           # trainable rotation
-            gs.rz(float(x[q % len(x)]), q)       # encode feature again
+            qc.rz(float(x[q % len(x)]), q)       # encode feature
+            qc.ry(float(theta[q, l]), q)           # trainable rotation
+            qc.rz(float(x[q % len(x)]), q)       # encode feature again
         for q in range(n_qubits - 1):
-            gs.cx(q, q + 1)                        # entanglement
-    return gs
+            qc.cx(q, q + 1)                        # entanglement
+    return qc
 
 def get_pauli_z(qubit_idx: int, n_qubits: int) -> np.ndarray:
     """Build the n_qubit-system Z observable for qubit qubit_idx."""
@@ -211,8 +211,8 @@ def vqc_logits(x: np.ndarray, theta: torch.Tensor,
                n_classes: int = 3, backend: str = 'torch') -> torch.Tensor:
     """Compute Pauli-Z expectation values as classification logits."""
     n_qubits = theta.shape[0]
-    gs = build_circuit(x, theta, backend)
-    sv = np.asarray(gs.execute()).flatten()
+    qc = build_circuit(x, theta, backend)
+    sv = np.asarray(qc.execute()).flatten()
     logits = []
     for c in range(n_classes):
         Z_c = get_pauli_z(c, n_qubits)

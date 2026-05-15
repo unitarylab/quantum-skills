@@ -98,15 +98,15 @@ print(result['status'])           # 'ok' if amplification succeeded
 |---|---|---|
 | 1 — Parameter Resolution | `n_data = U.get_num_qubits()`; `ancilla = n_data`; calls `_get_optimal_iterations(p)` if `reps is None` | Converts user-supplied probability into Grover iteration count $k$ |
 | 2 — Circuit Construction | Creates `Circuit(n_data+1)`, appends `U`, then loops `reps` times appending oracle and diffuser | Builds the full amplitude amplification circuit layer by layer |
-| 3 — Simulation Execution | `gs.execute()` → `State(re_state)` → `state_obj.calculate_state(data_qubits)` | Runs the statevector simulation; marginalizes ancilla to get data-register probabilities |
+| 3 — Simulation Execution | `qc.execute()` → `State(re_state)` → `state_obj.calculate_state(data_qubits)` | Runs the statevector simulation; marginalizes ancilla to get data-register probabilities |
 | 4 — Post-Processing | Iterates `state_basis_dict`; sums probability for states where all `good_zero_qubits == '0'` | Classically extracts `target_prob`; sets `is_success = (target_prob > p)` |
-| 5 — Export | `gs.draw(filename=..., title=...)` | Saves SVG circuit diagram |
+| 5 — Export | `qc.draw(filename=..., title=...)` | Saves SVG circuit diagram |
 
 **Helper Methods:**
 
 - **`_get_optimal_iterations(p)`** — Computes `k = max(0, round(π/(4·arcsin(√p)) − 0.5))`. Uses `round()` instead of `floor()` to avoid floating-point precision errors near integer boundaries.
-- **`_build_oracle(gs, zero_qubits, ancilla)`** — Implements the phase-kickback oracle. Prepares ancilla in $|-\rangle$ via `_prepare_kickback_ancilla_minus`, applies X-flips on all `zero_qubits` to convert $|0\rangle$-control to $|1\rangle$-control, applies `gs.cx`/`gs.mcx` targeting the ancilla, then reverts X-flips and unprepares the ancilla. The net data-register effect is $|x\rangle \mapsto (-1)^{f(x)}|x\rangle$.
-- **`_build_diffuser(gs, U, data_qubits, ancilla)`** — Implements the Grover diffuser as `U†` → `_build_oracle(all data_qubits)` → `U`. This reflects the state about $U|0\rangle^n$. It reuses `_build_oracle` on the full data register, which is the $2|0^n\rangle\langle 0^n|-I$ reflection.
+- **`_build_oracle(qc, zero_qubits, ancilla)`** — Implements the phase-kickback oracle. Prepares ancilla in $|-\rangle$ via `_prepare_kickback_ancilla_minus`, applies X-flips on all `zero_qubits` to convert $|0\rangle$-control to $|1\rangle$-control, applies `qc.cx`/`qc.mcx` targeting the ancilla, then reverts X-flips and unprepares the ancilla. The net data-register effect is $|x\rangle \mapsto (-1)^{f(x)}|x\rangle$.
+- **`_build_diffuser(qc, U, data_qubits, ancilla)`** — Implements the Grover diffuser as `U†` → `_build_oracle(all data_qubits)` → `U`. This reflects the state about $U|0\rangle^n$. It reuses `_build_oracle` on the full data register, which is the $2|0^n\rangle\langle 0^n|-I$ reflection.
 - **`_update_last_result` / `_build_return`** — Store all runtime data into `self.last_result` and package the result dict (including the ASCII panel rendered by `format_result_ascii()`).
 
 **Data flow:** `U` (user input) → `Circuit` circuit → `execute()` → `State.calculate_state()` → `target_prob` → `_build_return()` → result dict.
@@ -145,10 +145,10 @@ The data register probabilities are extracted via `State.calculate_state(data_qu
 
 | README / Theory Concept | Code Object or Location |
 |---|---|
-| Initial state $|\psi\rangle = U|0\rangle$ | `gs.append(U, data_qubits)` in Stage 2 of `run()` |
+| Initial state $|\psi\rangle = U|0\rangle$ | `qc.append(U, data_qubits)` in Stage 2 of `run()` |
 | Good state: $f(x)=1$ iff all marked qubits are $|0\rangle$ | `good_zero_qubits` parameter; tested via `basis_str[q] == '0'` in Stage 4 |
-| Oracle $O_f$: phase flip on good states | `_build_oracle(gs, zero_qubits, ancilla)` — MCX + kickback ancilla |
-| Diffuser $D = 2|\psi\rangle\langle\psi| - I$ | `_build_diffuser(gs, U, data_qubits, ancilla)` — `U†` → all-zeros oracle → `U` |
+| Oracle $O_f$: phase flip on good states | `_build_oracle(qc, zero_qubits, ancilla)` — MCX + kickback ancilla |
+| Diffuser $D = 2|\psi\rangle\langle\psi| - I$ | `_build_diffuser(qc, U, data_qubits, ancilla)` — `U†` → all-zeros oracle → `U` |
 | Angle $\theta = \arcsin(\sqrt{p})$ | `theta = math.asin(math.sqrt(p))` inside `_get_optimal_iterations()` |
 | Optimal iteration count $k = \lfloor\pi/(4\theta) - 1/2\rceil$ | `int(round(math.pi / (4.0 * theta) - 0.5))` in `_get_optimal_iterations()` |
 | Ancilla qubit for phase kickback | `ancilla = n_data` — automatically the last qubit in the `n_data+1` register |
@@ -312,32 +312,32 @@ def amplitude_amplification(U: Circuit, good_zero_qubits, p: float, backend='tor
     ancilla = n_data
     reps = max(1, round(math.pi / (4 * math.asin(math.sqrt(p))) - 0.5))
 
-    gs = Circuit(n_data + 1, backend=backend)
-    gs.append(U, list(range(n_data)))
+    qc = Circuit(n_data + 1, backend=backend)
+    qc.append(U, list(range(n_data)))
 
     for _ in range(reps):
         # --- Oracle ---
-        gs.x(ancilla); gs.h(ancilla)
-        for q in good_zero_qubits: gs.x(q)
+        qc.x(ancilla); qc.h(ancilla)
+        for q in good_zero_qubits: qc.x(q)
         if len(good_zero_qubits) == 1:
-            gs.cx(good_zero_qubits[0], ancilla)
+            qc.cx(good_zero_qubits[0], ancilla)
         else:
-            gs.mcx(good_zero_qubits, ancilla)
-        for q in good_zero_qubits: gs.x(q)
-        gs.h(ancilla); gs.x(ancilla)
+            qc.mcx(good_zero_qubits, ancilla)
+        for q in good_zero_qubits: qc.x(q)
+        qc.h(ancilla); qc.x(ancilla)
 
         # --- Diffuser ---
-        gs.append(U.dagger(), list(range(n_data)))
+        qc.append(U.dagger(), list(range(n_data)))
         # (repeat oracle on all data qubits)
-        gs.x(ancilla); gs.h(ancilla)
+        qc.x(ancilla); qc.h(ancilla)
         all_data = list(range(n_data))
-        for q in all_data: gs.x(q)
-        gs.mcx(all_data, ancilla)
-        for q in all_data: gs.x(q)
-        gs.h(ancilla); gs.x(ancilla)
-        gs.append(U, list(range(n_data)))
+        for q in all_data: qc.x(q)
+        qc.mcx(all_data, ancilla)
+        for q in all_data: qc.x(q)
+        qc.h(ancilla); qc.x(ancilla)
+        qc.append(U, list(range(n_data)))
 
-    return gs
+    return qc
 ```
 
 ## Debugging Tips

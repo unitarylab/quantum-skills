@@ -159,7 +159,7 @@ It can also be used together with control qubits and a specified `control_sequen
 
 Applying a Custom Unitary Matrix
 ```python
-gs = Circuit(n + 1)  # Create an (n+1)-qubit circuit for custom unitary testing
+qc = Circuit(n + 1)  # Create an (n+1)-qubit circuit for custom unitary testing
 
 U = np.random.randn(2**n, 2**n) + 1j * np.random.randn(2**n, 2**n)
 U = (U + U.conj().T) / 2
@@ -175,17 +175,17 @@ def test_gs_unitary_apply(n):
     U = expm(1j * U)
 
     # Create an (n+1)-qubit circuit
-    gs = Circuit(n + 1)
+    qc = Circuit(n + 1)
 
     # Apply U to the first n qubits, using qubit n as a control qubit with control state '0'
-    gs.unitary(U, range(n), n, '0')
+    qc.unitary(U, range(n), n, '0')
 
     for j in range(2 ** (n + 1)):
         initial_state = np.zeros(2 ** (n + 1), dtype=complex)
         initial_state[j] = 1.0
 
         # Execute the circuit
-        actual = gs.execute(initial_state.copy())
+        actual = qc.execute(initial_state.copy())
 
         # Construct the expected result
         expected = initial_state.copy()
@@ -195,7 +195,7 @@ def test_gs_unitary_apply(n):
             expected[:2**n] = U @ expected[:2**n]
 
         # Check whether the actual result matches the expected result
-        assert np.allclose(actual, expected), f"gs.unitary result does not match expectation, basis index = {j}"
+        assert np.allclose(actual, expected), f"qc.unitary result does not match expectation, basis index = {j}"
 
     print(f"test_gs_unitary_apply({n}) passed")
 

@@ -102,18 +102,18 @@ print(result['plot'])
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Initialization | Validates `num_classes <= 2^n_qubits`; initializes `self.params = np.random.uniform(0, 2π, (layers, n_qubits, 3))` | Parameter array shape `(L, N, 3)` for Rx/Rz/Ry per qubit per layer |
-| 2 — Circuit Mapping | Creates `Circuit(Register('q', n_qubits), backend=backend)`; calls `_build_vqc_layer(gs, x_train[0], ...)` for visualization | Architecture preview only |
+| 2 — Circuit Mapping | Creates `Circuit(Register('q', n_qubits), backend=backend)`; calls `_build_vqc_layer(qc, x_train[0], ...)` for visualization | Architecture preview only |
 | 3 — Training Loop | For each epoch/sample: computes `prediction = label + Gaussian_noise * exp(-epoch/10)`; MSE loss simulation; no actual quantum gradient | **Simplified training placeholder** |
 | 4 — Evaluation | `final_acc = 1/num_classes + (1 - 1/num_classes) * (1 - min(1, final_loss))` | Derived accuracy estimate (not actual measurement) |
-| 5 — Export | `gs.draw(filename=circuit_path)` | Saves SVG circuit diagram |
+| 5 — Export | `qc.draw(filename=circuit_path)` | Saves SVG circuit diagram |
 
 **Helper Methods:**
 
-- **`_build_vqc_layer(gs, x, params, n_qubits, layers, n_features)`** — For each layer `l`, per qubit `q`: applies `rx(x[q % n_features], q)` (data encoding), `rz(params[l,q,0], q)`, `ry(params[l,q,1], q)` (variational), then `cnot(q, q+1)` entanglement chain.
+- **`_build_vqc_layer(qc, x, params, n_qubits, layers, n_features)`** — For each layer `l`, per qubit `q`: applies `rx(x[q % n_features], q)` (data encoding), `rz(params[l,q,0], q)`, `ry(params[l,q,1], q)` (variational), then `cnot(q, q+1)` entanglement chain.
 
-**Critical limitation note:** The `run()` method's training loop (Stage 3) does **not** call `_build_vqc_layer`, `gs.execute()`, or any quantum circuit during training. The loss is a mathematical placeholder based on Gaussian noise decaying with epoch. The `_build_vqc_layer` method is only invoked once in Stage 2 for visualization purposes.
+**Critical limitation note:** The `run()` method's training loop (Stage 3) does **not** call `_build_vqc_layer`, `qc.execute()`, or any quantum circuit during training. The loss is a mathematical placeholder based on Gaussian noise decaying with epoch. The `_build_vqc_layer` method is only invoked once in Stage 2 for visualization purposes.
 
-**Data flow (actual):** `x_train[0]` → `_build_vqc_layer()` (visualization only) → `gs` drawn → simulated loss loop → approximated `final_acc` → result dict.
+**Data flow (actual):** `x_train[0]` → `_build_vqc_layer()` (visualization only) → `qc` drawn → simulated loss loop → approximated `final_acc` → result dict.
 
 ## Understanding the Key Quantum Components
 Input features are mapped to qubit rotations:
@@ -138,15 +138,15 @@ The computational basis probabilities $|c_0|^2, \ldots, |c_{2^n-1}|^2$ of the fi
 
 | README / Theory Concept | Code Object or Location |
 |---|---|
-| Angle encoding $R_x(x_i)$ | `gs.rx(x[q % n_features], q)` per qubit in `_build_vqc_layer()` |
-| Variational rotations $R_z(\theta_{l,q,0})$, $R_y(\theta_{l,q,1})$ | `gs.rz(params[l,q,0], q)`, `gs.ry(params[l,q,1], q)` |
-| Entanglement CNOT chain | `gs.cnot(q, q+1)` for `q in range(n_qubits-1)` |
+| Angle encoding $R_x(x_i)$ | `qc.rx(x[q % n_features], q)` per qubit in `_build_vqc_layer()` |
+| Variational rotations $R_z(\theta_{l,q,0})$, $R_y(\theta_{l,q,1})$ | `qc.rz(params[l,q,0], q)`, `qc.ry(params[l,q,1], q)` |
+| Entanglement CNOT chain | `qc.cnot(q, q+1)` for `q in range(n_qubits-1)` |
 | Parameter array $\theta \in \mathbb{R}^{L \times N \times 3}$ | `self.params = np.random.uniform(0, 2π, (layers, n_qubits, 3))` |
 | Training via gradient descent | **Not implemented**: Stage 3 uses Gaussian-noise MSE proxy |
 | Loss convergence | `loss_history[epoch] = mean(epoch_errors)` based on label + noise |
 | Final accuracy estimate | `1/K + (1-1/K)*(1 - min(1, final_loss))` — analytical proxy |
 
-**Notes on implementation:** The PQC is fully constructed in `_build_vqc_layer()` and could theoretically be used for quantum gradient computation, but the `run()` training loop bypasses this entirely. If actual QNN training with parameter shift is needed, `_build_vqc_layer` must be called per sample with `gs.execute()` and the Parameter Shift Rule applied over `self.params`.
+**Notes on implementation:** The PQC is fully constructed in `_build_vqc_layer()` and could theoretically be used for quantum gradient computation, but the `run()` training loop bypasses this entirely. If actual QNN training with parameter shift is needed, `_build_vqc_layer` must be called per sample with `qc.execute()` and the Parameter Shift Rule applied over `self.params`.
 
 ## Mathematical Deep Dive
 $$U(\theta, x) = \prod_{l=1}^{L}\left[\prod_{q} R_x(\theta_{l,q,0})R_y(\theta_{l,q,1})R_z(\theta_{l,q,2}) \cdot \prod_{\text{edges}} \text{CNOT}\right] \cdot U_{\text{encode}}(x)$$
@@ -184,7 +184,7 @@ The following skeleton reconstructs the PQC architecture and training loop from 
 import numpy as np
 from unitarylab.core import Circuit, Register
 
-def build_vqc_layer(gs: Circuit, x: np.ndarray, params: np.ndarray,
+def build_vqc_layer(qc: Circuit, x: np.ndarray, params: np.ndarray,
                     n_qubits: int, layers: int, n_features: int):
     """
     Build PQC in-place: for each layer,
@@ -195,20 +195,20 @@ def build_vqc_layer(gs: Circuit, x: np.ndarray, params: np.ndarray,
     """
     for l in range(layers):
         for i in range(n_qubits):
-            gs.rx(float(x[i % n_features]), i)      # data encoding
-            gs.rz(float(params[l, i, 0]), i)        # trainable
-            gs.ry(float(params[l, i, 1]), i)        # trainable
+            qc.rx(float(x[i % n_features]), i)      # data encoding
+            qc.rz(float(params[l, i, 0]), i)        # trainable
+            qc.ry(float(params[l, i, 1]), i)        # trainable
         for i in range(n_qubits - 1):
-            gs.cnot(i, i + 1)                        # entanglement
+            qc.cnot(i, i + 1)                        # entanglement
 
 def qnn_forward(x: np.ndarray, params: np.ndarray,
                 n_qubits: int, layers: int,
                 n_features: int, backend: str = 'torch') -> np.ndarray:
     """Evaluate the PQC and return the output state probability vector."""
     reg = Register('q', n_qubits)
-    gs  = Circuit(reg, backend=backend)
-    build_vqc_layer(gs, x, params, n_qubits, layers, n_features)
-    sv = gs.execute()  # returns complex state vector
+    qc  = Circuit(reg, backend=backend)
+    build_vqc_layer(qc, x, params, n_qubits, layers, n_features)
+    sv = qc.execute()  # returns complex state vector
     return np.abs(np.asarray(sv).flatten())**2  # measurement probabilities
 
 def train_qnn_minimal(x_train: np.ndarray, y_train: np.ndarray,

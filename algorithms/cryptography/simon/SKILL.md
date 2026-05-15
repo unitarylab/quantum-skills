@@ -84,19 +84,19 @@ print(result['plot'])         # ASCII result panel
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Validation | Extracts `n = len(s_target)`; checks for all-zero string | Guards against trivial inputs |
-| 2 — Circuit Construction | Creates `Circuit(rx, ry, cqr)` with two `n`-qubit registers + classical register; applies `gs.h(rx[:])`, calls `_build_simon_oracle(gs, s_target)`, measures `ry` to `cqr`, applies `gs.h(rx[:])` again | Full Simon protocol circuit in 4 lines |
-| 3 — Simulation | `gs.execute()` → `State(re_state)` → `state_obj.calculate_state(range(n))` | Runs mid-circuit-measurement simulation; extracts x-register basis dictionary |
+| 2 — Circuit Construction | Creates `Circuit(rx, ry, cqr)` with two `n`-qubit registers + classical register; applies `qc.h(rx[:])`, calls `_build_simon_oracle(qc, s_target)`, measures `ry` to `cqr`, applies `qc.h(rx[:])` again | Full Simon protocol circuit in 4 lines |
+| 3 — Simulation | `qc.execute()` → `State(re_state)` → `state_obj.calculate_state(range(n))` | Runs mid-circuit-measurement simulation; extracts x-register basis dictionary |
 | 4 — Classical Post-Processing | `_get_basis_simple(state_list, n)` extracts $n-1$ linearly independent vectors; `_solve_simon_general(basis, n)` back-substitutes to recover `s` | $\mathbb{F}_2$ linear algebra |
-| 5 — Export | `gs.draw(filename=..., title=...)` | Saves SVG circuit diagram |
+| 5 — Export | `qc.draw(filename=..., title=...)` | Saves SVG circuit diagram |
 
 **Helper Methods:**
 
-- **`_build_simon_oracle(gs, s)`** — Implements $U_f$ with CNOT gates. First, copies $x$ to $y$ register via `cx(i, i+n)` for each bit. Then, for each bit `i` where `s[i]='1'`, applies `cx(n-1-pivot_idx, n-1-i+n)` (where `pivot_idx = s.find('1')`) to create the $f(x) = f(x\oplus s)$ mapping.
+- **`_build_simon_oracle(qc, s)`** — Implements $U_f$ with CNOT gates. First, copies $x$ to $y$ register via `cx(i, i+n)` for each bit. Then, for each bit `i` where `s[i]='1'`, applies `cx(n-1-pivot_idx, n-1-i+n)` (where `pivot_idx = s.find('1')`) to create the $f(x) = f(x\oplus s)$ mapping.
 - **`_get_basis_simple(state_list, n_qubits)`** — Greedy pivot selection: iterates bitstrings, keeps the first bitstring with each distinct leftmost-1 pivot position. Returns at most $n-1$ linearly independent vectors.
 - **`_solve_simon_general(basis_list, n)`** — Back-substitution over $\mathbb{F}_2$: finds the free variable index (the non-pivot position), sets it to 1, then resolves all pivot variables in reverse order.
 - **`_update_last_result` / `_build_return`** — Store runtime fields and package result dict.
 
-**Key design detail:** The circuit uses `Register`, `ClassicalRegister`, and `Circuit` with mixed quantum/classical registers. The mid-circuit measurement (`gs.measure(ry[:], cqr[:])`) collapses the output register during simulation, which is why only the `'torch'` backend is supported.
+**Key design detail:** The circuit uses `Register`, `ClassicalRegister`, and `Circuit` with mixed quantum/classical registers. The mid-circuit measurement (`qc.measure(ry[:], cqr[:])`) collapses the output register during simulation, which is why only the `'torch'` backend is supported.
 
 **Data flow:** `s_target` → oracle construction → `execute()` → `State.calculate_state()` → basis extraction → back-substitution → `found_s` → `_build_return()`.
 
@@ -123,12 +123,12 @@ The measured bit-strings form a system of linear equations over $\mathbb{F}_2$. 
 
 | README / Theory Concept | Code Object or Location |
 |---|---|
-| Input register $|x\rangle$ | `rx = Register('x', n)`; `gs = Circuit(rx, ry, cqr)` |
+| Input register $|x\rangle$ | `rx = Register('x', n)`; `qc = Circuit(rx, ry, cqr)` |
 | Output register $|y\rangle$ | `ry = Register('y', n)` |
-| Initial superposition $H^{\otimes n}|0\rangle^n$ | `gs.h(rx[:])` before oracle |
-| Oracle $U_f|x\rangle|0\rangle \to |x\rangle|f(x)\rangle$ | `_build_simon_oracle(gs, s_target)` — CNOT pattern |
-| Mid-circuit collapse of output register | `gs.measure(ry[:], cqr[:])` between oracle and final Hadamard |
-| Final Hadamard layer (interference) | `gs.h(rx[:])` after measurement |
+| Initial superposition $H^{\otimes n}|0\rangle^n$ | `qc.h(rx[:])` before oracle |
+| Oracle $U_f|x\rangle|0\rangle \to |x\rangle|f(x)\rangle$ | `_build_simon_oracle(qc, s_target)` — CNOT pattern |
+| Mid-circuit collapse of output register | `qc.measure(ry[:], cqr[:])` between oracle and final Hadamard |
+| Final Hadamard layer (interference) | `qc.h(rx[:])` after measurement |
 | Linear equations $y \cdot s \equiv 0$ | Bitstrings from `state_obj.calculate_state(range(n))` |
 | Basis extraction (Gaussian elimination) | `_get_basis_simple(state_list, n)` — pivot selection |
 | Back-substitution recovery of $s$ | `_solve_simon_general(basis_list, n)` — $\mathbb{F}_2$ algebra |
@@ -279,7 +279,7 @@ The following Python skeleton reconstructs the core components of Simon's algori
 ```python
 # Simplified reconstruction — mirrors SimonAlgorithm._build_simon_oracle()
 
-def build_simon_oracle(gs, s: str, n: int):
+def build_simon_oracle(qc, s: str, n: int):
     """Build U_f for Simon's problem with hidden string s.
 
     Structure: copy x → y via CX, then XOR the pivot column into all
@@ -287,7 +287,7 @@ def build_simon_oracle(gs, s: str, n: int):
     """
     # Copy x to y
     for i in range(n):
-        gs.cx(i, i + n)
+        qc.cx(i, i + n)
 
     pivot_idx = s.find('1')    # leftmost '1' in s
     if pivot_idx < 0:
@@ -296,7 +296,7 @@ def build_simon_oracle(gs, s: str, n: int):
     for i in range(n):
         if s[i] == '1':
             # XOR: qubit (n-1-pivot_idx) in x controls qubit (n-1-i+n) in y
-            gs.cx(n - 1 - pivot_idx, n - 1 - i + n)
+            qc.cx(n - 1 - pivot_idx, n - 1 - i + n)
 ```
 
 ### Step 2: Build and run the full Simon circuit
@@ -312,21 +312,21 @@ def simon_circuit(s_target: str, backend: str = 'torch'):
     ry = Register('y', n)
     from unitarylab.core import ClassicalRegister
     cqr = ClassicalRegister('c', n)
-    gs = Circuit(rx, ry, cqr, backend=backend)
+    qc = Circuit(rx, ry, cqr, backend=backend)
 
     # H on input
-    for i in range(n): gs.h(i)
+    for i in range(n): qc.h(i)
 
     # Oracle
-    build_simon_oracle(gs, s_target, n)
+    build_simon_oracle(qc, s_target, n)
 
     # Mid-circuit measurement of output register
-    gs.measure(list(range(n, 2*n)), list(range(n)))
+    qc.measure(list(range(n, 2*n)), list(range(n)))
 
     # H on input again
-    for i in range(n): gs.h(i)
+    for i in range(n): qc.h(i)
 
-    return gs
+    return qc
 ```
 
 ### Step 3: Classical post-processing (Gaussian elimination over F₂)

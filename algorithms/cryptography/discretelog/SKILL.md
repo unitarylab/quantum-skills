@@ -89,10 +89,10 @@ print(result['plot'])          # ASCII result panel
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Setup | Validates `gcd(g,P)==1` and `gcd(y,P)==1`; sets `n_count = 2*P.bit_length()`, `n_work = P.bit_length()` | Determines register sizes sufficient for continued-fraction accuracy |
-| 2 — Circuit Construction | Creates three registers `reg_a`, `reg_b`, `reg_work`; H on reg_a/reg_b; X on work[0] to set $|1\rangle$; controlled $g^{2^i} \bmod P$ via `gs.unitary()` for each reg_a bit; controlled $(y^{-1})^{2^j} \bmod P$ for each reg_b bit; appends `IQFT(n_count)` to both registers | Full DLP QPE circuit |
-| 3 — Simulation | `gs.execute()` → `State.calculate_state(range(2*n_count))` | Extracts probability distribution over reg_a ⊗ reg_b (marginalizing over work register) |
+| 2 — Circuit Construction | Creates three registers `reg_a`, `reg_b`, `reg_work`; H on reg_a/reg_b; X on work[0] to set $|1\rangle$; controlled $g^{2^i} \bmod P$ via `qc.unitary()` for each reg_a bit; controlled $(y^{-1})^{2^j} \bmod P$ for each reg_b bit; appends `IQFT(n_count)` to both registers | Full DLP QPE circuit |
+| 3 — Simulation | `qc.execute()` → `State.calculate_state(range(2*n_count))` | Extracts probability distribution over reg_a ⊗ reg_b (marginalizing over work register) |
 | 4 — Classical Post-Processing | Calls `_classical_post_processing(probs_dict, g, y, P, n_count, N_size)` | Full continued-fractions + congruence solver |
-| 5 — Export | `gs.draw(filename=..., title=...)` | Saves SVG circuit diagram |
+| 5 — Export | `qc.draw(filename=..., title=...)` | Saves SVG circuit diagram |
 
 **Helper Methods:**
 
@@ -139,13 +139,13 @@ From the measurement $(u, v)$:
 
 | README / Theory Concept | Code Object or Location |
 |---|---|
-| reg_A superposition $H^{\otimes n}|0\rangle$ | `gs.h(get_p(ra[:]))` in Stage 2 |
-| reg_B superposition $H^{\otimes n}|0\rangle$ | `gs.h(get_p(rb[:]))` in Stage 2 |
-| Work register initialized to $|1\rangle$ | `gs.x(get_p(rw[0]))` in Stage 2 |
-| Controlled $g^{2^i} \bmod P$ on work via reg_a bit $i$ | `gs.unitary(matrix, work_qubits, ctrl_qubit, '1')` loop over `range(n_count)` |
+| reg_A superposition $H^{\otimes n}|0\rangle$ | `qc.h(get_p(ra[:]))` in Stage 2 |
+| reg_B superposition $H^{\otimes n}|0\rangle$ | `qc.h(get_p(rb[:]))` in Stage 2 |
+| Work register initialized to $|1\rangle$ | `qc.x(get_p(rw[0]))` in Stage 2 |
+| Controlled $g^{2^i} \bmod P$ on work via reg_a bit $i$ | `qc.unitary(matrix, work_qubits, ctrl_qubit, '1')` loop over `range(n_count)` |
 | Controlled $(y^{-1})^{2^j} \bmod P$ via reg_b bit $j$ | Same pattern with `y_inv = pow(y, -1, P)` |
-| Inverse QFT on reg_a | `gs.append(IQFT(n_count), get_p(ra[:]))` |
-| Inverse QFT on reg_b | `gs.append(IQFT(n_count), get_p(rb[:]))` |
+| Inverse QFT on reg_a | `qc.append(IQFT(n_count), get_p(ra[:]))` |
+| Inverse QFT on reg_b | `qc.append(IQFT(n_count), get_p(rb[:]))` |
 | Probability distribution over (A, B) | `state_obj.calculate_state(range(2*n_count))` marginalizes work register |
 | Continued fractions: $u/N \approx s/r$ | `Fraction(u, N_size).limit_denominator(P)` |
 | True group order $r$: $g^r \equiv 1$ | Search loop over multiples of `r_base` with `pow(g, r_base*k, P) == 1` |
@@ -210,33 +210,33 @@ def build_dlp_circuit(g: int, y: int, P: int, n_count: int, n_work: int,
     ra = Register('a', n_count)
     rb = Register('b', n_count)
     rw = Register('w', n_work)
-    gs = Circuit(ra, rb, rw, backend=backend)
+    qc = Circuit(ra, rb, rw, backend=backend)
 
     # Offset helpers to get flat qubit indices
     a_off, b_off, w_off = 0, n_count, 2 * n_count
 
     # 1. Hadamard both counting registers; work register to |1>
-    gs.h(range(a_off, a_off + n_count))
-    gs.h(range(b_off, b_off + n_count))
-    gs.x(w_off)   # |work> = |1>
+    qc.h(range(a_off, a_off + n_count))
+    qc.h(range(b_off, b_off + n_count))
+    qc.x(w_off)   # |work> = |1>
 
     # 2. Controlled g^{2^i} on reg_a
     for i in range(n_count):
         mult = pow(g, 2**i, P)
-        gs.unitary(modular_matrix(mult, P, n_work),
+        qc.unitary(modular_matrix(mult, P, n_work),
                    range(w_off, w_off + n_work), a_off + i, '1')
 
     # 3. Controlled (y^{-1})^{2^j} on reg_b
     y_inv = pow(y, -1, P)
     for j in range(n_count):
         mult = pow(y_inv, 2**j, P)
-        gs.unitary(modular_matrix(mult, P, n_work),
+        qc.unitary(modular_matrix(mult, P, n_work),
                    range(w_off, w_off + n_work), b_off + j, '1')
 
     # 4. IQFT on both counting registers
-    gs.append(IQFT(n_count, backend=backend), range(a_off, a_off + n_count))
-    gs.append(IQFT(n_count, backend=backend), range(b_off, b_off + n_count))
-    return gs
+    qc.append(IQFT(n_count, backend=backend), range(a_off, a_off + n_count))
+    qc.append(IQFT(n_count, backend=backend), range(b_off, b_off + n_count))
+    return qc
 
 def solve_dlp(g: int, y: int, P: int, backend: str = 'torch'):
     """Quantum DLP: find x such that g^x = y mod P."""
@@ -245,8 +245,8 @@ def solve_dlp(g: int, y: int, P: int, backend: str = 'torch'):
     n_work  = P.bit_length()
     n_count = 2 * n_work
 
-    gs = build_dlp_circuit(g, y, P, n_count, n_work, backend)
-    sv = gs.execute()
+    qc = build_dlp_circuit(g, y, P, n_count, n_work, backend)
+    sv = qc.execute()
     meas_full = State(sv).measure(range(2 * n_count), endian='little')
 
     # Extract a and b

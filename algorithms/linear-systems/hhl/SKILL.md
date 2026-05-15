@@ -99,21 +99,21 @@ print(result['circuit_path'])        # SVG circuit diagram
 |---|---|---|
 | 1 — Matrix Pre-processing | Validates $A$ (Hermitian, power-of-2 dims); normalizes $b$; extracts eigenvalues; computes `t` to avoid phase wraparound; computes `k_start` and `scale_factor`; sets `signed_phase_mode` for matrices with negative eigenvalues | Adaptive parameter tuning |
 | 2 — Circuit Construction | Builds `Circuit(1 + d + n_sys)` with ancilla at 0, phase at 1..d, system at d+1...; calls four sub-circuit builders (A–D) | Full HHL circuit assembly |
-| 3 — Simulation | `gs.execute()` → `np.asarray(final_state)` | Runs statevector simulation |
+| 3 — Simulation | `qc.execute()` → `np.asarray(final_state)` | Runs statevector simulation |
 | 4 — Post-Processing | `_postselect_solution_state(state_arr, scale_factor, d, n_sys)` extracts the ancilla=1 sub-state; computes `diff_norm` vs. `np.linalg.solve(A, b)` | Solution extraction and comparison |
-| 5 — Export | `gs.draw(filename=..., title=...)` | Saves SVG circuit diagram |
+| 5 — Export | `qc.draw(filename=..., title=...)` | Saves SVG circuit diagram |
 
 **Stage 2 — Four Sub-Circuit Steps:**
 
-- **Step A: State Preparation** — `gs.initialize(b_state, system_qubits)` loads normalized $b/\|b\|$ into the system register.
-- **Step B: QPE** — `_expi_hermitian(A, t)` computes $U = e^{iAt}$ numerically; `_unitary_circuit_from_matrix(U_mat)` wraps it in a `Circuit` via `gs.unitary()`; `QPEAlgorithm().build_qpe_circuit(U_circ, d)` builds the full QPE sub-circuit; it is appended to `phase_qubits + system_qubits`.
+- **Step A: State Preparation** — `qc.initialize(b_state, system_qubits)` loads normalized $b/\|b\|$ into the system register.
+- **Step B: QPE** — `_expi_hermitian(A, t)` computes $U = e^{iAt}$ numerically; `_unitary_circuit_from_matrix(U_mat)` wraps it in a `Circuit` via `qc.unitary()`; `QPEAlgorithm().build_qpe_circuit(U_circ, d)` builds the full QPE sub-circuit; it is appended to `phase_qubits + system_qubits`.
 - **Step C: Controlled Reciprocal Rotation** — `_controlled_reciprocal_rotation(d, t, k_start, signed_phase)` builds the ancilla rotation circuit. For each phase integer $k$, it applies X-flips to phase bits to select the $k$-th computational basis state, computes rotation angle $2\arcsin(C/k)$, and applies `mcry(theta, controls, ancilla=0)`. Then unflips X gates. This creates a distinct controlled-Ry for each eigenvalue bin.
-- **Step D: Inverse QPE** — `gs.append(qpe_circ.dagger(), ...)` uncomputes the phase register, removing entanglement.
+- **Step D: Inverse QPE** — `qc.append(qpe_circ.dagger(), ...)` uncomputes the phase register, removing entanglement.
 
 **Helper Methods:**
 
 - **`_expi_hermitian(A, t)`** — Eigendecomposition: `np.linalg.eigh(A)` → `V @ diag(exp(i*2π*λ*t)) @ V†`.
-- **`_unitary_circuit_from_matrix(U, backend)`** — Wraps an $N\times N$ matrix as a `Circuit` via `gs.unitary(U, range(n))`.
+- **`_unitary_circuit_from_matrix(U, backend)`** — Wraps an $N\times N$ matrix as a `Circuit` via `qc.unitary(U, range(n))`.
 - **`_controlled_reciprocal_rotation(d, t, k_start, signed_phase, backend)`** — Builds the ancilla rotation sub-circuit; handles both signed (negative eigenvalues) and unsigned phase modes.
 - **`_decode_signed_phase_index(k, d)`** — Converts raw QPE bin index to signed integer (negative for bins above `grid//2`).
 - **`_postselect_solution_state(state, scale, d, n)`** — Extracts the ancilla=1, phase=0 subspace: `state[1::2]` gives ancilla=1 slice; `[0::stride]` (with `stride = 2^d`) selects phase=0; scales by `scale_factor` to recover $A^{-1}b$.
@@ -143,7 +143,7 @@ $$|x\rangle \propto \sum_j \frac{b_j}{\lambda_j}|u_j\rangle = A^{-1}|b\rangle$$
 
 | README / Theory Concept | Code Object or Location |
 |---|---|
-| State preparation $|b\rangle = b/\|b\|$ | `gs.initialize(b_state, system_qubits)` — Step A |
+| State preparation $|b\rangle = b/\|b\|$ | `qc.initialize(b_state, system_qubits)` — Step A |
 | Evolution time $t$ (avoids wraparound) | Auto-computed: `t = target_phi_max / lam_max` in Stage 1 |
 | Unitary $U = e^{iAt}$ | `_expi_hermitian(A, t)` → explicit matrix via NumPy eigendecomposition |
 | QPE to encode eigenphases | `QPEAlgorithm().build_qpe_circuit(U_circ, d)` — Step B |
@@ -211,9 +211,9 @@ def expi_hermitian(A: np.ndarray, t: float) -> np.ndarray:
 def unitary_circuit(U_mat: np.ndarray, backend: str = 'torch') -> Circuit:
     """Wrap a unitary matrix as a Circuit."""
     n = int(np.log2(U_mat.shape[0]))
-    gs = Circuit(n, backend=backend)
-    gs.unitary(U_mat, list(range(n)))
-    return gs
+    qc = Circuit(n, backend=backend)
+    qc.unitary(U_mat, list(range(n)))
+    return qc
 ```
 
 ### Stage B: QPE to Encode Eigenphases
@@ -234,7 +234,7 @@ def encode_eigenphases(U_circ: Circuit, d: int, backend: str = 'torch') -> Circu
 
 def controlled_reciprocal_rotation(d: int, k_start: int, backend: str = 'torch') -> Circuit:
     """For each eigenvalue bin k, rotate ancilla by 2*arcsin(k_start/k)."""
-    gs = Circuit(d + 1, backend=backend)   # d phase qubits + 1 ancilla
+    qc = Circuit(d + 1, backend=backend)   # d phase qubits + 1 ancilla
     ancilla = 0
     phase_qubits = list(range(1, d + 1))
     grid = 2 ** d
@@ -245,14 +245,14 @@ def controlled_reciprocal_rotation(d: int, k_start: int, backend: str = 'torch')
         controls = []
         for bit_idx, bit in enumerate(reversed(k_bits)):
             if bit == '0':
-                gs.x(phase_qubits[bit_idx])
+                qc.x(phase_qubits[bit_idx])
             controls.append(phase_qubits[bit_idx])
-        gs.mcry(angle, controls, ancilla)
+        qc.mcry(angle, controls, ancilla)
         # Unflip
         for bit_idx, bit in enumerate(reversed(k_bits)):
             if bit == '0':
-                gs.x(phase_qubits[bit_idx])
-    return gs
+                qc.x(phase_qubits[bit_idx])
+    return qc
 ```
 
 ### Stage D: Inverse QPE and Post-selection

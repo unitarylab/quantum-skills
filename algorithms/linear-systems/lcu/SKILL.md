@@ -201,10 +201,10 @@ def build_prepare(alphas, n_anc: int, backend: str = 'torch') -> Circuit:
     # The real implementation calls _state_preparation_tree() which does this recursively
     # For a flat 2-element case:
     if m == 2:
-        gs = Circuit(n_anc, backend=backend)
+        qc = Circuit(n_anc, backend=backend)
         theta = 2 * np.arctan2(state[1], state[0])
-        gs.ry(theta, 0)
-        return gs
+        qc.ry(theta, 0)
+        return qc
     # General case: delegate to the recursive tree builder in LCUAlgorithm
     raise NotImplementedError("Use LCUAlgorithm._build_V() for general m")
 ```
@@ -217,13 +217,13 @@ def build_prepare(alphas, n_anc: int, backend: str = 'torch') -> Circuit:
 def build_select(unitaries, n_anc: int, n_sys: int, backend: str = 'torch') -> Circuit:
     """SELECT = sum_j |j><j|_anc ⊗ U_j: apply U_j conditional on ancilla=|j>."""
     m = len(unitaries)
-    gs = Circuit(n_anc + n_sys, backend=backend)
+    qc = Circuit(n_anc + n_sys, backend=backend)
     sys_qubits = list(range(n_anc, n_anc + n_sys))
     anc_qubits = list(range(n_anc))
     for j, U_j in enumerate(unitaries):
         control_seq = format(j, f'0{n_anc}b')   # e.g. '01' for j=1, n_anc=2
-        gs.append(U_j, target=sys_qubits, control=anc_qubits, control_sequence=control_seq)
-    return gs
+        qc.append(U_j, target=sys_qubits, control=anc_qubits, control_sequence=control_seq)
+    return qc
 ```
 
 ### Step 3: Full LCU circuit assembly
@@ -235,27 +235,27 @@ def lcu_circuit(alphas, unitaries, n_sys: int, initial_state=None, backend: str 
     """Full LCU circuit: PREPARE ⊗ I |psi> → SELECT → UNPREPARE ⊗ I."""
     m = len(alphas)
     n_anc = int(np.ceil(np.log2(max(m, 2))))
-    gs = Circuit(n_anc + n_sys, backend=backend)
+    qc = Circuit(n_anc + n_sys, backend=backend)
 
     anc_qubits = list(range(n_anc))
     sys_qubits = list(range(n_anc, n_anc + n_sys))
 
     # 1. Initial system state
     if initial_state is not None:
-        gs.append(initial_state, sys_qubits)
+        qc.append(initial_state, sys_qubits)
 
     # 2. PREPARE
     V_circ = build_prepare(alphas, n_anc, backend)
-    gs.append(V_circ, anc_qubits)
+    qc.append(V_circ, anc_qubits)
 
     # 3. SELECT
     sel_circ = build_select(unitaries, n_anc, n_sys, backend)
-    gs.append(sel_circ, list(range(n_anc + n_sys)))
+    qc.append(sel_circ, list(range(n_anc + n_sys)))
 
     # 4. UNPREPARE (V†)
-    gs.append(V_circ.dagger(), anc_qubits)
+    qc.append(V_circ.dagger(), anc_qubits)
 
-    return gs
+    return qc
 ```
 
 ## Debugging Tips
