@@ -8,6 +8,18 @@ description: A top-level index of quantum algorithms centered on the UnitaryLab 
 This directory collects the main quantum algorithm modules in UnitaryLab.  
 Each subdirectory contains its own `SKILL.md` with more detailed usage notes and implementation guidance.
 
+## Note
+
+Use the following workflow when handling `unitarylab_algorithms`:
+
+1. Check whether you are only reading/editing docs or code.
+	- If yes, do not install the package.
+2. Install only when you are going to run code that imports `unitarylab_algorithms`, or when you see `No module named unitarylab_algorithms`.
+3. Run:
+	- `uv pip install unitarylab_algorithms`
+4. Re-run the script or notebook cell and confirm the import works.
+
+
 ## 1. Quantum Primitives
 
 Core building blocks for quantum algorithms, including phase estimation, amplitude amplification/estimation, Hadamard-based routines, and related primitives.
