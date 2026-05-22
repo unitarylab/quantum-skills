@@ -155,7 +155,7 @@ qc.mcp(np.pi / 7, [0, 1, 2], 3) # Multiple control phase gate, control bit [0, 1
 ## Custom Unitary Gate
 
 The `unitary()` method applies a custom unitary matrix to one or more target qubits.  
-It can also be used together with control qubits and a specified `control_sequence`.
+It can also be used together with control qubits and a specified `control_state`.
 
 Applying a Custom Unitary Matrix
 ```python
@@ -269,7 +269,7 @@ qc.h(0)  # Apply a Hadamard gate to qubit 0
 qc.t(0)  # Apply a T gate to qubit 0
 
 # Creating a Controlled Subcircuit
-ctrl_qc = qc.control(2, control_sequence="11")  # Add 2 control qubits and require the control state to be |11⟩
+ctrl_qc = qc.control(2, control_state="11")  # Add 2 control qubits and require the control state to be |11⟩
 
 # Viewing Circuit Information
 
@@ -375,7 +375,7 @@ bad_u = np.array([[1, 1],
                   [0, 1]], dtype=complex)
 qs.unitary(bad_u, [0])  # Invalid unitary operation: the input matrix is not unitary
 
-# control_sequence length mismatch should raise an error
+# control_state length mismatch should raise an error
 qs = Circuit(3)
-qs.mcx([0, 1], 2, control_sequence="1")  # Invalid control sequence: length does not match the number of control qubits
+qs.mcx([0, 1], 2, control_state="1")  # Invalid control sequence: length does not match the number of control qubits
 ```

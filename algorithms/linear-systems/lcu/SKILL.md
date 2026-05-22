@@ -105,7 +105,7 @@ print(result['circuit_path'])   # SVG circuit diagram
 
 - **`_build_V(alphas, s_norm, m, n_anc, backend)`** — Constructs the PREPARE operator. Builds amplitude vector `state[j] = sqrt(alphas[j]/s_norm)` padded to `2^n_anc` elements. Calls `_state_preparation_tree(state)` to get a list of angle-decomposed Ry/McRy gate specs. Applies them as `qc.ry()` or `qc.mcry()` gates on the ancilla register.
 - **`_state_preparation_tree(alpha)`** — Recursive tree decomposition for amplitude encoding. Computes `theta = 2 * arctan2(norm_b, norm_a)` at each binary tree node and records whether the gate is unconditional (root) or conditional (controlled by parent nodes). Returns a list of gate dicts with `{name, target, angle, control_qubit, control_value}`.
-- **`_build_select(unitaries, m, n_anc, n_sys)`** — Constructs the SELECT operator. Loops over all `(j, U_j)` pairs; for each, calls `qc.append(U_j, target=sys_qubits, control=anc_qubits, control_sequence=format(j, f'0{n_anc}b'))`. This applies $U_j$ conditionally on ancilla = $|j\rangle$ in binary.
+- **`_build_select(unitaries, m, n_anc, n_sys)`** — Constructs the SELECT operator. Loops over all `(j, U_j)` pairs; for each, calls `qc.append(U_j, target=sys_qubits, control=anc_qubits, control_state=format(j, f'0{n_anc}b'))`. This applies $U_j$ conditionally on ancilla = $|j\rangle$ in binary.
 - **`_update_last_result` / `_build_return`** — Store fields and package result dict. Note: `_build_return` returns `status='success'` regardless of `success_prob` value; the low-probability case is reflected in the `success_prob` field.
 
 **Data flow:** `(alphas, unitaries)` → `_build_V()` → `_build_select()` → `V†` → `execute()` → `probabilities_dict()` → `success_prob` → `_build_return()`.
@@ -130,16 +130,17 @@ On success, the system register holds $M|\psi\rangle/\|M|\psi\rangle\|$.
 
 | README / Theory Concept | Code Object or Location |
 |---|---|
-| PREPARE: $V|0\rangle \to \sum_j\sqrt{\alpha_j/s}|j\rangle$ | `_build_V()` — amplitude tree → Ry/McRy gates on ancilla |
-| Amplitude tree decomposition | `_state_preparation_tree(state)` — recursive `arctan2` angles |
-| SELECT: $\sum_j|j\rangle\langle j|\otimes U_j$ | `_build_select()` — `qc.append(U_j, ..., control_sequence=format(j,'b'))` |
-| UNPREPARE: $V^\dagger$ | `V_circ.dagger()` appended to ancilla qubits |
-| Normalization $s = \sum_k\alpha_k$ | `s_norm = float(np.sum(alphas))` in Stage 1 |
-| Post-selection on ancilla $= |0\rangle^{n_\text{anc}}$ | `probabilities_dict(anc_qubits)` → key `'0'*n_anc` |
-| Success probability $P = \|M|\psi\rangle\|^2/s^2$ | `success_prob` from Stage 4 measurement |
-| Ancilla size $n_\text{anc} = \lceil\log_2 m\rceil$ | `n_anc = int(np.ceil(np.log2(m)))` in Stage 1 |
+| PREPARE operator | `_build_V()` constructs the state-preparation circuit. It maps `|0>` to `sum_j sqrt(alpha_j / s) |j>` through an amplitude-tree decomposition and controlled rotation gates on the ancilla/select register. |
+| Amplitude tree decomposition | `_state_preparation_tree(state)` recursively computes rotation angles using `arctan2`, then converts the target amplitude distribution into a sequence of `Ry` / multi-controlled `Ry` operations. |
+| SELECT operator | `_build_select()` implements `SELECT = sum_j |j><j| ⊗ U_j`. For each index `j`, it appends the corresponding controlled unitary `U_j` and uses `ctrl_state=format(j, f"0{n_anc}b")` to ensure the selected block is activated only when the ancilla/select register equals the binary encoding of `j`. |
+| UNPREPARE operator | `V_circ.dagger()` is appended after the SELECT block to implement `V†`, mapping the prepared ancilla/select state back toward `|0>`. |
+| Normalization factor | `s_norm = float(np.sum(alphas))` in Stage 1 computes `s = sum_k alpha_k`, which is used to normalize the LCU coefficients. |
+| Ancilla/select register size | `n_anc = int(np.ceil(np.log2(m)))` in Stage 1 determines the number of ancilla/select qubits required to index all `m` unitary terms. |
+| Post-selection condition | `probabilities_dict(anc_qubits)` is used to obtain the probability distribution on the ancilla/select register. The successful branch corresponds to the all-zero key: `'0' * n_anc`. |
+| Success probability | `success_prob` is extracted from the Stage 4 measurement result. It represents the probability of successfully projecting the ancilla/select register onto `|0>^{n_anc}` after applying `PREPARE → SELECT → UNPREPARE`. |
+| LCU output relation | After successful post-selection, the system state is proportional to `M|psi> / s`, where `M = sum_j alpha_j U_j`. Therefore, the success probability is related to `||M|psi>||^2 / s^2`. |
 
-**Notes on encapsulation:** The PREPARE operator uses a recursive classical tree computation (`_state_preparation_tree`) to decompose an arbitrary $2^{n_\text{anc}}$-element state into a Ry/McRy gate sequence. This is entirely classical computation; the quantum part is just applying those gates. The SELECT operator directly calls `qc.append()` with `control_sequence` to avoid building separate MCX structures. The `_build_return` always sets `status='success'`; the actual LCU outcome quality is in `lcu_success_probability`.
+**Notes on encapsulation:** The PREPARE operator uses a recursive classical tree computation (`_state_preparation_tree`) to decompose an arbitrary $2^{n_\text{anc}}$-element state into a Ry/McRy gate sequence. This is entirely classical computation; the quantum part is just applying those gates. The SELECT operator directly calls `qc.append()` with `control_state` to avoid building separate MCX structures. The `_build_return` always sets `status='success'`; the actual LCU outcome quality is in `lcu_success_probability`.
 
 ## Mathematical Deep Dive
 $$V|0\rangle_{\text{anc}}|\psi\rangle = \sum_j \sqrt{\frac{\alpha_j}{s}}|j\rangle|\psi\rangle$$
@@ -222,7 +223,7 @@ def build_select(unitaries, n_anc: int, n_sys: int, backend: str = 'torch') -> C
     anc_qubits = list(range(n_anc))
     for j, U_j in enumerate(unitaries):
         control_seq = format(j, f'0{n_anc}b')   # e.g. '01' for j=1, n_anc=2
-        qc.append(U_j, target=sys_qubits, control=anc_qubits, control_sequence=control_seq)
+        qc.append(U_j, target=sys_qubits, control=anc_qubits, control_state=control_seq)
     return qc
 ```
 

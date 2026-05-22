@@ -77,35 +77,35 @@ Coupling Map
     target           : [0]
     control          : []
     params           : {}
-    control_sequence : []
+    control_state : []
 ----------------------------------------------------
 [1] cx
     raw_name         : cx
     target           : [1]
     control          : [0]
     params           : {}
-    control_sequence : [1]
+    control_state : [1]
 ----------------------------------------------------
 [2] h
     raw_name         : h
     target           : [0]
     control          : []
     params           : {}
-    control_sequence : []
+    control_state : []
 ----------------------------------------------------
 [3] rz
     raw_name         : rz
     target           : [1]
     control          : []
     params           : {'value': 0.7853981633974483}
-    control_sequence : []
+    control_state : []
 ----------------------------------------------------
 [4] mcx
     raw_name         : mcx
     target           : [3]
     control          : [0, 1]
     params           : {}
-    control_sequence : [1, 1]
+    control_state : [1, 1]
 ----------------------------------------------------
 ====================================================
 
@@ -194,35 +194,35 @@ info.show("instructions")
     target           : [0]
     control          : []
     params           : {}
-    control_sequence : []
+    control_state : []
 ----------------------------------------------------
 [1] cx
     raw_name         : cx
     target           : [1]
     control          : [0]
     params           : {}
-    control_sequence : [1]
+    control_state : [1]
 ----------------------------------------------------
 [2] h
     raw_name         : h
     target           : [0]
     control          : []
     params           : {}
-    control_sequence : []
+    control_state : []
 ----------------------------------------------------
 [3] rz
     raw_name         : rz
     target           : [1]
     control          : []
     params           : {'value': 0.7853981633974483}
-    control_sequence : []
+    control_state : []
 ----------------------------------------------------
 [4] mcx
     raw_name         : mcx
     target           : [3]
     control          : [0, 1]
     params           : {}
-    control_sequence : [1, 1]
+    control_state : [1, 1]
 ----------------------------------------------------
 ====================================================
 ```

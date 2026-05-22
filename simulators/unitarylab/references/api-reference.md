@@ -118,39 +118,39 @@ Quantum circuit container. Wraps the backend gate-sequence implementation and ad
 | `u3(theta, phi, lambda_, qubit)` | U3 gate |
 | `p(angle, qubit)` | Phase gate |
 
-**Two-qubit gates** — `control_sequence` is an optional binary string specifying active control states (e.g. `'0'` for control-on-zero).
+**Two-qubit gates** — `control_state` is an optional binary string specifying active control states (e.g. `'0'` for control-on-zero).
 
 | Method | Description |
 |--------|-------------|
 | `swap(qubit1, qubit2)` | SWAP gate |
-| `cnot(control, target, control_sequence=None)` | CNOT (CX) |
-| `cx(control, target, control_sequence=None)` | CX (alias for CNOT) |
-| `cy(control, target, control_sequence=None)` | CY |
-| `cz(control, target, control_sequence=None)` | CZ |
-| `ch(control, target, control_sequence=None)` | CH |
-| `cs(control, target, control_sequence=None)` | CS |
-| `cp(angle, control, target, control_sequence=None)` | Controlled-Phase |
-| `crx(angle, control, target, control_sequence=None)` | Controlled-RX |
-| `cry(angle, control, target, control_sequence=None)` | Controlled-RY |
-| `crz(angle, control, target, control_sequence=None)` | Controlled-RZ |
+| `cnot(control, target, control_state=None)` | CNOT (CX) |
+| `cx(control, target, control_state=None)` | CX (alias for CNOT) |
+| `cy(control, target, control_state=None)` | CY |
+| `cz(control, target, control_state=None)` | CZ |
+| `ch(control, target, control_state=None)` | CH |
+| `cs(control, target, control_state=None)` | CS |
+| `cp(angle, control, target, control_state=None)` | Controlled-Phase |
+| `crx(angle, control, target, control_state=None)` | Controlled-RX |
+| `cry(angle, control, target, control_state=None)` | Controlled-RY |
+| `crz(angle, control, target, control_state=None)` | Controlled-RZ |
 
 **Multi-control gates** — `controls` is a list of control qubits.
 
 | Method | Description |
 |--------|-------------|
-| `mcx(controls, target, control_sequence=None)` | Multi-controlled X |
-| `mcy(controls, target, control_sequence=None)` | Multi-controlled Y |
-| `mcz(controls, target, control_sequence=None)` | Multi-controlled Z |
-| `mch(controls, target, control_sequence=None)` | Multi-controlled H |
-| `mcrx(angle, controls, target, control_sequence=None)` | Multi-controlled RX |
-| `mcry(angle, controls, target, control_sequence=None)` | Multi-controlled RY |
-| `mcrz(angle, controls, target, control_sequence=None)` | Multi-controlled RZ |
-| `mcp(angle, controls, target, control_sequence=None)` | Multi-controlled Phase |
+| `mcx(controls, target, control_state=None)` | Multi-controlled X |
+| `mcy(controls, target, control_state=None)` | Multi-controlled Y |
+| `mcz(controls, target, control_state=None)` | Multi-controlled Z |
+| `mch(controls, target, control_state=None)` | Multi-controlled H |
+| `mcrx(angle, controls, target, control_state=None)` | Multi-controlled RX |
+| `mcry(angle, controls, target, control_state=None)` | Multi-controlled RY |
+| `mcrz(angle, controls, target, control_state=None)` | Multi-controlled RZ |
+| `mcp(angle, controls, target, control_state=None)` | Multi-controlled Phase |
 
 **Custom unitary**
 
 ```python
-qc.unitary(matrix, target, control=[], control_sequence=None)
+qc.unitary(matrix, target, control=[], control_state=None)
 ```
 
 Apply an arbitrary unitary matrix to `target` qubits. `matrix` must be a unitary ndarray of shape `(2^len(target), 2^len(target))`.
@@ -167,9 +167,9 @@ Map `target` qubit(s) to `clbit` classical bit(s). Results are stored in the cor
 
 | Method | Description |
 |--------|-------------|
-| `append(block, target, control=[], control_sequence=None)` | Append a sub-circuit at the end |
-| `prepend(block, target, control=[], control_sequence=None)` | Prepend a sub-circuit at the beginning |
-| `initialize(v, target, control=[], control_sequence=None)` | Prepare state vector `v` on `target` qubits (must be called before any gate on those qubits) |
+| `append(block, target, control=[], control_state=None)` | Append a sub-circuit at the end |
+| `prepend(block, target, control=[], control_state=None)` | Prepend a sub-circuit at the beginning |
+| `initialize(v, target, control=[], control_state=None)` | Prepare state vector `v` on `target` qubits (must be called before any gate on those qubits) |
 
 **Circuit transformations**
 
@@ -180,7 +180,7 @@ Map `target` qubit(s) to `clbit` classical bit(s). Results are stored in the cor
 | `reverse()` | `Circuit` | Gates in reverse order |
 | `decompose(times=1)` | `Circuit` | Decompose composite gates |
 | `repeat(times=1)` | `Circuit` | Repeat circuit `times` times |
-| `control(num_ctrl_qubits=1, control_sequence=None)` | `Circuit` | Add `num_ctrl_qubits` control qubits |
+| `control(num_ctrl_qubits=1, control_state=None)` | `Circuit` | Add `num_ctrl_qubits` control qubits |
 
 **Execution**
 

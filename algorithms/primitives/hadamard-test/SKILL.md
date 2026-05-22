@@ -110,7 +110,7 @@ print(result_im['est_val'])   # ≈ -sin(0.4) ≈ -0.3894
 
 **Helper Methods:**
 
-- **`_build_hadamard_test_circuit(U, prepare_psi, imag, backend)`** — Constructs the single-ancilla circuit. Ancilla is qubit 0; target is qubits `1..n`. Applies `H` to ancilla, optionally `Sdag` for imaginary part, appends `prepare_psi` to target, then appends `U` as a controlled unitary (`U.control([anc], control_sequence='1')`), applies `H` again to ancilla.
+- **`_build_hadamard_test_circuit(U, prepare_psi, imag, backend)`** — Constructs the single-ancilla circuit. Ancilla is qubit 0; target is qubits `1..n`. Applies `H` to ancilla, optionally `Sdag` for imaginary part, appends `prepare_psi` to target, then appends `U` as a controlled unitary (`U.control([anc], control_state='1')`), applies `H` again to ancilla.
 - **`_estimate_phi_from_real_imag(cos_est, sin_est)`** — Computes `atan2(sin_est, cos_est) / (2π) % 1.0` to extract the eigenphase $\phi \in [0,1)$.
 - **`_as_statevector(result)`** — Converts `execute()` output to a normalized `numpy` array.
 - **`_update_last_result` / `_build_return`** — Store all runtime fields and package result dict.
@@ -145,7 +145,7 @@ So $|\langle\phi|\psi\rangle|^2 = 2p(0) - 1$.
 | Ancilla in superposition $\frac{1}{\sqrt{2}}(|0\rangle+|1\rangle)$ | `qc.h(anc)` in `_build_hadamard_test_circuit()` |
 | $S^\dagger$ rotation for imaginary part | `qc.sdag(anc)` inserted if `imag=True` |
 | State preparation $|\psi\rangle$ on target | `qc.append(prepare_psi, target=tgt)` |
-| Controlled-$U$ gate | `U.control([anc], control_sequence='1')` appended to target register |
+| Controlled-$U$ gate | `U.control([anc], control_state='1')` appended to target register |
 | Final $H$ measurement on ancilla | Second `qc.h(anc)` closes the Hadamard test |
 | $\langle Z\rangle = p(0) - p(1)$ | `exp_val = p0 - p1` in Stage 3 |
 | Shot noise model | `c0 = rng.binomial(shots, p0_exact)`; `p0 = c0 / shots` |
@@ -222,7 +222,7 @@ def hadamard_test_circuit(U: Circuit, prepare_psi=None, imag=False) -> Circuit:
     if prepare_psi is not None:
         qc.append(prepare_psi, target=tgt)
 
-    qc.append(U, target=tgt, control=[anc], control_sequence="1")
+    qc.append(U, target=tgt, control=[anc], control_state="1")
     qc.h(anc)
     return qc
 ```
