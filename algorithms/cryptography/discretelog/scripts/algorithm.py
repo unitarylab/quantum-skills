@@ -11,14 +11,16 @@ def example_small_prime():
     print("=" * 50)
     print("Discrete Log: 3^x ≡ 6 (mod 7)")
     print("=" * 50)
-    print(result.get("plot", ""))
+    for f in result.get("plot", []):
+        print(f"  Output file  : {f['filename']} ({f['format']})")
     print(f"  Status       : {result['status']}")
-    print(f"  Found x      : {result['found_x']}")
+    print(f"  Found x      : {result['Found x']}")
+    print(f"  Period r     : {result.get('Detected period r')}")
+    print(f"  Time (s)     : {result.get('Computation time (s)')}")
     print(f"  Circuit path : {result.get('circuit_path')}")
-    print(f"  Message      : {result['message']}")
 
-    if result["found_x"] is not None:
-        x = int(result["found_x"])
+    if result["Found x"] is not None:
+        x = int(result["Found x"])
         print(f"  Verification : 3^{x} mod 7 = {pow(3, x, 7)}  (target = 6)")
 
 

@@ -34,7 +34,7 @@ python ./scripts/algorithm.py
 - Quantum Fourier Transform and QPE.
 - Modular arithmetic, multiplicative order, modular inverse.
 - Continued fractions algorithm.
-- Python: `numpy`, `Circuit`, `Register`, `ClassicalRegister`, `State`, `unitarylab.library.IQFT`.
+- Python: `numpy`, `Circuit`, `Register`, `unitarylab.library.IQFT`.
 
 ## Using the Provided Implementation
 
@@ -49,21 +49,33 @@ result = algo.run(
     backend='torch'
 )
 
-print(result['found_x'])       # Found discrete log x
-print(result['status'])        # 'ok' on success
-print(result['circuit_path'])  # SVG circuit diagram path
-print(result['plot'])          # ASCII result panel
+print(result['Found x'])                  # Found discrete log x
+print(result['status'])                   # 'ok' on success, 'failed' otherwise
+print(result['circuit_path'])             # SVG circuit diagram path
+print(result.get('plot', []))             # List of output file dicts [{"format": ..., "filename": ...}]
+print(result.get('Detected period r'))    # Detected group order r
+print(result.get('Computation time (s)')) # Simulation time in seconds
 ```
 
 ## Core Parameters Explained
+
+**Constructor `DiscreteLogAlgorithm(text_mode, algo_dir)`:**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `text_mode` | `str` | `'plain'` | Output text formatting mode. Use `'legacy'` for ASCII art panels. |
+| `algo_dir` | `str` or `None` | `None` | Directory to save output files. Auto-derived from CWD if `None`. |
+
+**`run(g, y, P, backend, device, dtype)` parameters:**
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `g` | `int` | required | Base of the discrete logarithm. Must satisfy $\gcd(g, P) = 1$. |
 | `y` | `int` | required | Target value. Must satisfy $\gcd(y, P) = 1$. |
 | `P` | `int` | required | Prime modulus. |
-| `backend` | `str` | `'torch'` | Simulation backend. Only `'torch'` supported. |
-| `algo_dir` | `str` or `None` | `None` | Directory to save SVG circuit diagram. |
+| `backend` | `str` | `'torch'` | Simulation backend. |
+| `device` | `str` | `'cpu'` | Compute device (`'cpu'` or `'cuda'`). |
+| `dtype` | | `np.complex128` | Numeric dtype for simulation. |
 
 **Common misunderstandings:**
 - Both `g` and `y` must be coprime to `P`. This is validated; a `ValueError` is raised otherwise.
@@ -75,24 +87,26 @@ print(result['plot'])          # ASCII result panel
 | Key | Type | Description |
 |---|---|---|
 | `status` | `str` | `'ok'` if $g^x \equiv y \pmod{P}$ is verified; `'failed'` otherwise. |
-| `found_x` | `int` or `None` | Recovered discrete logarithm $x$; `None` if not found. |
-| `circuit_path` | `str` | Path to SVG circuit diagram. |
-| `message` | `str` | Human-readable summary. |
-| `plot` | `str` | ASCII art result panel. |
+| `Found x` | `int` or `None` | Recovered discrete logarithm $x$; `None` if not found. |
+| `Detected period r` | `int` or `None` | Detected multiplicative group order $r$; `None` if not found. |
+| `Computation time (s)` | `float` | Wall-clock simulation time in seconds. |
+| `circuit_path` | `str` | Path to saved SVG circuit diagram. |
+| `plot` | `list` | List of output file dicts: `[{"format": "txt", "filename": "..."}]`. Use `.get('plot', [])`. |
+| `circuit` | `Circuit` | The constructed `Circuit` object. |
 
 ## Implementation Architecture
 
 `DiscreteLogAlgorithm` in `algorithm.py` structures the DLP algorithm into five ordered stages within `run()`, using a matrix-based modular multiplication oracle and a multi-step classical post-processing routine.
 
-**`run(g, y, P, backend, algo_dir)` — Five Stages:**
+**`run(g, y, P, backend, device, dtype)` — Five Stages:**
 
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Setup | Validates `gcd(g,P)==1` and `gcd(y,P)==1`; sets `n_count = 2*P.bit_length()`, `n_work = P.bit_length()` | Determines register sizes sufficient for continued-fraction accuracy |
-| 2 — Circuit Construction | Creates three registers `reg_a`, `reg_b`, `reg_work`; H on reg_a/reg_b; X on work[0] to set $|1\rangle$; controlled $g^{2^i} \bmod P$ via `qc.unitary()` for each reg_a bit; controlled $(y^{-1})^{2^j} \bmod P$ for each reg_b bit; appends `IQFT(n_count)` to both registers | Full DLP QPE circuit |
-| 3 — Simulation | `qc.execute()` → `State.calculate_state(range(2*n_count))` | Extracts probability distribution over reg_a ⊗ reg_b (marginalizing over work register) |
+| 2 — Circuit Construction | Creates three registers `reg_a`, `reg_b`, `reg_work`; H on reg_a/reg_b; X on work[0] to set $|1\rangle$; controlled $g^{2^i} \bmod P$ via `gs.unitary()` for each reg_a bit; controlled $(y^{-1})^{2^j} \bmod P$ for each reg_b bit; appends `IQFT(n_count)` to both registers | Full DLP QPE circuit |
+| 3 — Simulation | `gs.execute(backend=backend, device=device, dtype=dtype)` → `res_vec.calculate_state(range(2*n_count))` | Extracts probability distribution over reg_a ⊗ reg_b (marginalizing over work register) |
 | 4 — Classical Post-Processing | Calls `_classical_post_processing(probs_dict, g, y, P, n_count, N_size)` | Full continued-fractions + congruence solver |
-| 5 — Export | `qc.draw(filename=..., title=...)` | Saves SVG circuit diagram |
+| 5 — Export | `self.save_circuit(gs)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
 
 **Helper Methods:**
 
@@ -103,11 +117,11 @@ print(result['plot'])          # ASCII result panel
   3. Applies `Fraction(u, N_size).limit_denominator(P)` to get candidate `(s_base, r_base)`.
   4. Searches multiples of `r_base` to find the true group order `r` where `g^r ≡ 1 (mod P)`.
   5. Computes `target = round(v * r / N_size)` and solves $sx \equiv -\text{target} \pmod{r}$ via modular inverse, checking all solutions in the coset.
-- **`_update_last_result` / `_build_return`** — Store runtime fields and package result dict.
+- **`_build_return_dict(is_success, circuit_path, filename, gs)`** — Packages the result dictionary returned by `run()`, including `status` (`'ok'`/`'failed'`), `circuit_path`, `plot` (list of file dicts), `circuit`, and the output fields `Found x`, `Detected period r`, and `Computation time (s)` merged from `self.output`.
 
 **Register address translation:** The `get_p(reg_slice)` inline function inside `run()` translates named register slices into flat qubit indices by adding the appropriate offset (`0` for reg_a, `n_count` for reg_b, `2*n_count` for reg_work).
 
-**Data flow:** `(g, y, P)` → register + oracle construction → `execute()` → `State.calculate_state()` → `_classical_post_processing()` → `found_x` → `_build_return()`.
+**Data flow:** `(g, y, P)` → register + oracle construction → `gs.execute()` → `res_vec.calculate_state()` → `_classical_post_processing()` → `found_x` → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
 Both reg_A and reg_B are placed in uniform superposition:
@@ -172,9 +186,12 @@ from unitarylab_algorithms import DiscreteLogAlgorithm
 # Solve 3^x ≡ 6 (mod 7): answer is x=3 since 3^3=27=3*7+6
 algo = DiscreteLogAlgorithm()
 result = algo.run(g=3, y=6, P=7, backend='torch')
-print(f"x = {result['found_x']}")   # Expected: 3
-print(f"Verify: 3^3 mod 7 = {pow(3, 3, 7)}")  # Should be 6
-print(result['plot'])
+print(f"x = {result['Found x']}")                    # Expected: 3
+print(f"Status: {result['status']}")                  # 'ok' on success, 'failed' on failure
+print(f"Period r: {result['Detected period r']}")     # Detected group order
+print(f"Time: {result['Computation time (s)']} s")    # Simulation time
+print(f"Verify: 3^3 mod 7 = {pow(3, 3, 7)}")        # Should be 6
+print(result.get('plot', []))  # [{"format": "txt", "filename": "..."}]
 ```
 
 ## Implementing Your Own Version
@@ -186,7 +203,7 @@ Below is a skeleton that reconstructs the discrete-log quantum circuit at the co
 import math
 from fractions import Fraction
 import numpy as np
-from unitarylab.core import Circuit, Register, State
+from unitarylab import Circuit, Register
 from unitarylab.library import IQFT
 
 def modular_matrix(mult: int, P: int, n_work: int) -> np.ndarray:
@@ -198,8 +215,7 @@ def modular_matrix(mult: int, P: int, n_work: int) -> np.ndarray:
         U[y, x] = 1.0
     return U.astype(complex)
 
-def build_dlp_circuit(g: int, y: int, P: int, n_count: int, n_work: int,
-                       backend: str = 'torch') -> Circuit:
+def build_dlp_circuit(g: int, y: int, P: int, n_count: int, n_work: int) -> Circuit:
     """
     Two-register QPE circuit for DLP g^x = y mod P.
     Register a (counts a): controlled g^{2^i} mod P
@@ -210,7 +226,7 @@ def build_dlp_circuit(g: int, y: int, P: int, n_count: int, n_work: int,
     ra = Register('a', n_count)
     rb = Register('b', n_count)
     rw = Register('w', n_work)
-    qc = Circuit(ra, rb, rw, backend=backend)
+    qc = Circuit(ra, rb, rw, name='DLP_circuit')
 
     # Offset helpers to get flat qubit indices
     a_off, b_off, w_off = 0, n_count, 2 * n_count
@@ -234,34 +250,36 @@ def build_dlp_circuit(g: int, y: int, P: int, n_count: int, n_work: int,
                    range(w_off, w_off + n_work), b_off + j, '1')
 
     # 4. IQFT on both counting registers
-    qc.append(IQFT(n_count, backend=backend), range(a_off, a_off + n_count))
-    qc.append(IQFT(n_count, backend=backend), range(b_off, b_off + n_count))
+    qc.append(IQFT(n_count), range(a_off, a_off + n_count))
+    qc.append(IQFT(n_count), range(b_off, b_off + n_count))
     return qc
 
-def solve_dlp(g: int, y: int, P: int, backend: str = 'torch'):
+def solve_dlp(g: int, y: int, P: int, backend: str = 'torch', device: str = 'cpu'):
     """Quantum DLP: find x such that g^x = y mod P."""
     if math.gcd(g, P) != 1 or math.gcd(y, P) != 1:
         raise ValueError('g and y must be coprime to P')
     n_work  = P.bit_length()
     n_count = 2 * n_work
 
-    qc = build_dlp_circuit(g, y, P, n_count, n_work, backend)
-    sv = qc.execute()
-    meas_full = State(sv).measure(range(2 * n_count), endian='little')
+    qc = build_dlp_circuit(g, y, P, n_count, n_work)
+    res_vec = qc.execute(backend=backend, device=device, dtype=np.complex128)
+    probs_dict = res_vec.calculate_state(range(2 * n_count))
 
-    # Extract a and b
-    raw_a = int(meas_full[:n_count], 2)
-    raw_b = int(meas_full[n_count:], 2)
-
-    phase_a = raw_a / (2**n_count)
-    phase_b = raw_b / (2**n_count)
-    r = Fraction(phase_a).limit_denominator(P).denominator
-    if r == 0:
-        return None
-    # x = (b/r_b) / (a/r_a) mod (P-1) via CRT
-    for x in range(P - 1):
-        if pow(g, x, P) == y:
-            return x
+    # Sort by probability and post-process
+    sorted_probs = sorted(probs_dict.items(), key=lambda item: item[1]['prob'], reverse=True)
+    for bitstring, data in sorted_probs:
+        if data['prob'] < 0.02:
+            continue
+        u_bin, v_bin = bitstring[n_count:], bitstring[:n_count]
+        u, v = int(u_bin, 2), int(v_bin, 2)
+        if u == 0:
+            continue
+        frac = Fraction(u, 2**n_count).limit_denominator(P)
+        r = frac.denominator
+        if r and pow(g, r, P) == 1:
+            for x in range(r):
+                if pow(g, x, P) == y:
+                    return x
     return None
 ```
 
@@ -382,6 +400,6 @@ print(result)
 ## Debugging Tips
 
 1. **Simulation is slow**: Qubit count is $5\lfloor\log_2 P\rfloor$; exponential in bits. Keep $P$ small ($P=7$, $11$, $13$).
-2. **`found_x` is `None`**: The continued fractions step failed to extract a valid period. Re-run (the algorithm is probabilistic) or increase $n_{\text{count}}$.
+2. **`Found x` is `None`**: The continued fractions step failed to extract a valid period. Re-run (the algorithm is probabilistic) or increase $n_{\text{count}}$.
 3. **`g` and `y` not coprime to `P`**: Will raise `ValueError`. Ensure $\gcd(g, P) = \gcd(y, P) = 1$.
 4. **Wrong answer**: The quantum measurement gives the correct answer with high probability but not certainty. The classical post-processing verifies correctness; if wrong, retry.
