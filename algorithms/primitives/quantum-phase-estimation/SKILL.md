@@ -51,7 +51,7 @@ U.s(0)   # S gate has phase e^{i*pi/2} = e^{2pi*i*0.25}
 prepare_psi = Circuit(1, name="prep_1", backend='torch')
 prepare_psi.x(0)   # |0> -> |1>
 
-algo = QPEAlgorithm()
+algo = QPEAlgorithm()          # algo_dir can be set here; defaults to results/
 result = algo.run(
     U=U,
     d=4,                       # 4-bit phase precision (1/16 = 0.0625)
@@ -59,20 +59,30 @@ result = algo.run(
     backend='torch'
 )
 
-print(result['estimated_phase'])        # Should be ~0.25
-print(result['confidence_probability'])      # Probability of the best state
-print(result['circuit_path'])   # SVG circuit diagram path
+print(result['Estimated phase'])         # Should be ~0.25
+print(result['Best phase probability'])  # Probability of the best state
+print(result['circuit_path'])            # SVG circuit diagram path
 ```
 
 ## Core Parameters Explained
+
+**`QPEAlgorithm.__init__` parameters:**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `text_mode` | `str` | `'plain'` | Output text mode. |
+| `algo_dir` | `str` or `None` | `None` | Directory for saved outputs. Defaults to `results/<category>/<algo>/`. |
+
+**`run()` parameters:**
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `U` | `Circuit` | required | Unitary operator whose phase is to be estimated. |
 | `d` | `int` | required | Number of phase-register qubits. Precision is $1/2^d$. |
 | `prepare_target` | `Circuit` or `None` | `None` | Circuit preparing the eigenstate $\|\psi\rangle$. Defaults to $\|0\rangle$ if `None`. |
-| `backend` | `str` | `'torch'` | Simulation backend. Forces `'torch'`. |
-| `algo_dir` | `str` or `None` | `None` | Directory to save SVG circuit diagram. |
+| `backend` | `str` | `'torch'` | Simulation backend. |
+| `device` | `str` | `'cpu'` | Hardware device for simulation. |
+| `dtype` | dtype | `np.complex128` | Numerical precision for simulation. |
 
 **Common misunderstandings:**
 - `d` determines precision: to resolve $\phi$ to accuracy $\epsilon$, use $d \geq \lceil \log_2(1/\epsilon) \rceil$.
@@ -83,42 +93,45 @@ print(result['circuit_path'])   # SVG circuit diagram path
 
 | Key | Type | Description |
 |---|---|---|
-| `estimated_phase` | `float` | Estimated phase as a decimal in $[0, 1)$. |
-| `confidence_probability` | `float` | the `brest_prob`, Probability of the best-fit phase bit-string. |
-| `circuit` | `Circuit` | The full QPE circuit object. |
+| `status` | `str` | `'ok'` on success, `'failed'` on error. |
 | `circuit_path` | `str` | Path to the saved SVG circuit diagram. |
-| `message` | `str` | Summary with estimated phase value. |
-| `plot` | `str` | ASCII art result panel. |
+| `plot` | `list[dict]` | List of saved output files, each `{"format": str, "filename": str}`. |
+| `circuit` | `Circuit` | The full QPE circuit object. |
+| `Estimated phase` | `float` | Estimated phase as a decimal in $[0, 1)$. |
+| `Best phase bit string` | `str` | Binary string of the most-probable phase register measurement. |
+| `Best phase probability` | `float` | Probability of the best-fit phase bit-string. |
+| `Computation time (s)` | `float` | Wall-clock time of the statevector simulation. |
+| `Phase probabilities` | `list` | Top-3 `(bits, prob)` pairs from the phase register distribution. |
 
 ## Implementation Architecture
 
 `QPEAlgorithm` in `algorithm.py` splits the implementation into `run()` (the five-stage orchestrator) and `build_qpe_circuit()` (a reusable, exportable circuit builder).
 
-**`run(U, d, prepare_target, backend, algo_dir)` — Five Stages:**
+**`run(U, d, prepare_target, backend, device, dtype)` — Five Stages:**
 
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Setup | Extracts `n_target`, computes `total_qubits = d + n_target` | Establishes qubit layout: phase (`d` qubits) + target (`n_target` qubits) |
-| 2 — Circuit Construction | Calls `self.build_qpe_circuit(U, d, prepare_target, backend=backend)` | Delegates all circuit building to the reusable helper |
-| 3 — Simulation | `qc.execute()` → `np.asarray(final_state)` → `State(state_arr)` | Runs statevector simulation; wraps result in a `State` object |
-| 4 — Phase Extraction | `state_obj.probabilities_dict(phase_qubits, endian='little', threshold=1e-8)` → picks best bit-string → `phi_est = int(bits,2) / 2^d` | Marginalizes target register; converts binary readout to decimal phase |
-| 5 — Export | `qc.draw(filename=..., title=...)` | Saves SVG circuit diagram |
+| 2 — Circuit Construction | Calls `self.build_qpe_circuit(U, d, prepare_target)` | Delegates all circuit building to the reusable helper |
+| 3 — Simulation | `gs.execute(backend, device, dtype)` → `final_state` | Runs statevector simulation and returns the final state object directly |
+| 4 — Phase Extraction | `final_state._phase_probabilities_from_state(phase_qubits, endian='little', threshold=1e-8)` → picks best bit-string → `phi_est = int(best_bits_str, 2) / (2 ** d)` | Marginalizes target register; converts binary readout to decimal phase |
+| 5 — Export | `self.save_circuit(gs)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
 
 **`build_qpe_circuit(U, d, prepare_target, backend)` — Reusable Circuit Builder:**
 
 This method is the core algorithmic component, designed to be called by other algorithms (e.g., HHL, QAE). It builds the circuit in four sub-steps:
 
-1. If `prepare_target` is provided, appends it to the target register (`target_qubits = range(d, d+n_target)`).
-2. Applies Hadamard to all `d` phase qubits (`phase_qubits = range(d)`).
-3. Loops `k = 0..d-1`: builds `cU = U.control(1, '1')` and applies it `2^k` times controlled by `phase_qubits[k]`.
-4. Appends `IQFT(d, backend=backend)` from `unitarylab.library` to the phase register.
+1. If `prepare_target` is provided, appends it to the target register (`target_qubits = list(range(d, d+n_target))`).
+2. Applies Hadamard to all `d` phase qubits (`phase_qubits = list(range(d))`).
+3. Loops `k = 0..d-1`: calls `gs.append(U.repeat(2**k), target=target_qubits, control=phase_qubits[k], control_state='1')` to apply controlled $U^{2^k}$.
+4. Appends `IQFT(d)` from `unitarylab.library` to `phase_qubits`.
 
 **Helper Methods:**
 
-- **`_update_last_result` / `_build_return`** — Store runtime fields and package result dict with ASCII panel.
-- `State.probabilities_dict(phase_qubits, endian='little', threshold=...)` — called in Stage 4 to extract phase register marginals from the full statevector.
+- **`update_output` / `_build_return_dict`** — Store runtime output fields and package the final result dict.
+- `final_state._phase_probabilities_from_state(phase_qubits, endian='little', threshold=...)` — called in Stage 4 to extract phase register marginals from the full statevector.
 
-**Data flow:** `U` → `build_qpe_circuit()` → `Circuit` → `execute()` → `State.probabilities_dict()` → `phi_est` → `_build_return()`.
+**Data flow:** `U` → `build_qpe_circuit()` → `Circuit` → `execute()` → `_phase_probabilities_from_state()` → `phi_est` → `_build_return_dict()`.
 
 **Note:** `build_qpe_circuit()` can be called directly without `run()` to obtain the `Circuit` for embedding in a parent algorithm.
 
@@ -150,11 +163,11 @@ The iQFT transforms the phase-encoded register to: if $\phi = k_0/2^d$ exactly, 
 | Controlled $U^{2^k}$ | `cU = U.control(1, '1')` repeated `2^k` times per phase qubit `k` |
 | Inverse QFT | `IQFT(d, backend)` from `unitarylab.library`, appended to `phase_qubits` |
 | Phase readout $\phi = k_0/2^d$ | `int(best_bits_str, 2) / (2 ** d)` in Stage 4 |
-| Probability of best phase | `best_prob = sorted_phases[0][1]` from `state_obj.probabilities_dict()` |
+| Probability of best phase | `best_prob = sorted_phases[0][1]` from `final_state._phase_probabilities_from_state()` |
 | Phase precision $\delta\phi = 1/2^d$ | Implicit: determined by number of bits `d` in phase register |
 | Subroutine for HHL / QAE | `build_qpe_circuit()` returns a standalone `Circuit` embeddable externally |
 
-**Notes on encapsulation:** The iQFT is sourced from `unitarylab.library.IQFT` rather than constructed inline, unlike the amplitude estimation implementation which builds it locally. The controlled-unitary power is realized by looping `2^k` repetitions of `cU`, not by general unitary exponential; this is correct but exponentially expensive in `d`. The `endian='little'` argument in `probabilities_dict()` ensures the least-significant bit is on the left, consistent with the register ordering.
+**Notes on encapsulation:** The iQFT is sourced from `unitarylab.library.IQFT` rather than constructed inline, unlike the amplitude estimation implementation which builds it locally. The controlled-unitary power is realized via `U.repeat(2**k)` passed to `gs.append(..., control=phase_qubits[k], control_state='1')`, which is correct but exponentially expensive in `d`. The `endian='little'` argument in `_phase_probabilities_from_state()` ensures the least-significant bit is on the left, consistent with the register ordering.
 
 ## Mathematical Deep Dive
 $$|0\rangle^d|\psi\rangle \rightarrow \frac{1}{\sqrt{2^d}}\sum_{j=0}^{2^d-1} e^{2\pi i\phi j}|j\rangle|\psi\rangle$$
@@ -185,8 +198,9 @@ prepare_psi.x(0)  # |1> is eigenstate of T with phase pi/4
 algo = QPEAlgorithm()
 result = algo.run(U=U, d=6, prepare_target=prepare_psi, backend='torch')
 
-print(f"Estimated phi = {result['estimated_phase']:.6f}")  # Expected ≈ 0.125
-print(f"Best probability = {result['confidence_probability']:.4f}")
+print(f"Estimated phi = {result['Estimated phase']:.6f}")  # Expected ≈ 0.125
+print(f"Best probability = {result['Best phase probability']:.4f}")
+print(f"Status = {result['status']}")
 ```
 
 ## Reference Implementation (Qiskit)
@@ -319,31 +333,30 @@ Official reference:
 from unitarylab.core import Circuit
 from unitarylab.library import IQFT
 
-def qpe_circuit(U: Circuit, d: int, prepare_target=None, backend='torch'):
+def qpe_circuit(U: Circuit, d: int, prepare_target=None):
     n_target = U.get_num_qubits()
-    qc = Circuit(d + n_target, backend=backend)
-    phase = list(range(d))
-    target = list(range(d, d + n_target))
+    qc = Circuit(d + n_target, name=f"QPE_d{d}")
+    phase_qubits = list(range(d))
+    target_qubits = list(range(d, d + n_target))
 
     if prepare_target is not None:
-        qc.append(prepare_target, target)
+        qc.append(prepare_target, target_qubits)
 
-    for q in phase:
+    for q in phase_qubits:
         qc.h(q)
 
-    cU = U.control(1)
     for k in range(d):
-        for _ in range(2 ** k):
-            qc.append(cU, target + [phase[k]])
+        power = 2 ** k
+        qc.append(U.repeat(power), target=target_qubits, control=phase_qubits[k], control_state='1')
 
-    qc.append(IQFT(d, backend=backend), phase)
+    qc.append(IQFT(d), phase_qubits)
     return qc
 ```
 
 ## Debugging Tips
 
 1. **Wrong phase estimate**: Check that `prepare_target` actually prepares an eigenstate of `U`. If the initial state is a superposition of eigenstates, QPE will show multiple peaks.
-2. **Phase not in $[0, 1)$**: The output `estimated_phase = int(best_bits, 2) / 2^d` is always in $[0, 1)$ by construction; no folding needed for QPE (unlike QAE).
+2. **Phase not in $[0, 1)$**: The output `result['Estimated phase'] = int(best_bits_str, 2) / (2 ** d)` is always in $[0, 1)$ by construction; no folding needed for QPE (unlike QAE).
 3. **Precision insufficient**: Increase `d`. Each additional bit doubles the resolution.
 4. **Gate count explodes**: $U^{2^{d-1}}$ is applied up to $2^{d-1}$ times. For deep $U$, use matrix exponentiation to build $U^{2^k}$ directly.
 5. **IQFT sign convention**: The unitarylab's `IQFT` matches the standard convention. Do not swap QFT and IQFT orders.

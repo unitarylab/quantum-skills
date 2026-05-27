@@ -4,9 +4,9 @@ Compares classical Schrodingerization solver with Trotter quantum circuit.
 """
 
 import numpy as np
-from unitarylab.library import schro_classical, schro_trotter
-from unitarylab.library.differential_operator import TDiff
-from unitarylab.library.differential_operator.classical_matrices import (
+from unitarylab.library.equation.schrodingerization import schro_classical, schro_trotter
+from unitarylab.library.equation.differential_operator import TDiff
+from unitarylab.library.equation.differential_operator.classical_matrices import (
     first_order_derivative,
     matrix_exponential,
 )
@@ -46,9 +46,9 @@ def main():
 
     # --- Method 2: Trotter quantum circuit ---
     dt_trotter = T / Nt
-    tdiff = a * TDiff(nx, dx, order=1, scheme="central", boundary="dirichlet")
-    func1, func2 = tdiff.data()
-    H1 = func1(dt_trotter / R)
+    # central scheme: H1 is None (already unitary), H2 from first-order derivative
+    H1 = None
+    func2 = (a * TDiff(nx, dx, 1, boundary="dirichlet")).data()[1]
     H2 = func2(dt_trotter)
 
     u_trot, qc = schro_trotter(

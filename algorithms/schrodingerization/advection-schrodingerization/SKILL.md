@@ -161,17 +161,22 @@ The Schrödingerization framework can be referred to in './Schr_skills.markdown'
 #### (A) Classical Schrödinger Solver
 
 ```python
-from unitarylab.library import schro_classical
-u = schro_classical(
-    A,
-    u0,
-    T=T,
-    na=na,
-    R=R,
-    order=order,
-    point=point,
-    b=b
+from unitarylab.library.equation.schrodingerization import schro_classical as schro
+from unitarylab.library.equation.schrodingerization import circuit_classical
+from unitarylab.library.equation.differential_operator.classical_matrices import first_order_derivative
+
+# Build derivative operator and system matrices
+A0, b0 = first_order_derivative(
+    N=Nx, dx=dx,
+    boundary_condition=bd, scheme=scheme,
+    g1=eq.boundary.left_value, g2=eq.boundary.right_value
 )
+A = A0 * a
+b = b0 * a
+
+# Solve and obtain circuit structure
+u = schro(A, u0, T=T, na=na, R=R, order=order, point=point, b=b)
+qc = circuit_classical(nx, na)
 ```
 
 ------
@@ -190,18 +195,35 @@ e^{-iHt}
 $$
 
 ```python
-from unitarylab.library import schro_trotter
+from unitarylab.library.equation.schrodingerization import schro_trotter as schro
+from unitarylab.library.equation.differential_operator import TDiff
+from unitarylab.library.equation.differential_operator.classical_matrices import first_order_derivative as first_order_derivative_classical
+
+# Build boundary term
+A0, b0 = first_order_derivative_classical(
+    N=Nx, dx=dx,
+    boundary_condition=bd, scheme=scheme,
+    g1=eq.boundary.left_value, g2=eq.boundary.right_value
+)
+b = b0 * a
+b = b * T if T > 1 else b
+theta = 1 / T if T > 1 else 1
+
+# Build Hamiltonian components
+if scheme == 'upwind':
+    func1 = (abs(a) * TDiff(nx, dx, 2, boundary=bd)).data()[0]
+    H1 = func1(dt / R)
+elif scheme == 'central':
+    H1 = None
+func2 = (a * TDiff(nx, dx, 1, boundary=bd)).data()[1]
+H2 = func2(dt)
+
+# Execute Trotter evolution
 u, qc = schro(
-    u0=u0,
-    H1=H1,
-    H2=H2,
-    Nt=Nt,
-    na=na,
-    R=R,
-    order=order,
-    point=point,
-    b=b,
-    theta=theta
+    u0=u0, H1=H1, H2=H2,
+    Nt=Nt, na=na, R=R,
+    order=order, point=point,
+    b=b, theta=theta * dt
 )
 ```
 
@@ -209,13 +231,43 @@ u, qc = schro(
 
 ### 7. Output Generation
 
-Agent must return:
+After solving, populate `self.output` with result data, then call `_build_return_dict()` to assemble the return value:
 
-- Numerical solution $u(x,T)$
-- Grid information $(x, \Delta x)$
-- Hamiltonian structure
-- (Optional) quantum circuit $qc$
-- Visualization-ready data
+```python
+# Store solution data into self.output (merged into return dict automatically)
+self.output.update({
+    "message": "Advection equation solved",
+    "grid": {"n_points": Nx, "dx": dx},
+    "x": x.tolist(),
+    "u": u.tolist(),
+})
+
+# Generate plots and circuit diagrams
+name = f"1D_Advection_Classical_nx={nx}_na={na}_T={T}"
+solution_plot_path = self._generate_solution_plot(name, x, u)
+circuit_plot_paths = self._generate_circuit_plots(name, qc)
+
+# Build return dict using base class helper
+result = self._build_return_dict(
+    success=True,
+    circuit_path=circuit_plot_paths,
+    filepath=[solution_plot_path],
+    circuit=qc
+)
+```
+
+Return value keys (from `_build_return_dict`):
+
+| Key | Type | Description |
+|---|---|---|
+| `status` | `str` | `'ok'` or `'failed'` |
+| `circuit_path` | `list` | Paths to circuit diagram files |
+| `plot` | `list[dict]` | `[{"format": "svg", "filename": ...}]` |
+| `circuit` | object | Circuit object (`qc`) |
+| `message` | `str` | Human-readable result message (from `self.output`) |
+| `grid` | `dict` | `{"n_points": Nx, "dx": dx}` — spatial grid info (from `self.output`) |
+| `x` | `list` | Grid point coordinates (from `self.output`) |
+| `u` | `list` | Solution values $u(x,T)$ (from `self.output`) |
 
 ------
 

@@ -52,10 +52,11 @@ result = algo.run(
     backend='torch'
 )
 
-print(result['estimated_amplitude'])  # Estimated probability p
-print(result['phi'])                  # Estimated phase phi
-print(result['histogram'])            # Phase register measurement histogram
+print(result['Target amplitude'])     # Estimated probability p
+print(result['Phase'])                # Estimated phase phi
+print(result['Most likely phase (bits)'])  # Best phase register bit-string
 print(result['circuit_path'])         # SVG circuit diagram path
+print(result['plot'])                 # List of saved output file dicts
 ```
 
 ## Core Parameters Explained
@@ -65,39 +66,48 @@ print(result['circuit_path'])         # SVG circuit diagram path
 | `U` | `Circuit` | required | State preparation circuit on data qubits (no ancilla). |
 | `good_zero_qubits` | `List[int]` | required | Indices of qubits that must be $|0\rangle$ to define the good state. |
 | `d` | `int` | `6` | Number of qubits in the phase register. Precision scales as $\delta a \approx \pi/2^d$. |
-| `backend` | `str` | `'torch'` | Simulation backend. Implementation forces `'torch'`. |
-| `algo_dir` | `str` or `None` | `None` | Directory to save circuit diagram. |
+| `backend` | `str` | `'torch'` | Simulation backend. |
+| `device` | `str` | `'cpu'` | Device for simulation (e.g. `'cpu'` or `'cuda'`). |
+| `dtype` | `dtype` | `np.complex128` | Numerical dtype for the statevector simulation. |
+
+`AmplitudeEstimationAlgorithm(text_mode='plain', algo_dir=None)` — constructor parameters:
+- `text_mode`: Output formatting style (`'plain'` or `'legacy'`).
+- `algo_dir`: Directory for saving results; auto-derived from cwd if `None`.
 
 **Common misunderstandings:**
 - `d` controls precision, not the number of Grover iterations. Larger `d` means more controlled-$Q$ applications in QPE.
 - The total qubit count is `d + n_data + 1` (phase + data + Grover ancilla).
-- `estimated_amplitude` is $\sin^2(\pi\phi)$; do not confuse the phase $\phi$ with the amplitude.
+- `result['Target amplitude']` is $\sin^2(\pi\phi)$; do not confuse the phase $\phi$ with the amplitude.
 
 ## Return Fields
 
+The result dict is built by `_build_return_dict(success, circuit_path, filepath, circuit)` and contains:
+
 | Key | Type | Description |
 |---|---|---|
-| `status` | `str` | Always `'success'`. |
-| `estimated_amplitude` | `float` | Estimated success probability $\hat{a} = \sin^2(\pi\phi)$. |
-| `phi` | `float` | Estimated phase $\phi \in [0, 0.5]$ after folding. |
-| `histogram` | `dict` | Bit-string → probability for phase register measurements. |
+| `status` | `str` | `'ok'` on success, `'failed'` otherwise. |
 | `circuit_path` | `str` | Path to the saved SVG circuit diagram. |
-| `message` | `str` | Summary including best phase bit-string and estimated $\hat{a}$. |
-| `plot` | `str` | ASCII art result panel. |
+| `plot` | `list[dict]` | List of saved output files: each entry has `'format'` (file extension) and `'filename'` (full path). |
+| `circuit` | `Circuit` | The QPE circuit object. |
+| `Target amplitude` | `float` | Estimated success probability $\hat{a} = \sin^2(\pi\phi)$. |
+| `Phase` | `float` | Estimated phase $\phi \in [0, 0.5]$ after folding. |
+| `Most likely phase (bits)` | `str` | Bit-string of the highest-probability phase register measurement. |
+| `Computation time (s)` | `float` | Wall-clock seconds for the quantum simulation step. |
+| `Total qubits` | `int` | Total qubit count: `d + n_data + 1`. |
 
 ## Implementation Architecture
 
 `AmplitudeEstimationAlgorithm` in `algorithm.py` organizes the QAE algorithm into five ordered stages within `run()`, plus a set of self-contained quantum-circuit building helpers.
 
-**`run(U, good_zero_qubits, d, backend, algo_dir)` — Five Stages:**
+**`run(U, good_zero_qubits, d, backend, device, dtype)` — Five Stages:**
 
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Setup | Computes `n_data`, sets `total_qubits = d + n_data + 1` | Establishes register layout: phase (`d` qubits) + data (`n_data` qubits) + Grover ancilla (1 qubit) |
 | 2 — Circuit Construction | Builds `prepare` (data init), calls `_grover_operator_from_zero_oracle(U, good_zero_qubits)` to get `G`, then calls `_qpe_circuit(G, d, prepare)` | Assembles the complete QPE circuit around the Grover operator |
-| 3 — Simulation | `qpe_circ.execute()` → `np.asarray(state)` → `_phase_histogram(statevector, d)` | Runs statevector simulation; extracts phase register probability histogram |
-| 4 — Classical Post-Processing | Reads top bit-string; computes `phi_raw = int(bits, 2) / 2^d`; folds to `[0, 0.5]`; computes `est_amp = sin²(π·φ)` | Converts QPE phase readout back to amplitude estimate |
-| 5 — Export | `qpe_circ.draw(filename=..., title=...)` | Saves SVG circuit diagram |
+| 3 — Simulation | `qpe_circ.execute(backend, device, dtype)` → `.state` → `np.asarray(state)` → `_phase_histogram(statevector, d)` | Runs statevector simulation; extracts phase register probability histogram |
+| 4 — Classical Post-Processing | Reads top bit-string; computes `phi_raw = int(bits, 2) / 2^d`; folds to `[0, 0.5]`; computes `est_amp = sin²(π·φ)`; calls `update_output()` | Converts QPE phase readout back to amplitude estimate; stores output fields |
+| 5 — Export | `save_circuit(qpe_circ)` + `save_txt()` → `_build_return_dict(True, circuit_path, filename, qpe_circ)` | Saves SVG circuit diagram and text report; assembles return dict |
 
 **Helper Methods:**
 
@@ -107,9 +117,9 @@ print(result['circuit_path'])         # SVG circuit diagram path
 - **`_phase_oracle_all_zeros(qc, zero_qubits, ancilla)`** — Phase-kickback oracle: prepares ancilla in $|-\rangle$, X-flips `zero_qubits`, applies MCX, unflips, unprepares ancilla. Same as amplitude amplification's oracle.
 - **`_diffusion_about_prepared_state(qc, U, data_qubits, ancilla)`** — Applies `U†`, calls `_phase_oracle_all_zeros` on all data qubits, applies `U`. Same as amplitude amplification's diffuser.
 - **`_phase_histogram(statevector, d)`** — Marginalizes the full statevector over the non-phase qubits by grouping indices `idx % 2^d` and summing probabilities. Returns a sorted dict of bit-string → probability.
-- **`_update_last_result` / `_build_return`** — Store all runtime fields in `self.last_result` and package the result dict with the ASCII panel.
+- **`_build_return_dict(success, circuit_path, filepath, circuit)`** — Assembles the final result dict. Sets `status` to `'ok'`/`'failed'`, wraps file paths into `plot` (list of `{'format': ext, 'filename': path}` dicts), attaches the `circuit` object, and merges all `self.output` fields via `update_output()`.
 
-**Data flow:** `U` + `good_zero_qubits` → `_grover_operator_from_zero_oracle()` → `G` → `_qpe_circuit()` → `qpe_circ` → `execute()` → `_phase_histogram()` → `est_amp` → `_build_return()`.
+**Data flow:** `U` + `good_zero_qubits` → `_grover_operator_from_zero_oracle()` → `G` → `_qpe_circuit()` → `qpe_circ` → `execute()` → `_phase_histogram()` → `est_amp` → `update_output()` → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
 
@@ -150,7 +160,7 @@ $$\hat{a} = \sin^2(\pi\phi)$$
 | Grover operator $Q$ | `_grover_operator_from_zero_oracle(U, good_zero_qubits)` → returns `G` as a `Circuit` |
 | Global phase correction $(-1)$ | X-kick on ancilla appended at end of `_grover_operator_from_zero_oracle` |
 | QPE phase register ($d$ bits) | `phase = list(range(d))` in `_qpe_circuit()`; Hadamard applied to all `d` bits |
-| Controlled $Q^{2^k}$ applications | Inner loop `for _ in range(2**k): qc.append(cU, ...)` in `_qpe_circuit()` |
+| Controlled $Q^{2^k}$ applications | `gs.append(U.repeat(2**k), target=target, control=phase[k], control_state='1')` in `_qpe_circuit()` |
 | Inverse QFT (iQFT) | `_iqft_circuit(d)` — appended to phase qubits in `_qpe_circuit()` |
 | Phase readout $\phi$ | `phi_raw = int(best_bits, 2) / 2^d`; folded to `[0, 0.5]` |
 | Amplitude formula $\hat{a} = \sin^2(\pi\phi)$ | `est_amp = float(np.sin(np.pi * phi) ** 2)` |
@@ -189,9 +199,11 @@ algo = AmplitudeEstimationAlgorithm()
 result = algo.run(U=U, good_zero_qubits=[0], d=8, backend='torch')
 
 print(f"True p = {np.cos(theta)**2:.6f}")
-print(f"QAE estimate = {result['estimated_amplitude']:.6f}")
-print(f"Phase phi = {result['phi']:.6f}")
-print(result['plot'])
+print(f"QAE estimate = {result['Target amplitude']:.6f}")
+print(f"Phase phi   = {result['Phase']:.6f}")
+print(f"Best bits   = {result['Most likely phase (bits)']}")
+print(f"Status      = {result['status']}")
+print(result['plot'])   # list of saved output file dicts
 ```
 ## Reference Implementation (Qiskit)
 
@@ -413,6 +425,6 @@ def qae_full(U, good_zero_qubits, d, backend='torch'):
 
 1. **Large estimation error**: Increase `d`. Each additional bit halves the phase resolution.
 2. **Histogram has many small peaks instead of one dominant peak**: This is expected for small `d`; increase `d` to sharpen the peak.
-3. **`estimated_amplitude` misses a factor**: Ensure the good state condition (all `good_zero_qubits` in $|0\rangle$) matches your circuit's actual target. A common mistake is using wrong qubit indices.
+3. **`result['Target amplitude']` misses a factor**: Ensure the good state condition (all `good_zero_qubits` in $|0\rangle$) matches your circuit's actual target. A common mistake is using wrong qubit indices.
 4. **Symmetric peaks**: The histogram may show two peaks at $\phi$ and $1-\phi$. The code folds both to the same estimate — this is correct behavior.
 5. **Circuit size scaling**: Total circuit depth scales as $O(2^d)$ due to QPE. For `d=10`, expect a deep circuit.

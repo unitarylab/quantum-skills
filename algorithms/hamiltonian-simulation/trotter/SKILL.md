@@ -45,7 +45,7 @@ You do not implement $e^{-i(H_1 + H_2 + \cdots + H_L)t}$ directly. Instead, you 
 After using this skill, you should be able to:
 1. Explain first-order versus even higher-order Suzuki formulas.
 2. Understand how order and steps change error and depth.
-3. Use the repository `SuzukiTrotterAlgorithm` class correctly for experiments.
+3. Use the repository `TrotterAlgorithm` class correctly for experiments.
 4. Extract the circuit from the result dictionary.
 5. Build reproducible comparisons across parameter sweeps.
 
@@ -68,25 +68,22 @@ After using this skill, you should be able to:
 ### Quick Start Example
 
 ```python
-from unitarylab_algorithms import SuzukiTrotterAlgorithm
+import numpy as np
+from unitarylab_algorithms.hamiltonian_simulation.trotter.algorithm import TrotterAlgorithm
 
-# 2-qubit Heisenberg-like Hamiltonian as grouped Pauli terms
-# Each group is a list of (pauli_string, coefficient) tuples
-grouped_paulis = [
-    [("ZI", 0.5), ("IZ", 0.5)],
-    [("XX", 0.3), ("YY", 0.3)],
-]
-total_time = 1.0
+# 2-qubit Heisenberg Hamiltonian as a numpy matrix
+H = np.array([[2.0, 1.0],
+              [1.0, 3.0]])
+t = 1.0
+error = 1e-8
 
-algo = SuzukiTrotterAlgorithm(order=2, reps=1)
-result = algo.run(
-    grouped_paulis=grouped_paulis,
-    total_time=total_time,
-    backend='torch',
-)
+algo = TrotterAlgorithm()
+result = algo.run(H=H, t=t, error=error, order=2, steps=1000, backend='torch')
 
-print("status:", result['status'])
-print(result.get('plot', ''))
+print("status:", result['status'])          # 'ok' on success
+print("circuit_path:", result['circuit_path'])
+print("output files:", result['plot'])      # list of {format, filename} dicts
+print("circuit:", result['circuit'])
 ```
 
 ### Core Parameters Explained
@@ -94,60 +91,74 @@ print(result.get('plot', ''))
 #### Constructor
 
 ```python
-class SuzukiTrotterAlgorithm:
-    def __init__(self, order: int = 1, reps: int = 1) -> None:
+class TrotterAlgorithm(BaseAlgorithm):
+    def __init__(self, text_mode: str = 'plain', algo_dir: str = None) -> None:
         ...
 ```
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `order` | `int` | `1` | Suzuki-Trotter order. Must be `1` or an even integer (`2,4,6,...`). |
-| `reps` | `int` | `1` | Number of repetitions of the Trotter step. |
+| `text_mode` | `str` | `'plain'` | Output text rendering mode (e.g. `'plain'`, `'legacy'`). |
+| `algo_dir` | `str\|None` | `None` | Directory for saving result files. Auto-derived from file path if `None`. |
 
 #### `run()` Parameters
 
 ```python
-def run(self, grouped_paulis, total_time, backend='torch', algo_dir=None):
+def run(self, H: np.ndarray, t: float, error: float,
+        order: int = 1, steps: int = 1000,
+        backend='torch', device='cpu', dtype=np.complex128):
     ...
 ```
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `grouped_paulis` | `List[List[Tuple[str, float]]]` | required | Hamiltonian as grouped Pauli terms. Each group is a list of `(pauli_string, coefficient)` tuples. |
-| `total_time` | `float` | required | Evolution time $t$ in $e^{-iHt}$. |
-| `backend` | `str` | `'torch'` | Simulation backend. |
-| `algo_dir` | `str\|None` | `None` | Output directory for circuit diagrams. |
+| `H` | `np.ndarray` | required | Hermitian Hamiltonian matrix (square). |
+| `t` | `float` | required | Total evolution time in $e^{-iHt}$. |
+| `error` | `float` | required | Target approximation error used to adaptively bound step count. |
+| `order` | `int` | `1` | Suzuki-Trotter order. Must be `1` or an even integer (`2,4,6,...`). |
+| `steps` | `int` | `1000` | Upper bound on number of Trotter steps; adaptive formula may reduce this further. |
+| `backend` | `str` | `'torch'` | Simulation backend for matrix computation. |
+| `device` | `str` | `'cpu'` | Device for the backend (e.g. `'cpu'`, `'cuda'`). |
+| `dtype` | | `np.complex128` | Numerical dtype for the evolution matrix. |
 
 ### Return Fields
 
 | Key | Type | Description |
 |---|---|---|
-| `status` | `str` | `'success'`. |
-| `circuit` | `Circuit` | The assembled Trotter circuit. |
-| `plot` | `str` | ASCII art result panel. |
+| `status` | `str` | `'ok'` on success, `'failed'` on error. |
+| `circuit_path` | `list` | Paths to saved circuit diagram files (`[trotter_full, trotter_slice]`). |
+| `plot` | `list` | List of `{"format": str, "filename": str}` dicts for all saved output files. |
+| `circuit` | `Circuit` | The fully assembled Trotter circuit (`qc`). |
+| `Approximate evolution matrix` | `np.ndarray` | $U_{\text{approx}} = $ Trotter-circuit unitary. |
+| `Exact evolution matrix` | `np.ndarray` | $U_{\text{exact}} = e^{-iHt}$ from `scipy.linalg.expm`. |
+| `Frobenius norm of error` | `float` | $\|U_{\text{approx}} - U_{\text{exact}}\|_F$. |
 
 ## Understanding the Core Components
 
-### 1) Constructor checks and adaptive step rule
+### 1) Input validation and adaptive step rule
 
-From `algorithms/trotter/trotter.py`:
+From `run()` in `algorithm.py`:
 
 ```python
-if order > 1 and order % 2 == 1:
-    raise ValueError("Order must be 1 or an even integer.")
-self.order = order
-self.alpha = np.linalg.norm(H, 2)
-self.steps = int(min(max(steps, 5**order * np.power(t * self.target_qubits * self.alpha, 1 + 1.0 / order) * np.power(target_error, -1.0 / order) * 1.5), 1e2))
+# _format_system validates: finite t, positive error, square Hermitian H,
+# pads dimension to next power-of-2 if needed.
+dim, H, n = self._format_system(H, t, error)
+alpha = np.linalg.norm(H, 2)
+steps = int(min(
+    5**order * np.power(t * n * alpha, 1 + 1.0 / order)
+              * np.power(error, -1.0 / order) * 1.5,
+    steps
+))
 ```
 
 Interpretation:
-1. Odd order above 1 is explicitly forbidden.
-2. The code uses spectral norm `alpha = ||H||_2`.
-3. Step count uses a heuristic tied to order, norm, time, qubits, and target error.
+1. `_format_system` enforces Hermiticity, finite `t`, positive `error`, and power-of-2 padding.
+2. Spectral norm `alpha = ||H||_2` drives the adaptive step formula.
+3. The adaptive formula upper-bounds the actual step count by the caller-supplied `steps`.
 
 ### 2) Suzuki recursion engine
 
-From `_recurse` in `algorithms/trotter/trotter.py`:
+From `_recurse` in `algorithm.py`:
 
 ```python
 if order == 1:
@@ -170,64 +181,65 @@ Interpretation:
 
 ### 3) Slice expansion and full-circuit assembly
 
-From `_expand` and `_run`:
+From `_expand` and `run()` in `algorithm.py`:
 
 ```python
-scaled_decomposition = [(p, c / self.steps) for p, c in decomposition]
-one_slice = self._recurse(self.order, scaled_decomposition)
+# _expand: scale coefficients by 1/steps, then recurse for one slice
+scaled_decomposition = [(p, c / steps) for p, c in decomposition]
+one_slice = self._recurse(order, scaled_decomposition)
 return one_slice
 ```
 
 ```python
-decomposition = self._pauli_decompose(self.H, self.t)
-sequence = self._expand(decomposition)
+# run(): decompose H*t, build slice circuit, repeat steps times
+decomposition = pauli_string_decomposition(H * t)
+sequence = self._expand(decomposition, order, steps)
 
 for pauli_str, angle in sequence:
     gate = pauli_string_evolution(pauli_str, angle)
-    qc.append(gate, range(self.target_qubits))
+    trotter.append(gate, range(n))
 
-self._circuit = qc.repeat(self.steps)
-self._evolution_result = self._circuit.get_matrix()
+qc = Circuit(reg, name='Trotter Decomposition')
+qc.append(trotter.repeat(steps), range(n))
+U_approx = qc.get_matrix(backend=backend, device=device, dtype=dtype)
 ```
 
 Interpretation:
-1. One slice uses coefficients divided by `steps`.
-2. Slice is then repeated by `qc.repeat(self.steps)`.
-3. Evolution matrix comes directly from the assembled gate sequence.
+1. `pauli_string_decomposition(H * t)` absorbs the time factor into the Pauli coefficients.
+2. One slice uses coefficients divided by `steps`; the slice circuit is `trotter`.
+3. The full circuit `qc` wraps `trotter.repeat(steps)` — one block repeated.
+4. Both circuits are saved: `trotter_full` (the repeated `qc`) and `trotter_slice` (`trotter`).
 
 ### 4) Notes on external package functions (brief)
 
-1. `_pauli_decompose` is inherited from `HamiltonianSimulationResult`; it handles banded-real optimization and generic decomposition.
-2. `pauli_string_evolution` builds the circuit for a single Pauli-string exponential.
-3. `total_error` is computed in the base class by comparing to `scipy.linalg.expm(-1j * H * t)`.
+1. `pauli_string_decomposition` (from `unitarylab.library.pauli_operator`) decomposes the matrix into Pauli strings with coefficients.
+2. `pauli_string_evolution` builds the circuit for a single Pauli-string exponential $e^{-i\theta P}$.
+3. Error is computed in `run()` as the Frobenius norm `norm(U_approx - expm(-1j * H * t), ord='fro')`.
 
 ## Hands-On Example: Hamiltonian Simulation
 
-Use a parameter sweep to visualize tradeoffs.
+Use a parameter sweep to compare orders.
 
 ```python
-from unitarylab_algorithms import SuzukiTrotterAlgorithm
+import numpy as np
+from unitarylab_algorithms.hamiltonian_simulation.trotter.algorithm import TrotterAlgorithm
 
-# 2-qubit Hamiltonian as grouped Pauli terms
-grouped_paulis = [
-    [("ZI", 0.5), ("IZ", -0.3)],
-    [("XX", 0.2), ("YY", 0.2), ("ZZ", 0.1)],
-]
+# 2-qubit Hamiltonian matrix
+H = np.array([[0.5 + 0.2,  0.3],
+              [0.3,       -0.5 + 0.1]])
 
 for order in [1, 2, 4]:
-    algo = SuzukiTrotterAlgorithm(order=order, reps=1)
-    result = algo.run(
-        grouped_paulis=grouped_paulis,
-        total_time=1.0,
-        backend='torch',
-    )
-    print(f"order={order}, status={result['status']}")
-    print(result.get('plot', ''))
+    algo = TrotterAlgorithm()
+    result = algo.run(H=H, t=1.0, error=1e-8, order=order, steps=1000, backend='torch')
+    frob_err = result['Frobenius norm of error']
+    print(f"order={order}, status={result['status']}, Frobenius error={frob_err:.2e}")
+    print("saved files:", result['plot'])
 ```
 
 What to look for:
-1. Higher order produces more complex circuits but better approximation.
-2. The `plot` field provides a summary of the decomposition.
+1. Higher order reduces Frobenius norm error for the same step budget.
+2. The `plot` field lists the saved output files (txt report).
+3. `circuit_path` holds paths to the SVG/PNG circuit diagrams.
 
 ## Mathematical Deep Dive
 

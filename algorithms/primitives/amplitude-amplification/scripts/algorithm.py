@@ -23,7 +23,7 @@ def example_2qubit():
     print("=" * 50)
     print(result.get("plot", ""))
     print(f"  Status        : {result['status']}")
-    print(f"  Amplified prob: {result['amplified_prob']:.4f}")
+    print(f"  Amplified prob: {result['Amplified Target Probability']:.4f}")
     print(f"  Circuit path  : {result.get('circuit_path')}")
 
 
@@ -46,7 +46,7 @@ def example_3qubit():
     print("=" * 50)
     print(result.get("plot", ""))
     print(f"  Status        : {result['status']}")
-    print(f"  Amplified prob: {result['amplified_prob']:.4f}")
+    print(f"  Amplified prob: {result['Amplified Target Probability']:.4f}")
 
 
 if __name__ == "__main__":

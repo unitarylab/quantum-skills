@@ -24,9 +24,10 @@ def example_s_gate():
     print("=" * 50)
     print("QPE Example: S Gate  (expected phi = 0.25)")
     print("=" * 50)
-    print(result.get("plot", ""))
-    print(f"  Estimated phase : {result['estimated_phase']}")
-    print(f"  Best probability: {result['confidence_probability']:.4f}")
+    for f in result.get("plot", []):
+        print(f"  Saved file      : {f['filename']} ({f['format']})")
+    print(f"  Estimated phase : {result['Estimated phase']}")
+    print(f"  Best probability: {result['Best phase probability']:.4f}")
     print(f"  Circuit path    : {result.get('circuit_path')}")
 
 
@@ -49,9 +50,10 @@ def example_t_gate():
     print("=" * 50)
     print("QPE Example: T Gate  (expected phi = 0.125)")
     print("=" * 50)
-    print(result.get("plot", ""))
-    print(f"  Estimated phase : {result['estimated_phase']}")
-    print(f"  Best probability: {result['confidence_probability']:.4f}")
+    for f in result.get("plot", []):
+        print(f"  Saved file      : {f['filename']} ({f['format']})")
+    print(f"  Estimated phase : {result['Estimated phase']}")
+    print(f"  Best probability: {result['Best phase probability']:.4f}")
 
 
 if __name__ == "__main__":

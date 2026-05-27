@@ -59,12 +59,12 @@ algo = HadamardTestAlgorithm()
 # Estimate real part
 result_re = algo.run(mode='expectation', U=U, prepare_psi=prepare_psi,
                      imag=False, shots=20000, backend='torch')
-print(result_re['est_val'])   # ≈ cos(0.4) ≈ 0.9211
+print(result_re['Estimated Value'])   # ≈ cos(0.4) ≈ 0.9211
 
 # Estimate imaginary part
 result_im = algo.run(mode='expectation', U=U, prepare_psi=prepare_psi,
                      imag=True, shots=20000, backend='torch')
-print(result_im['est_val'])   # ≈ -sin(0.4) ≈ -0.3894
+print(result_im['Estimated Value'])   # ≈ -sin(0.4) ≈ -0.3894
 ```
 
 ## Core Parameters Explained
@@ -89,16 +89,18 @@ print(result_im['est_val'])   # ≈ -sin(0.4) ≈ -0.3894
 
 | Key | Type | Description |
 |---|---|---|
-| `estimated_value` | `float` or `dict` | Estimated value. A single float for `'expectation'`; a dict `{'real': ..., 'imag': ..., 'phase': ..., 'magnitude': ...}` for `'phase_estimation'`; a float for `'swap_test'`. |
-| `circuit_path` | `str` | Path to SVG circuit diagram. |
-| `message` | `str` | Human-readable result summary. |
-| `plot` | `str` | ASCII art result panel. |
+| `status` | `str` | `'ok'` on success, `'failed'` on error. |
+| `Estimated Value` | `float` | Estimated scalar value for all modes: `Re` or `Im` of $\langle\psi|U|\psi\rangle$ for `'expectation'`; $|\langle\phi|\psi\rangle|^2$ for `'swap_test'`; eigenphase $\phi \in [0,1)$ for `'phase_estimation'`. |
+| `Computation Time (s)` | `float` | Wall-clock time for the full `run()` call. |
+| `circuit_path` | `list[str]` | List of file paths to saved SVG circuit diagram(s). One path for `'expectation'` and `'swap_test'`; two paths for `'phase_estimation'`. |
+| `plot` | `list[dict]` | List of saved result files, each as `{"format": "txt", "filename": "<path>"}`. |
+| `circuit` | `Circuit` | The primary `Circuit` object (first circuit built in the selected mode). |
 
 ## Implementation Architecture
 
 `HadamardTestAlgorithm` in `algorithm.py` organizes execution into five stages within `run()`, with a single circuit-building helper and shot-noise simulation.
 
-**`run(mode, U, prepare_psi, prepare_phi, imag, shots, backend, algo_dir)` — Five Stages:**
+**`run(mode, U, prepare_psi, prepare_phi, imag, shots, backend)` — Five Stages:**
 
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
@@ -106,21 +108,21 @@ print(result_im['est_val'])   # ≈ -sin(0.4) ≈ -0.3894
 | 2 — Circuit Construction | Dispatches to `_build_hadamard_test_circuit()` based on mode; for `swap_test` builds joint prep and U_swap; for `phase_estimation` builds both real and imag circuits | Creates one or two `Circuit` objects stored in `circuits` dict |
 | 3 — Simulation + Sampling | For each circuit: `circ.execute()` → `State.probabilities_dict([0])` → extracts `p0_exact`; simulates shot noise via `numpy.random.binomial(shots, p0_exact)` | Runs statevector simulation; converts ancilla probabilities to noisy `<Z>` estimate |
 | 4 — Post-Processing | Accumulates `measurements` from `<Z> = p0 - p1`; computes final `est_val` per mode | Expectation: returns `<Z>` directly; Swap test: clips to `[0,1]`; Phase estimation: calls `_estimate_phi_from_real_imag()` |
-| 5 — Export | `circ.draw(filename=..., title=...)` for each circuit | Saves SVG circuit diagram(s) |
+| 5 — Export | `self.save_circuit(circ, filename)` for each circuit; `self.save_txt()` for text output | Saves SVG circuit diagram(s) and result text file; calls `_build_return_dict()` |
 
 **Helper Methods:**
 
-- **`_build_hadamard_test_circuit(U, prepare_psi, imag, backend)`** — Constructs the single-ancilla circuit. Ancilla is qubit 0; target is qubits `1..n`. Applies `H` to ancilla, optionally `Sdag` for imaginary part, appends `prepare_psi` to target, then appends `U` as a controlled unitary (`U.control([anc], control_state='1')`), applies `H` again to ancilla.
+- **`_build_hadamard_test_circuit(U, prepare_psi, imag)`** — Constructs the single-ancilla circuit. Ancilla is qubit 0; target is qubits `1..n`. Applies `H` to ancilla, optionally `sdag` for imaginary part, appends `prepare_psi` to target, then appends `U` as a controlled unitary (`qc.append(U, target=tgt, control=[anc], control_state='1')`), applies `H` again to ancilla.
 - **`_estimate_phi_from_real_imag(cos_est, sin_est)`** — Computes `atan2(sin_est, cos_est) / (2π) % 1.0` to extract the eigenphase $\phi \in [0,1)$.
 - **`_as_statevector(result)`** — Converts `execute()` output to a normalized `numpy` array.
-- **`_update_last_result` / `_build_return`** — Store all runtime fields and package result dict.
+- **`update_output(output)` / `_build_return_dict(success, circuit_path, filepath, circuit)`** — Stores `Estimated Value` and `Computation Time (s)` in `self.output`; packages the final result dict.
 
 **Mode dispatch logic:**
 - `'expectation'`: builds one circuit with `imag` flag
 - `'swap_test'`: builds joint state `|φ⊗ψ⟩` and controlled-SWAP unitary; runs real circuit only
 - `'phase_estimation'`: builds two circuits (real + imag); combines via `_estimate_phi_from_real_imag()`
 
-**Data flow:** mode selection → `_build_hadamard_test_circuit()` per branch → `execute()` → ancilla `p0` → shot noise → `<Z>` → mode-specific reduction → `est_val` → `_build_return()`.
+**Data flow:** mode selection → `_build_hadamard_test_circuit()` per branch → `execute()` → ancilla `p0` → shot noise → `<Z>` → mode-specific reduction → `est_val` → `update_output()` → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
 The ancilla qubit (qubit 0) acts as a quantum probe. After the circuit, its measurement probabilities encode the inner product:
@@ -151,7 +153,7 @@ So $|\langle\phi|\psi\rangle|^2 = 2p(0) - 1$.
 | Shot noise model | `c0 = rng.binomial(shots, p0_exact)`; `p0 = c0 / shots` |
 | SWAP test: $p(0) = (1 + \|\langle\phi|\psi\rangle\|^2)/2$ | `U_swap` built as SWAP gate on joint system; same circuit path as expectation |
 | Phase $\phi = \text{atan2}(\text{Im}, \text{Re}) / 2\pi$ | `_estimate_phi_from_real_imag(re_est, im_est)` |
-| Return value `estimated_value` | `est_val` in `_build_return()` — single float for all modes |
+| Return value `Estimated Value` | `est_val` stored via `update_output()`, returned by `_build_return_dict()` — single float for all modes |
 
 **Notes on encapsulation:** The swap test is implemented by constructing a new `U_swap` from SWAP gates and a joint preparation `Circuit`, then running the exact same `_build_hadamard_test_circuit` code path. No special circuit structure is needed for the swap test case beyond this reuse. Shot noise is applied as a post-simulation binomial sampling; the underlying statevector probability is exact.
 
@@ -193,14 +195,14 @@ result = algo.run(
     shots=40000,
     backend='torch'
 )
-print(f"Overlap^2: {result['estimated_value']:.4f}")
+print(f"Overlap^2: {result['Estimated Value']:.4f}")
 # |<Bell|++>|^2 = |(<00|+<11|)/sqrt(2) * (|++>)|^2 = 0.5
 
 # Phase estimation mode
 U2 = Circuit(1, name="T_gate", backend='torch')
 U2.t(0)  # T|0> = |0> so <0|T|0> = 1
 result2 = algo.run(mode='phase_estimation', U=U2, shots=20000)
-print(result2['estimated_value'])
+print(result2['Estimated Value'])
 ```
 
 ## Implementing Your Own Version

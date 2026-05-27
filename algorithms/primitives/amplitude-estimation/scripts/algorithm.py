@@ -22,8 +22,8 @@ def example_uniform():
     print("QAE Example: 2-Qubit Uniform  (expected p ~ 0.25)")
     print("=" * 50)
     print(result.get("plot", ""))
-    print(f"  Estimated amplitude: {result['estimated_amplitude']:.4f}")
-    print(f"  Estimated phi      : {result['phi']:.4f}")
+    print(f"  Estimated amplitude: {result['Target amplitude']:.4f}")
+    print(f"  Estimated phi      : {result['Phase']:.4f}")
     print(f"  Circuit path       : {result.get('circuit_path')}")
 
 
@@ -45,8 +45,8 @@ def example_biased():
     print("QAE Example: Biased Preparation")
     print("=" * 50)
     print(result.get("plot", ""))
-    print(f"  Estimated amplitude: {result['estimated_amplitude']:.4f}")
-    print(f"  Estimated phi      : {result['phi']:.4f}")
+    print(f"  Estimated amplitude: {result['Target amplitude']:.4f}")
+    print(f"  Estimated phi      : {result['Phase']:.4f}")
 
 
 if __name__ == "__main__":

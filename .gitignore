@@ -1,3 +1,5 @@
 .DS_Store
 __pycache__/
 results/
+
+run_all_algorithms_test.sh

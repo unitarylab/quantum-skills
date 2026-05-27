@@ -8,6 +8,14 @@ description: A quantum-compatible solver for the 1D Heat Equation using Schrödi
 python ./scripts/algorithm.py
 ```
 
+## Entry Point
+
+```python
+from unitarylab_algorithms.schrodingerization.equation_heat.algorithm import HeatEquationAlgorithm
+
+result = HeatEquationAlgorithm().run()
+```
+
 # Skill: Quantum Simulation of 1D Heat Equation
 
 ## 1. Mathematical Formulation
@@ -57,12 +65,31 @@ The Schrödingerization framework can be referred to in './Schr_skills.markdown'
 ### Step 1: Parse Input Parameters
 
 ```python
-L, T, nx, na, R, order, point, f0 = eq.get_common_coefficients()
-bd = eq.boundary.type
+from unitarylab.library.equation import parse_equation
 
+eq = parse_equation(params)          # params: dict loaded from setup.json
+method = eq.solver.type.lower()      # "classical" | "trotter" | "block"
+
+# Common coefficients
+L, T, source, nx, na, R, point, order, f0 = eq.get_common_coefficients()
+bd     = eq.boundary.type            # "dirichlet" | "periodic" | "neumann"
+scheme = eq.discrete.type
+a      = eq.get_parameter('a')       # diffusion coefficient
+
+# Grid
 Nx = 2**nx
-dx = L / Nx
-x = np.arange(0, L, dx)
+# Dirichlet (default)
+dx = L / (Nx + 1)
+x  = np.arange(dx, L, dx)
+# Periodic override
+if bd == "periodic":
+    dx = L / Nx
+    x  = np.arange(0, L, dx)
+# Neumann override
+elif bd == "neumann":
+    dx = L / (Nx - 1)
+    x  = np.arange(0, L + dx, dx)
+
 u0 = f0(x)  # initial condition
 ```
 
@@ -70,17 +97,28 @@ u0 = f0(x)  # initial condition
 
 ### Step 2: Discretization
 
-Construct 2nd-order differential operator:
+Construct 2nd-order differential operator using `CDiff` (classical) or `TDiff` (Trotter):
+
+#### Classical
 
 ```python
-A0, b0 = second_order_derivative(
-    N=Nx,
-    dx=dx,
-    boundary_condition=bd
-)
+from unitarylab.library.equation.differential_operator import CDiff
 
-A = a * A0
-b = a * b0 + f(x)
+A = a * CDiff(N=Nx, dx=dx, order=2, scheme=scheme, boundary=bd).get_matrix()
+b = eq.get_rhs_1d(Nx, dx, scheme=scheme) + source(x)
+```
+
+#### Trotter
+
+```python
+from unitarylab.library.equation.differential_operator import TDiff
+
+dt = eq.solver.dt
+Nt = int(T / dt)
+
+func1, func2 = (a * TDiff(nx, dx, 2, scheme=scheme, boundary=bd)).data()
+H1 = func1(dt / R)   # auxiliary-space term
+H2 = func2(dt)       # spatial-Laplacian term
 ```
 
 ------
@@ -102,19 +140,14 @@ $$
 #### Classical Schrödinger Solver
 
 ```python
-u = schro(
-    A,
-    u0,
-    T=T,
-    na=na,
-    R=R,
-    order=order,
-    point=point,
-    b=b
-)
+from unitarylab.library.equation.schrodingerization import schro_classical as schro
+from unitarylab.library.equation.schrodingerization import circuit_classical
+
+u  = schro(A, u0, T=T, na=na, R=R, order=order, point=point, b=b)
+qc = circuit_classical(nx, na)
 ```
 
-#### Trotterized Quantum Evolution (Optional)
+#### Trotterized Quantum Evolution
 
 Split Hamiltonian $H = H_1 + H_2$ and apply Trotter decomposition:
 $$
@@ -122,6 +155,8 @@ e^{-iHt} \approx \left(e^{-i H_1 \Delta t} e^{-i H_2 \Delta t}\right)^{N_t}
 $$
 
 ```python
+from unitarylab.library.equation.schrodingerization import schro_trotter as schro
+
 u, qc = schro(
     u0=u0,
     H1=H1,
@@ -130,9 +165,7 @@ u, qc = schro(
     na=na,
     R=R,
     order=order,
-    point=point,
-    b=b,
-    theta=theta
+    point=point
 )
 ```
 
@@ -140,24 +173,36 @@ u, qc = schro(
 
 ### Step 5: Visualization
 
+Internally called via `self._generate_solution_plot(name, x, u)` where `name` encodes solver metadata:
+
 ```python
-ax.plot(x, u, "r-", linewidth=2)
-ax.fill_between(x, u, alpha=0.3)
+# Classical
+name = f"1D Heat Classical nx={nx} na={na} T={T}"
+# Trotter
+name = f"1D Heat Lie-Trotter nx={nx} na={na} T={T} dt={dt}"
+
+solution_plot_path = self._generate_solution_plot(name, x, u)
 ```
 
-- Generates 1D solution plot
-- Optional animation for time evolution
+- Generates 1D solution SVG
+- Path returned in the `plot` field of the result dict
 
 ------
 
 ### Step 6: Quantum Circuit Export
 
+Internally called via `self._generate_circuit_plots()`:
+
 ```python
-qc.draw(filename="heat_1d_circuit.svg")
+# Classical  (qc only)
+circuit_plot_paths = self._generate_circuit_plots(name, qc)
+
+# Trotter  (qc + sub-Hamiltonians)
+circuit_plot_paths = self._generate_circuit_plots(name, qc, H1, H2)
 ```
 
-- Full circuit for Hamiltonian simulation
-- Includes Trotter decomposition if used
+- Paths returned in the `circuit` field of the result dict
+- Includes Trotter sub-circuit diagrams when H1/H2 are provided
 
 ------
 
@@ -190,10 +235,31 @@ $$
 
 ## 7. Outputs
 
-- Solution array $u(x,T)$
-- 1D plot of solution
-- Full quantum circuit diagram
-- Optional Trotter decomposition diagrams
+The `run()` method returns a dict built by `_build_return_dict(success, circuit_path, filepath, circuit)`:
+
+```python
+{
+    "status":       "ok" | "failed",
+    "circuit_path": circuit_path,          # path(s) to circuit diagram file(s)
+    "plot": [
+        {"format": "svg", "filename": "<solution_plot_path>"},
+        ...                                # one entry per filepath
+    ],
+    "circuit":      circuit_plot_paths,    # list of circuit SVG paths
+    # …plus any extra keys from self.output
+}
+```
+
+Additional solver-specific keys appended to the result:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `x` | `list[float]` | Spatial grid points |
+| `u` | `list[float]` | Solution values $u(x, T)$ |
+| `grid.n_points` | `int` | $N_x = 2^{n_x}$ |
+| `grid.dx` | `float` | Spatial step size |
+| `grid.dt` | `float` | Time step (Trotter only) |
+| `grid.nt` | `int` | Number of time steps (Trotter only) |
 
 ------
 

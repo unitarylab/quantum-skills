@@ -16,12 +16,13 @@ def example_factor_15():
     print("=" * 50)
     print("Shor Example: N = 15")
     print("=" * 50)
-    print(result.get("plot", ""))
-    print(f"  Status       : {result['status']}")
-    print(f"  Factors      : {result['factors']}")
-    print(f"  Period       : {result['period']}")
-    print(f"  Circuit path : {result.get('circuit_path')}")
-    print(f"  Message      : {result['message']}")
+    print(f"  Status        : {result['status']}")
+    print(f"  Factors       : {result['factors']}")
+    print(f"  Period        : {result['period']}")
+    print(f"  Selected base : {result['Selected base']}")
+    print(f"  Circuit path  : {result.get('circuit_path')}")
+    for f in result.get('plot', []):
+        print(f"  Saved file    : [{f['format']}] {f['filename']}")
 
 
 def example_factor_21():
@@ -37,11 +38,13 @@ def example_factor_21():
     print("=" * 50)
     print("Shor Example: N = 21")
     print("=" * 50)
-    print(result.get("plot", ""))
-    print(f"  Status       : {result['status']}")
-    print(f"  Factors      : {result['factors']}")
-    print(f"  Period       : {result['period']}")
-    print(f"  Message      : {result['message']}")
+    print(f"  Status        : {result['status']}")
+    print(f"  Factors       : {result['factors']}")
+    print(f"  Period        : {result['period']}")
+    print(f"  Selected base : {result['Selected base']}")
+    print(f"  Circuit path  : {result.get('circuit_path')}")
+    for f in result.get('plot', []):
+        print(f"  Saved file    : [{f['format']}] {f['filename']}")
 
 
 if __name__ == "__main__":

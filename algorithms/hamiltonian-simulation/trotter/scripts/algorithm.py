@@ -1,32 +1,29 @@
 """Trotter-Suzuki Hamiltonian Simulation — approximate e^{-iHt} via product formulas."""
 
-from unitarylab_algorithms import SuzukiTrotterAlgorithm
+import numpy as np
+from unitarylab_algorithms.hamiltonian_simulation.trotter.algorithm import TrotterAlgorithm
 
 
 def main():
-    # 2-qubit Heisenberg-like Hamiltonian as grouped Pauli terms
-    # Each group is a list of (pauli_string, coefficient) tuples
-    grouped_paulis = [
-        [("ZI", 0.5), ("IZ", 0.5)],
-        [("XX", 0.3), ("YY", 0.3)],
-    ]
-    total_time = 1.0
+    # 2-qubit Heisenberg-like Hamiltonian as a numpy matrix
+    H = np.array([[2.0, 1.0],
+                  [1.0, 3.0]])
+    t = 1.0
+    error = 1e-8
 
     print("=" * 50)
     print("Trotter-Suzuki Hamiltonian Simulation")
     print("=" * 50)
 
     for order in [1, 2, 4]:
-        algo = SuzukiTrotterAlgorithm(order=order, reps=1)
-        result = algo.run(
-            grouped_paulis=grouped_paulis,
-            total_time=total_time,
-            backend="torch",
-        )
+        algo = TrotterAlgorithm()
+        result = algo.run(H=H, t=t, error=error, order=order, steps=1000, backend="torch")
 
         print(f"\n  Order {order}:")
-        print(f"    status : {result['status']}")
-        print(result.get("plot", ""))
+        print(f"    status          : {result['status']}")
+        print(f"    Frobenius error : {result['Frobenius norm of error']:.2e}")
+        print(f"    circuit_path    : {result['circuit_path']}")
+        print(f"    saved files     : {result['plot']}")
 
 
 if __name__ == "__main__":

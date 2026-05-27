@@ -27,8 +27,8 @@ def example_expectation():
     print("Hadamard Test: Expectation Mode")
     print("=" * 50)
     print(result_re.get("plot", ""))
-    print(f"  Re estimate: {result_re['estimated_value']:.4f}  (expected ~0.9211)")
-    print(f"  Im estimate: {result_im['estimated_value']:.4f}  (expected ~-0.3894)")
+    print(f"  Re estimate: {result_re['Estimated Value']:.4f}  (expected ~0.9211)")
+    print(f"  Im estimate: {result_im['Estimated Value']:.4f}  (expected ~-0.3894)")
 
 
 def example_swap_test():
@@ -52,7 +52,7 @@ def example_swap_test():
     print("Hadamard Test: Swap Test Mode")
     print("=" * 50)
     print(result.get("plot", ""))
-    print(f"  Overlap estimate: {result['estimated_value']:.4f}")
+    print(f"  Overlap estimate: {result['Estimated Value']:.4f}")
 
 
 if __name__ == "__main__":

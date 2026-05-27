@@ -60,7 +60,7 @@ print("Run result")
 print("─" * 55)
 print(f"  status       : {result['status']}")
 print(f"  circuit_path : {result['circuit_path']}")
-print(f"  file_path    : {result['file_path']}")
+print(f"  plot         : {result['plot']}")
 
 # ─────────────────────────────────────────────
 # Detailed output

@@ -91,23 +91,18 @@ is computed via `scipy.linalg.expm` for error benchmarking.
 
 ### Outputs
 
-The `run()` method returns a dictionary with the following fields:
+The `run()` method returns a dictionary built by `_build_return_dict(success, circuit_path, filepath, circuit)`. The `self.output` fields are merged into the result via `result.update(self.output)`, so all keys below are accessible directly on the returned dict:
 
 | Key | Type | Description |
 |---|---|---|
-| `status` | `str` | `'ok'` on success |
+| `status` | `str` | `'ok'` on success, `'failed'` otherwise |
 | `circuit_path` | `str` | Local path to the saved circuit diagram (SVG) |
-| `file_path` | `str` | Local path to the saved text result file |
+| `plot` | `list` | List of saved result files, each as `{"format": str, "filename": str}` (format is the 3-char file extension) |
 | `circuit` | `object` | Raw circuit object from `runable.circuit` |
-
-The algorithm also records structured output accessible via `self.output`:
-
-| Field | Description |
-|---|---|
-| `Evolution result` | Approximate unitary from the Cartan-Lax flow (`runable.evolution_result`) |
-| `Final total error` | Achieved approximation error (`runable.total_error`) |
-| `Computation time (s)` | Wall-clock runtime in seconds |
-| `Exact evolution` | Exact matrix $U_{\text{exact}} = e^{-iHt_{\text{evol}}}$ |
+| `Evolution result` | `np.ndarray` | Approximate unitary from the Cartan-Lax flow (`runable.evolution_result`) |
+| `Final total error` | `float` | Achieved approximation error (`runable.total_error`) |
+| `Computation time (s)` | `float` | Wall-clock runtime in seconds |
+| `Exact evolution` | `np.ndarray` | Exact matrix $U_{\text{exact}} = e^{-iHt_{\text{evol}}}$ computed via `scipy.linalg.expm` |
 
 ---
 
@@ -153,20 +148,26 @@ result = algo.run(
 
 print("status      :", result['status'])
 print("circuit_path:", result['circuit_path'])
-print("file_path   :", result['file_path'])
+print("plot        :", result['plot'])          # e.g. [{'format': 'txt', 'filename': '/path/to/result.txt'}]
 ```
 
 ### Accessing Detailed Output
 
+All `self.output` fields are merged into the returned dict, so they can be accessed either from `result` directly or from `algo.output`:
+
 ```python
 # Approximate evolution unitary
-U_approx = algo.output["Evolution result"]
+U_approx = result["Evolution result"]        # same as algo.output["Evolution result"]
 
 # Exact reference unitary
-U_exact  = algo.output["Exact evolution"]
+U_exact  = result["Exact evolution"]
 
 # Achieved error
-error_val = algo.output["Final total error"]
+error_val = result["Final total error"]
+
+# Saved files
+for f in result["plot"]:
+    print(f"Saved {f['format']} file: {f['filename']}")
 
 print(f"Total error: {error_val:.2e}")
 ```

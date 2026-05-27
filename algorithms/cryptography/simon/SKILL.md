@@ -42,26 +42,36 @@ from unitarylab_algorithms import SimonAlgorithm
 
 algo = SimonAlgorithm()
 result = algo.run(
-    s_target='1010',   # Hidden string to find
+    s='1010',      # Hidden string to find
     backend='torch'
 )
 
-print(result['found_s'])      # Found hidden string (should match s_target)
-print(result['status'])       # 'ok' if found_s == s_target
-print(result['circuit_path']) # SVG circuit diagram path
-print(result['plot'])         # ASCII result panel
+print(result['Computed s'])      # Found hidden string (should match s)
+print(result['status'])          # 'ok' if found == s
+print(result['circuit_path'])    # SVG circuit diagram path
+print(result['plot'])            # List of saved file dicts [{"format": ..., "filename": ...}]
 ```
 
 ## Core Parameters Explained
 
+**`__init__(text_mode, algo_dir)` — Constructor parameters:**
+
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `s_target` | `str` | `'1010'` | The hidden binary string $s$ to be found. Must have at least one `'1'`. |
+| `text_mode` | `str` | `'plain'` | Output text formatting mode. |
+| `algo_dir` | `str` or `None` | `None` | Directory to save results; auto-derived from cwd if `None`. |
+
+**`run(s, backend, device, dtype)` — Run parameters:**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `s` | `str` | `'1010'` | The hidden binary string $s$ to be found. Must have at least one `'1'`. |
 | `backend` | `str` | `'torch'` | Only `'torch'` is supported (requires mid-circuit measurement). |
-| `algo_dir` | `str` or `None` | `None` | Directory to save SVG circuit diagram. |
+| `device` | `str` | `'cpu'` | Device for simulation (e.g. `'cpu'` or `'cuda'`). |
+| `dtype` | dtype | `np.complex128` | Numerical dtype for simulation. |
 
 **Common misunderstandings:**
-- `s_target` cannot be all-zero (`'0000'`); this is the trivial case with no hidden structure.
+- `s` cannot be all-zero (`'0000'`); this is the trivial case with no hidden structure.
 - The algorithm is probabilistic; it runs the quantum circuit once and extracts equations from the measurement distribution. A single run may not find all $n-1$ linearly independent equations, but the simulation samples enough states.
 - `backend` must be `'torch'` because the circuit includes mid-circuit measurements.
 
@@ -69,36 +79,40 @@ print(result['plot'])         # ASCII result panel
 
 | Key | Type | Description |
 |---|---|---|
-| `status` | `str` | `'ok'` if `found_s == s_target`; `'failed'` otherwise. |
-| `found_s` | `str` | The binary string $s$ recovered by the classical post-processing step. |
+| `status` | `str` | `'ok'` if `found_s == s`; `'failed'` otherwise. |
+| `Computed s` | `str` | The binary string $s$ recovered by the classical post-processing step. |
 | `circuit_path` | `str` | Path to the saved SVG circuit diagram. |
-| `message` | `str` | Human-readable summary. |
-| `plot` | `str` | ASCII art result panel. |
+| `plot` | `list` | List of saved file dicts, each with `'format'` and `'filename'` keys. |
+| `circuit` | `Circuit` | The `Circuit` object constructed for the algorithm. |
+| `Valid states` | `int` | Number of valid basis states measured from the simulation. |
+| `computation time (s)` | `float` | Quantum simulation wall-clock time in seconds. |
+| `Register size` | `int` | Register size $n$ (derived from `len(s)`). |
+| `Equations` | `int` | Number of linearly independent $\mathbb{F}_2$ equations extracted. |
 
 ## Implementation Architecture
 
 `SimonAlgorithm` in `algorithm.py` structures the algorithm into five ordered stages inside `run()`, with three classical helper methods for circuit oracle construction and linear algebra post-processing.
 
-**`run(s_target, backend, algo_dir)` — Five Stages:**
+**`run(s, backend, device, dtype)` — Five Stages:**
 
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
-| 1 — Parameter Validation | Extracts `n = len(s_target)`; checks for all-zero string | Guards against trivial inputs |
-| 2 — Circuit Construction | Creates `Circuit(rx, ry, cqr)` with two `n`-qubit registers + classical register; applies `qc.h(rx[:])`, calls `_build_simon_oracle(qc, s_target)`, measures `ry` to `cqr`, applies `qc.h(rx[:])` again | Full Simon protocol circuit in 4 lines |
-| 3 — Simulation | `qc.execute()` → `State(re_state)` → `state_obj.calculate_state(range(n))` | Runs mid-circuit-measurement simulation; extracts x-register basis dictionary |
-| 4 — Classical Post-Processing | `_get_basis_simple(state_list, n)` extracts $n-1$ linearly independent vectors; `_solve_simon_general(basis, n)` back-substitutes to recover `s` | $\mathbb{F}_2$ linear algebra |
-| 5 — Export | `qc.draw(filename=..., title=...)` | Saves SVG circuit diagram |
+| 1 — Parameter Validation | Extracts `n = len(s)`; checks for all-zero string | Guards against trivial inputs |
+| 2 — Circuit Construction | Creates `Circuit(rx, ry, cqr)` with two `n`-qubit registers + classical register; applies `gs.h(rx[:])`, calls `_build_simon_oracle(gs, s)`, measures `ry` to `cqr`, applies `gs.h(rx[:])` again | Full Simon protocol circuit in 4 lines |
+| 3 — Simulation | `gs.execute(backend, device, dtype)` → `re_state.calculate_state(range(n))` | Runs mid-circuit-measurement simulation; extracts x-register basis dictionary |
+| 4 — Classical Post-Processing | `_get_basis_simple(state_basis_dict.keys(), n)` extracts $n-1$ linearly independent vectors; `_solve_simon_general(basis, n)` back-substitutes to recover `s` | $\mathbb{F}_2$ linear algebra |
+| 5 — Export | `self.save_circuit(gs)` / `self.save_txt()` → `_build_return_dict(is_success, circuit_path, filename, gs)` | Saves SVG circuit + text results; packages return dict |
 
 **Helper Methods:**
 
 - **`_build_simon_oracle(qc, s)`** — Implements $U_f$ with CNOT gates. First, copies $x$ to $y$ register via `cx(i, i+n)` for each bit. Then, for each bit `i` where `s[i]='1'`, applies `cx(n-1-pivot_idx, n-1-i+n)` (where `pivot_idx = s.find('1')`) to create the $f(x) = f(x\oplus s)$ mapping.
 - **`_get_basis_simple(state_list, n_qubits)`** — Greedy pivot selection: iterates bitstrings, keeps the first bitstring with each distinct leftmost-1 pivot position. Returns at most $n-1$ linearly independent vectors.
 - **`_solve_simon_general(basis_list, n)`** — Back-substitution over $\mathbb{F}_2$: finds the free variable index (the non-pivot position), sets it to 1, then resolves all pivot variables in reverse order.
-- **`_update_last_result` / `_build_return`** — Store runtime fields and package result dict.
+- **`_build_return_dict(success, circuit_path, filepath, circuit)`** — Packages the final return dict. Sets `status` to `'ok'` or `'failed'`, wraps file paths as `[{"format": ext, "filename": path}]`, and merges `self.output` fields (`Computed s`, `Valid states`, `computation time (s)`, `Register size`, `Equations`) into the result.
 
 **Key design detail:** The circuit uses `Register`, `ClassicalRegister`, and `Circuit` with mixed quantum/classical registers. The mid-circuit measurement (`qc.measure(ry[:], cqr[:])`) collapses the output register during simulation, which is why only the `'torch'` backend is supported.
 
-**Data flow:** `s_target` → oracle construction → `execute()` → `State.calculate_state()` → basis extraction → back-substitution → `found_s` → `_build_return()`.
+**Data flow:** `s` → `_build_simon_oracle(gs, s)` → `gs.execute()` → `re_state.calculate_state(range(n))` → `_get_basis_simple()` → `_solve_simon_general()` → `found_s` (`result['Computed s']`) → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
 The $n$-qubit input register $|x\rangle$ starts in $|0\rangle^n$. After Hadamard:
@@ -126,15 +140,15 @@ The measured bit-strings form a system of linear equations over $\mathbb{F}_2$. 
 | Input register $|x\rangle$ | `rx = Register('x', n)`; `qc = Circuit(rx, ry, cqr)` |
 | Output register $|y\rangle$ | `ry = Register('y', n)` |
 | Initial superposition $H^{\otimes n}|0\rangle^n$ | `qc.h(rx[:])` before oracle |
-| Oracle $U_f|x\rangle|0\rangle \to |x\rangle|f(x)\rangle$ | `_build_simon_oracle(qc, s_target)` — CNOT pattern |
-| Mid-circuit collapse of output register | `qc.measure(ry[:], cqr[:])` between oracle and final Hadamard |
-| Final Hadamard layer (interference) | `qc.h(rx[:])` after measurement |
-| Linear equations $y \cdot s \equiv 0$ | Bitstrings from `state_obj.calculate_state(range(n))` |
-| Basis extraction (Gaussian elimination) | `_get_basis_simple(state_list, n)` — pivot selection |
-| Back-substitution recovery of $s$ | `_solve_simon_general(basis_list, n)` — $\mathbb{F}_2$ algebra |
-| Success condition | `found_s == s_target` in Stage 4 |
+| Oracle $U_f|x\rangle|0\rangle \to |x\rangle|f(x)\rangle$ | `_build_simon_oracle(gs, s)` — CNOT pattern |
+| Mid-circuit collapse of output register | `gs.measure(ry[:], cqr[:])` between oracle and final Hadamard |
+| Final Hadamard layer (interference) | `gs.h(rx[:])` after measurement |
+| Linear equations $y \cdot s \equiv 0$ | Bitstrings from `re_state.calculate_state(range(n))` |
+| Basis extraction (Gaussian elimination) | `_get_basis_simple(state_basis_dict.keys(), n)` — pivot selection |
+| Back-substitution recovery of $s$ | `_solve_simon_general(basis, n)` — $\mathbb{F}_2$ algebra |
+| Success condition | `found_s == s` in Stage 4 |
 
-**Notes on encapsulation:** The oracle construction uses a hardcoded CNOT-based pattern for the standard Simon oracle where $f(x) = f(x \oplus s)$ with $s = s_\text{target}$. The classical post-processing does not use a general Gaussian elimination library; instead it uses greedy pivot selection followed by $\mathbb{F}_2$ back-substitution implemented directly. The simulation must be run with `backend='torch'` because the mid-circuit measurement is required.
+**Notes on encapsulation:** The oracle construction uses a hardcoded CNOT-based pattern for the standard Simon oracle where $f(x) = f(x \oplus s)$ with $s$ passed directly to `run()`. The classical post-processing does not use a general Gaussian elimination library; instead it uses greedy pivot selection followed by $\mathbb{F}_2$ back-substitution implemented directly. The simulation must be run with `backend='torch'` because the mid-circuit measurement is required.
 
 ## Mathematical Deep Dive
 
@@ -157,12 +171,12 @@ from unitarylab_algorithms import SimonAlgorithm
 
 # Test with a 6-bit hidden string
 algo = SimonAlgorithm()
-result = algo.run(s_target='101010', backend='torch')
+result = algo.run(s='101010', backend='torch')
 
 print(f"Target s:  101010")
-print(f"Found  s:  {result['found_s']}")
+print(f"Found  s:  {result['Computed s']}")
 print(f"Success:   {result['status'] == 'ok'}")
-print(result['plot'])
+print(result['plot'])   # [{'format': 'txt', 'filename': '...'}]
 ```
 ## Reference Implementation (Classiq)
 
@@ -362,7 +376,7 @@ def solve_simon(basis, n):
 
 ## Debugging Tips
 
-1. **`s_target` all zeros**: Will raise `ValueError`. Always include at least one `'1'` bit.
+1. **`s` all zeros**: Will raise `ValueError`. Always include at least one `'1'` bit.
 2. **`backend` not `'torch'`**: Will raise `ValueError`. Simon's algorithm requires mid-circuit measurement, supported only by `'torch'`.
-3. **`found_s` differs from `s_target`**: The solver may find a different or trivial $s$ if too few linearly independent equations were collected. Re-run or increase measurements.
+3. **`result['Computed s']` differs from `s`**: The solver may find a different or trivial $s$ if too few linearly independent equations were collected. Re-run or increase measurements.
 4. **Odd register size vs. qubit count**: The circuit uses $2n$ qubits (input + output) plus a classical register of $n$ bits.

@@ -80,7 +80,8 @@ result = algo.run(
 
 print("status      :", result["status"])
 print("circuit_path:", result["circuit_path"])
-print("file_path   :", result["file_path"])
+print("plot        :", result["plot"])
+print("frob_error  :", result["Frobenius norm of error"])
 ```
 
 ### Core Parameters Explained
@@ -115,19 +116,19 @@ def run(self, H, t, error, degree=15, beta=0.7):
 
 ### Return Fields
 
+`run()` returns a dictionary built by `_build_return_dict()`. The output fields from `algo.output` are merged directly into the same dict via `result.update(self.output)`.
+
 | Key | Type | Description |
 |---|---|---|
-| `status` | `str` | `'ok'` on success. |
+| `status` | `str` | `'ok'` on success, `'failed'` on error. |
 | `circuit_path` | `str` | Path to saved SVG circuit diagram. |
-| `file_path` | `str` | Path to saved text result file. |
-
-Stored in `algo.output` after `run()`:
-
-| Key | Type | Description |
-|---|---|---|
+| `plot` | `list[dict]` | List of saved result files, each `{"format": str, "filename": str}`. |
+| `circuit` | `Circuit` | The constructed QSP circuit object. |
 | `Approximate evolution matrix` | `np.ndarray` | $U_{\text{approx}}$ composed from time slices. |
 | `Exact evolution matrix` | `np.ndarray` | $e^{-iHt}$ computed via `scipy.linalg.expm`. |
 | `Frobenius norm of error` | `float` | $\|U_{\text{approx}} - U_{\text{exact}}\|_F$. |
+
+The same output fields are also accessible via `algo.output` after `run()` completes.
 
 ## Understanding the Core Components
 
@@ -172,8 +173,8 @@ for i in range(d + 1):
     if i % 2 != 0:
         coef_sin[i] = jn(i, t) * 2 * (-1) ** ((i - 1) / 2) * beta
 
-cos_Ht = QSP(UH, n, m, coef_cos.copy(), 0)
-sin_Ht = QSP(UH, n, m, coef_sin.copy(), 1)
+cos_Ht = QSP(UH, n, m, coef_cos.copy(), 0, is_coef_cheby=True)
+sin_Ht = QSP(UH, n, m, coef_sin.copy(), 1, is_coef_cheby=True)
 ```
 
 Interpretation:
@@ -210,7 +211,7 @@ Interpretation:
 ### 4) Notes on external package functions (brief)
 
 1. `block_encode(H, method="nagy")` is from `unitarylab.library`; it returns `encoded_H` with `.circuit`, `.alpha`, and `.total_qubits`.
-2. `QSP(UH, n, m, coef, parity)` is from `unitarylab.library._qsp`; it builds the interleaved signal-processing circuit for the given coefficient array.
+2. `QSP(UH, n, m, coef, parity, is_coef_cheby=True)` is from `unitarylab.library._qsp`; it builds the interleaved signal-processing circuit for the given Chebyshev coefficient array.
 3. `Circuit.get_matrix(n)` extracts the $2^n \times 2^n$ unitary submatrix acting on the $n$ system qubits.
 4. Error is computed in `run()` by comparing to `scipy.linalg.expm(-1j * H * t)` via Frobenius norm.
 

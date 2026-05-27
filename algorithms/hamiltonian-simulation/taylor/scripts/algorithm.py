@@ -25,8 +25,8 @@ def main():
 
     print("status      :", result["status"])
     print("circuit_path:", result["circuit_path"])
-    print("file_path   :", result["file_path"])
-    print("Frobenius error:", algo.output["Frobenius norm of error"])
+    print("plot        :", result["plot"])
+    print("Frobenius error:", result["Frobenius norm of error"])
 
     # --- Accuracy sweep: degree vs. t ---
     print("\n" + "=" * 55)

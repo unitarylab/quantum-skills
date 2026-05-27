@@ -111,19 +111,19 @@ def run(self, H: np.ndarray, t: float, error: float, degree: int = 15) -> dict:
 
 ### Return Value of `run()`
 
+`run()` returns a dictionary built by `_build_return_dict()`. The output fields from `algo.output` are merged directly into the same dict via `result.update(self.output)`.
+
 | Key | Type | Description |
 |---|---|---|
-| `status` | `str` | `'ok'` on success. |
+| `status` | `str` | `'ok'` on success, `'failed'` on error. |
 | `circuit_path` | `str` | Path to the saved SVG circuit diagram. |
-| `file_path` | `str` | Path to the saved text result file. |
-
-### `algo.output` Fields (after `run()`)
-
-| Key | Type | Description |
-|---|---|---|
+| `plot` | `list[dict]` | List of saved result files, each `{"format": str, "filename": str}`. |
+| `circuit` | `Circuit` | The constructed LCU circuit object. |
 | `Approximate evolution matrix` | `np.ndarray` | $U_{\text{approx}}^r$ — the LCU-based time-evolution approximation. |
 | `Exact evolution matrix` | `np.ndarray` | $e^{-iHt}$ computed via `scipy.linalg.expm`. |
 | `Frobenius norm of error` | `float` | $\|U_{\text{approx}}^r - e^{-iHt}\|_F$. |
+
+The same output fields are also accessible via `algo.output` after `run()` completes.
 
 ---
 
@@ -206,8 +206,8 @@ result = algo.run(
 
 print("status      :", result["status"])
 print("circuit_path:", result["circuit_path"])
-print("file_path   :", result["file_path"])
-print("Frobenius error:", algo.output["Frobenius norm of error"])
+print("plot        :", result["plot"])
+print("Frobenius error:", result["Frobenius norm of error"])
 ```
 
 ### Accuracy Sweep — `degree` vs. `t`

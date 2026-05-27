@@ -50,11 +50,12 @@ result = algo.run(
     max_retries=15
 )
 
-print(result['factors'])       # List of factors, e.g. [3, 5]
-print(result['period'])        # Found period r, or None for classical path
-print(result['status'])        # 'ok' on success
-print(result['circuit_path'])  # SVG circuit diagram path (if quantum path)
-print(result['message'])       # Summary
+print(result['status'])           # 'ok' on success, 'failed' if exhausted
+print(result['factors'])          # List of factors, e.g. [3, 5]; None on failure
+print(result['period'])           # Found period r, or None for classical path
+print(result['Selected base'])    # Random base a used
+print(result['circuit_path'])     # Path to SVG circuit diagram (None for classical path)
+print(result['plot'])             # List of saved output files: [{'format': 'svg'/'txt', 'filename': '...'}]
 ```
 
 ## Core Parameters Explained
@@ -63,9 +64,12 @@ print(result['message'])       # Summary
 |---|---|---|---|
 | `N` | `int` | required | The composite integer to factor. |
 | `method` | `str` | `'matrix'` | Circuit method: `'matrix'` or `'operator'`. |
-| `backend` | `str` | `'torch'` | Simulation backend. Only `'torch'` supported. |
 | `max_retries` | `int` | `15` | Maximum number of random base $a$ attempts. |
-| `algo_dir` | `str` or `None` | `None` | Directory to save SVG circuit diagram. |
+| `backend` | `str` | `'torch'` | Simulation backend (`'torch'` supported). |
+| `device` | `str` | `'cpu'` | Torch device, e.g. `'cpu'` or `'cuda'`. |
+| `dtype` | `dtype` | `np.complex128` | NumPy dtype for simulation. |
+
+`algo_dir` is set at construction time via `ShorAlgorithm(algo_dir=...)`, not in `run()`.
 
 **Common misunderstandings:**
 - Not every attempt succeeds; the loop retries automatically. The returned factors may come from a classical shortcut (even `N`, shared GCD).
@@ -74,42 +78,48 @@ print(result['message'])       # Summary
 
 ## Return Fields
 
+`_build_return_dict(success, circuit_path, filepath, circuit)` assembles the result. It merges the base fields with `self.output` (set by `self.update_output()` before each return).
+
 | Key | Type | Description |
 |---|---|---|
 | `status` | `str` | `'ok'` on success, `'failed'` if max retries exhausted. |
-| `factors` | `list` | List of prime factors found, e.g. `[3, 5]`. Empty on failure. |
-| `period` | `int` or `None` | Period $r$ of $f(x) = a^x \bmod N$ if found via quantum path; `None` for classical shortcut. |
-| `circuit_path` | `str` or `None` | Path to SVG circuit diagram; `None` for classical path. |
-| `message` | `str` | How the factors were found. |
-| `plot` | `str` | ASCII art result panel. |
+| `circuit_path` | `str` or `None` | Path to saved SVG circuit diagram; `None` for classical path. |
+| `plot` | `list` | Saved output files: `[{'format': 'svg'\|'txt', 'filename': '<path>'}]`. |
+| `circuit` | `Circuit` or `None` | The `Circuit` object (only present on failure path; `None` otherwise). |
+| `factors` | `list` or `None` | Non-trivial factors found, e.g. `[3, 5]`; `None` on failure. |
+| `period` | `int` or `None` | Period $r$ found via quantum path; `None` for classical shortcut. |
+| `Selected base` | `int` or `None` | Random base $a$ chosen; `None` for even-$N$ shortcut. |
+| `Computation time (s)` | `float` | Wall-clock time for `gs.execute()` (quantum path only). |
+| `Measurement` | `int` | Integer value of the counting-register measurement (quantum path only). |
+| `Total qubits` | `int` | Total qubits in the circuit (quantum path only). |
 
 ## Implementation Architecture
 
 `ShorAlgorithm` in `algorithm.py` uses a **retry loop** around the five-stage QPE framework. Classical shortcuts and random base selection are handled before the quantum circuit pipeline.
 
-**`run(N, method, backend, max_retries, algo_dir)` — Outer Loop + Five Stages:**
+**`run(N, method='matrix', max_retries=15, backend='torch', device='cpu', dtype=np.complex128)` — Outer Loop + Five Stages:**
 
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | Pre-check | Handles `N % 2 == 0` and `gcd(a, N) > 1` cases without any quantum circuit | Classical short-circuit for trivial cases |
-| 1 — Parameter Setup | Picks random `a`; computes `n_work`, `n_count = 2 * N.bit_length()`, `total_qubits` | Determines qubit counts for the chosen method |
-| 2 — Circuit Construction | Creates `Circuit(total_qubits)`; applies H to counting register; sets work register to $|1\rangle$ via `qc.x(n_count)`; calls `_build_modular_matrix_circuit` or `_build_modular_operator_circuit`; appends `IQFT(n_count)` | Builds the QPE circuit for period finding |
-| 3 — Simulation | `qc.execute()` → `State(result_vector)` → `state.measure(range(n_count), endian='little')` | Single-shot measurement of counting register |
-| 4 — Classical Post-Processing | `phase = measure_int / 2^n_count`; `Fraction(phase).limit_denominator(N).denominator` gives `r`; checks `r % 2 == 0`; computes `gcd(a^(r/2)±1, N)` | Continued fractions + factor extraction |
-| 5 — Export | `qc.draw(filename=..., title=...)` (only on success) | Saves SVG circuit diagram |
+| 1 — Parameter Setup | Picks random `a`; computes `n_work = N.bit_length()`, `n_count = 2 * n_work`, `n_work_actual` (method-dependent), `total_qubits` | Determines qubit counts for the chosen method |
+| 2 — Circuit Construction | Creates `Circuit(total_qubits, name=...)`; applies H to counting register via `gs.h(range(n_count))`; sets work register to $|1\rangle$ via `gs.x(n_count)`; calls `_build_modular_matrix_circuit` or `_build_modular_operator_circuit`; appends `IQFT(n_count)` via `gs.append(IQFT(n_count), range(n_count))` | Builds the QPE circuit for period finding |
+| 3 — Simulation | `result = gs.execute(backend=backend, device=device, dtype=dtype)`; `measure_bin = result.measure(range(n_count), endian='little')`; `measure_int = int(measure_bin, 2)` | Single-shot measurement of counting register |
+| 4 — Classical Post-Processing | `phase = measure_int / (2**n_count)`; `Fraction(phase).limit_denominator(N).denominator` gives `r`; checks `r % 2 == 0`; computes `gcd(a^(r/2)±1, N)` | Continued fractions + factor extraction |
+| 5 — Export | `self.save_circuit(gs)` and `self.save_txt()` (on success and failure) | Saves SVG circuit diagram and text results |
 
 **Two Circuit Methods:**
 
 - **`_build_modular_matrix_circuit(qc, n_count, n_work, a, N)`** — For each counting qubit `q`, computes `power_factor = a^(2^q) mod N`, builds a permutation matrix via `_get_modular_matrix(power_factor, N, n_work)`, and calls `qc.unitary(matrix, work_qubits, control=q)`. Simple and direct, but requires explicit matrix construction.
 
-- **`_build_modular_operator_circuit(qc, n_count, n_work, n_work_actual, a, N, backend)`** — Uses an algebraic operator decomposition. Core sub-components:
-  - `_multiple_mod(n_qubits, a, N, backend)` — Controlled modular multiplier; built from `_Add_constant_mod_opt` sub-circuits.
-  - `_Add_constant_mod_opt(n_qubits, a, N, backend)` — Quantum modular adder using QFT-domain phase rotations (`_Ph`, `_Controlled_Ph`, `QFT`, `IQFT`).
+- **`_build_modular_operator_circuit(gs, n_count, n_work, n_work_actual, a, N)`** — Uses an algebraic operator decomposition. Core sub-components:
+  - `_multiple_mod(n_qubits, a, N)` — Controlled modular multiplier; built from `_Add_constant_mod_opt` sub-circuits.
+  - `_Add_constant_mod_opt(n_qubits, a, N)` — Quantum modular adder using QFT-domain phase rotations (`_Ph`, `_Controlled_Ph`, `QFT`, `IQFT`).
 
 **Helper Methods:**
 - `_get_modular_matrix(a, N, n_qubits)` — Builds the permutation matrix for modular multiplication.
-- `_Ph(n, a, qc)` / `_Controlled_Ph(n, a, qc, ctrl, data)` — Apply phase rotations in QFT domain.
-- `_update_last_result` / `_build_return` — Store runtime fields and package result dict.
+- `_Ph(n, a, gs)` / `_Controlled_Ph(n, a, gs, control_qubit, data_qubits)` — Apply phase rotations in QFT domain.
+- `self.update_output(output)` / `_build_return_dict(success, circuit_path, filepath, circuit)` — Store runtime fields and package result dict.
 
 **Data flow:** `N` → random `a` → circuit method dispatch → `Circuit` → `execute()` → `state.measure()` → continued fractions → `gcd()` → factors → `_build_return()`.
 
@@ -141,8 +151,8 @@ yields non-trivial factors of $N$.
 | Work register initialized to $|1\rangle$ | `qc.x(n_count)` in Stage 2 |
 | Controlled $a^{2^k} \bmod N$ (matrix method) | `_build_modular_matrix_circuit()` — `qc.unitary(matrix, work, control=q)` |
 | Controlled $a^{2^k} \bmod N$ (operator method) | `_build_modular_operator_circuit()` via `_multiple_mod()` using QFT-domain adders |
-| Inverse QFT (iQFT) | `qc.append(IQFT(n_count, backend), range(n_count))` from `unitarylab.library` |
-| Measurement of counting register | `state.measure(range(n_count), endian='little')` → binary string → integer |
+| Inverse QFT (iQFT) | `gs.append(IQFT(n_count), range(n_count))` from `unitarylab.library` |
+| Measurement of counting register | `result = gs.execute(...)`; `result.measure(range(n_count), endian='little')` → binary string → integer |
 | Phase $\phi \approx k/r$ | `phase = measure_int / 2^n_count` |
 | Continued fractions algorithm | `Fraction(phase).limit_denominator(N).denominator` → `r` |
 | Factor extraction $\gcd(a^{r/2}\pm1, N)$ | `math.gcd(guess - 1, N)` and `math.gcd(guess + 1, N)` |
@@ -165,9 +175,13 @@ from unitarylab_algorithms import ShorAlgorithm
 
 algo = ShorAlgorithm()
 result = algo.run(N=15, method='matrix', backend='torch', max_retries=20)
-print(f"Factors of 15: {result['factors']}")    # [3, 5] or [5, 3]
+print(f"Status: {result['status']}")                  # 'ok' or 'failed'
+print(f"Factors of 15: {result['factors']}")          # [3, 5] or [5, 3]
 print(f"Period r: {result['period']}")
-print(result['plot'])
+print(f"Selected base a: {result['Selected base']}")
+print(f"Circuit path: {result['circuit_path']}")
+for f in result['plot']:                               # saved output files
+    print(f["format"], f["filename"])
 ```
 
 

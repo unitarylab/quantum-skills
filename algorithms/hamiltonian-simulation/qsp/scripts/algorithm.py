@@ -38,7 +38,7 @@ result = algo.run(
 
 print("Status       :", result["status"])
 print("Circuit path :", result["circuit_path"])
-print("File path    :", result["file_path"])
+print("Plot files   :", result["plot"])
 
 U_approx = algo.output["Approximate evolution matrix"]
 U_exact  = algo.output["Exact evolution matrix"]

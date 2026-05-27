@@ -66,27 +66,26 @@ After using this skill, you should be able to:
 ### Quick Start Example
 
 ```python
+import numpy as np
 from unitarylab_algorithms import QDriftAlgorithm
 
-# 2-qubit Hamiltonian as (pauli_string, coefficient) list
-H_list = [
-    ("ZI", 0.45),
-    ("IZ", 0.45),
-    ("XX", 0.1),
-]
+# 2x2 Hermitian Hamiltonian matrix
+H = np.array([[2, 1],
+              [1, 3]], dtype=float)
 
-algo = QDriftAlgorithm(seed=1234)
+algo = QDriftAlgorithm()
 result = algo.run(
-    H_list=H_list,
+    H=H,
     t=1.0,
-    epsilon=1e-3,
-    n_qubits=2,
+    error=1e-8,
+    steps=5000,
     backend='torch',
 )
 
 print("status:", result['status'])
-print("error:", result['error'])
-print(result.get('plot', ''))
+print("Frobenius norm of error:", result['Frobenius norm of error'])
+for f in result['plot']:
+    print(f"Saved {f['format']} file: {f['filename']}")
 ```
 
 ### Core Parameters Explained
@@ -95,46 +94,51 @@ print(result.get('plot', ''))
 
 ```python
 class QDriftAlgorithm:
-    def __init__(self, seed: int = 666) -> None:
+    def __init__(self, text_mode: str = "plain", algo_dir: str = None) -> None:
         ...
 ```
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `seed` | `int` | `666` | Random seed for reproducibility. |
+| `text_mode` | `str` | `"plain"` | Output text format mode. |
+| `algo_dir` | `str\|None` | `None` | Directory for saving result files. Auto-generated if `None`. |
 
 #### `run()` Parameters
 
 ```python
-def run(self, H_list, t, epsilon, n_qubits, backend='torch', algo_dir=None):
+def run(self, H: np.ndarray, t: float, error: float, steps: int = 5000, backend='torch', device='cpu', dtype=np.complex128):
     ...
 ```
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `H_list` | `List[Tuple[str, float]]` | required | Hamiltonian as a list of `(pauli_string, coefficient)` tuples. |
+| `H` | `np.ndarray` | required | Hermitian Hamiltonian matrix (2D square array). Non-power-of-2 dimensions are zero-padded. |
 | `t` | `float` | required | Total evolution time. |
-| `epsilon` | `float` | required | Target error; used to compute sampling step count $N = \lceil 2\lambda^2 t^2 / \epsilon \rceil$. |
-| `n_qubits` | `int` | required | Number of qubits. |
-| `backend` | `str` | `'torch'` | Simulation backend. |
-| `algo_dir` | `str\|None` | `None` | Output directory for circuit diagram. |
+| `error` | `float` | required | Desired approximation error (currently reserved; does not auto-set `steps`). |
+| `steps` | `int` | `5000` | Number of random Pauli samples. Larger values reduce variance and increase circuit depth. |
+| `backend` | `str` | `'torch'` | Simulation backend for `qc.get_matrix()`. |
+| `device` | `str` | `'cpu'` | Device for backend computation. |
+| `dtype` | `type` | `np.complex128` | Dtype for matrix computation. |
 
 ### Return Fields
 
+The `run()` method returns a dictionary built by `_build_return_dict(success, circuit_path, filepath, circuit)`. The `self.output` fields are merged into the result via `result.update(self.output)`, so all keys below are accessible directly on the returned dict:
+
 | Key | Type | Description |
 |---|---|---|
-| `status` | `str` | `'success'`. |
-| `error` | `float` | Estimated approximation error. |
-| `circuit` | `Circuit` | The assembled QDrift circuit (one random trajectory). |
-| `circuit_path` | `str` | Path to circuit SVG. |
-| `message` | `str` | Summary message. |
-| `plot` | `str` | ASCII art result panel. |
+| `status` | `str` | `'ok'` on success, `'failed'` otherwise. |
+| `circuit_path` | `str` | Local path to the saved circuit diagram (SVG). |
+| `plot` | `list` | List of saved result files, each as `{"format": str, "filename": str}` (format is the 3-char file extension). |
+| `circuit` | `Circuit` | The assembled QDrift circuit object. |
+| `Approximate evolution matrix` | `np.ndarray` | Approximate unitary $U_{\text{approx}}$ from the random QDrift circuit (`qc.get_matrix()`). |
+| `Exact evolution matrix` | `np.ndarray` | Exact reference unitary $e^{-iHt}$ computed via `scipy.linalg.expm`. |
+| `Frobenius norm of error` | `float` | $\|U_{\text{approx}} - U_{\text{exact}}\|_F$ — Frobenius norm of the difference. |
 
 ## Understanding the Core Components
 
 ### 1) Probability and angle construction
 
-From `_expand` in `algorithms/qdrift/qdrift.py`:
+From `_expand(decomposition, t, steps)` in `algorithm.py`:
 
 ```python
 pauli_strings = [p for p, _ in decomposition]
@@ -143,13 +147,13 @@ coeffs = np.array([c.real for _, c in decomposition], dtype=float)
 lam = np.sum(np.abs(coeffs))
 probs = np.abs(coeffs) / lam
 
-indices = np.random.choice(len(decomposition), size=self.steps, p=probs)
+indices = np.random.choice(len(decomposition), size=steps, p=probs)
 
 sequence = []
 for idx in indices:
     pauli_str = pauli_strings[idx]
     sign = np.sign(coeffs[idx])
-    angle = sign * lam * t / self.steps
+    angle = sign * lam * t / steps
     sequence.append((pauli_str, angle))
 ```
 
@@ -160,60 +164,64 @@ Interpretation:
 
 ### 2) Circuit assembly from random sequence
 
-From `_run`:
+From `run()` in `algorithm.py`:
 
 ```python
-decomposition = self._pauli_decompose(self.H, self.t)
-sequence = self._expand(decomposition, self.t)
+decomposition = pauli_string_decomposition(H)
+sequence = self._expand(decomposition, t, steps)
 
+reg = Register('K', n)
+qc = Circuit(reg, name='QDrift Decomposition')
 for pauli_str, angle in sequence:
     gate = pauli_string_evolution(pauli_str, angle)
-    qc.append(gate, range(self.target_qubits))
+    qc.append(gate, range(n))
 
-self._circuit = qc
-self._evolution_result = self._circuit.get_matrix()
+U_approx = qc.get_matrix(backend=backend, device=device, dtype=dtype)
+U_exact = expm(-1j * H * t)
+U_error = norm(U_approx - U_exact, ord='fro')
 ```
 
 Interpretation:
 1. The evolution result corresponds to one random trajectory.
-2. Different seeds produce different approximation instances.
-3. For stable evaluation, average over multiple independent runs.
+2. `np.random.choice` is unseeded by default; results vary between runs.
+3. For stable evaluation, fix a random seed externally via `np.random.seed(...)` before calling `run()`.
 
 ### 3) External package function notes (brief)
 
-1. `_pauli_decompose` comes from base class and handles decomposition details.
+1. `pauli_string_decomposition` from `unitarylab.library.pauli_operator` decomposes the matrix into Pauli terms.
 2. `pauli_string_evolution` creates the gate implementation for each sampled term.
-3. `total_error` comes from base class and compares to exact `expm(-1jHt)`.
+3. Error is assessed via Frobenius norm against `scipy.linalg.expm(-1j * H * t)`.
 
 ## Hands-On Example: Hamiltonian Simulation
 
-Measure variance across seeds and step counts.
+Measure variance across random seeds and step counts.
 
 ```python
+import numpy as np
 from unitarylab_algorithms import QDriftAlgorithm
 
-H_list = [
-    ("ZI", 0.35),
-    ("IZ", 0.35),
-    ("XX", 0.15),
-    ("YY", 0.15),
-]
+# 2-qubit Heisenberg-like Hamiltonian (4×4 matrix)
+XX = np.array([[0,0,0,1],[0,0,1,0],[0,1,0,0],[1,0,0,0]], dtype=float)
+ZZ = np.array([[1,0,0,0],[0,-1,0,0],[0,0,-1,0],[0,0,0,1]], dtype=float)
+H = XX + ZZ
 
-for epsilon in [0.1, 0.01]:
+for steps in [1000, 5000]:
     for seed in [0, 1, 2]:
-        algo = QDriftAlgorithm(seed=seed)
+        np.random.seed(seed)
+        algo = QDriftAlgorithm()
         result = algo.run(
-            H_list=H_list,
+            H=H,
             t=1.0,
-            epsilon=epsilon,
-            n_qubits=2,
+            error=1e-8,
+            steps=steps,
             backend='torch',
         )
-        print(f"epsilon={epsilon}, seed={seed}, error={result['error']:.3e}")
+        err = result['Frobenius norm of error']
+        print(f"steps={steps}, seed={seed}, Frobenius error={err:.3e}")
 ```
 
 What to look for:
-1. Smaller `epsilon` leads to more sampling steps and lower error.
+1. Larger `steps` reduces the Frobenius-norm error on average.
 2. Different seeds produce different random trajectories with some variance.
 
 ## Mathematical Deep Dive

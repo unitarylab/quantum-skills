@@ -4,12 +4,9 @@ Compares classical Schrodingerization solver with Trotter quantum circuit.
 """
 
 import numpy as np
-from unitarylab.library import schro_classical, schro_trotter
-from unitarylab.library.differential_operator import TDiff
-from unitarylab.library.differential_operator.classical_matrices import (
-    matrix_exponential,
-    second_order_derivative,
-)
+from unitarylab.library.equation.schrodingerization import schro_classical, schro_trotter, circuit_classical
+from unitarylab.library.equation.differential_operator import CDiff, TDiff
+from unitarylab.library.equation.differential_operator.classical_matrices import matrix_exponential
 
 
 def main():
@@ -19,22 +16,24 @@ def main():
     L = 1.0
     a = 0.1               # diffusion coefficient
     T = 0.02
-    dx = L / Nx
     na = 6
     R = 4.0
     order = 2
     point = 1
     Nt = 10
+    bd = "dirichlet"
+    scheme = "central"
 
-    # --- Grid & initial condition ---
-    x = np.linspace(0.0, L, Nx, endpoint=False)
+    # --- Grid & initial condition (Dirichlet) ---
+    dx = L / (Nx + 1)
+    x  = np.arange(dx, L, dx)
     u0 = np.sin(np.pi * x).astype(complex)
-    f = 0.1 * np.sin(2.0 * np.pi * x)
+    f  = 0.1 * np.sin(2.0 * np.pi * x)
 
     # --- Classical operators ---
-    D2, bvec = second_order_derivative(N=Nx, dx=dx, boundary_condition="dirichlet")
-    A = (a * D2).toarray().astype(complex)
-    b = np.asarray(a * bvec + f, dtype=complex)
+    A_raw = a * CDiff(N=Nx, dx=dx, order=2, scheme=scheme, boundary=bd).get_matrix()
+    A = (A_raw.toarray() if hasattr(A_raw, 'toarray') else np.asarray(A_raw)).astype(complex)
+    b = np.asarray(f, dtype=complex)   # zero Dirichlet BCs → no boundary correction
 
     # --- Reference ---
     u_ref = np.asarray(matrix_exponential(A, u0, T=T, dt=0.001), dtype=complex)
@@ -44,17 +43,16 @@ def main():
         schro_classical(A, u0, T=T, na=na, R=R, order=order, point=point, b=b),
         dtype=complex,
     )
+    qc_cls = circuit_classical(nx, na)
 
     # --- Method 2: Trotter quantum circuit ---
     dt_trotter = T / Nt
-    tdiff = a * TDiff(nx, dx, order=2, scheme="central", boundary="dirichlet")
-    func1, func2 = tdiff.data()
+    func1, func2 = (a * TDiff(nx, dx, 2, scheme=scheme, boundary=bd)).data()
     H1 = func1(dt_trotter / R)
     H2 = func2(dt_trotter)
 
     u_trot, qc = schro_trotter(
-        u0=u0, H1=H1, H2=H2, Nt=Nt, na=na, R=R, order=order, point=point, b=b,
-        theta=dt_trotter,
+        u0=u0, H1=H1, H2=H2, Nt=Nt, na=na, R=R, order=order, point=point
     )
     u_trot = np.asarray(u_trot, dtype=complex)
 
@@ -66,7 +64,8 @@ def main():
     print(f"  Trotter steps     : {Nt}")
     print(f"  Classical L2 err  : {np.linalg.norm(u_cls - u_ref):.6e}")
     print(f"  Trotter   L2 err  : {np.linalg.norm(u_trot - u_ref):.6e}")
-    print(f"  Circuit qubits    : {qc.get_num_qubits()}")
+    print(f"  Classical circuit : {qc_cls.get_num_qubits()} qubits")
+    print(f"  Trotter   circuit : {qc.get_num_qubits()} qubits")
 
 
 if __name__ == "__main__":

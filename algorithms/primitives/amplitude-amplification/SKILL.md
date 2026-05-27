@@ -57,12 +57,22 @@ result = algo.run(
     backend='torch'
 )
 
-print(result['amplified_prob'])   # Amplified probability of good state
-print(result['circuit_path'])     # SVG circuit diagram path
-print(result['status'])           # 'ok' if amplification succeeded
+print(result['Amplified Target Probability'])  # Amplified probability of good state
+print(result['circuit_path'])                  # SVG circuit diagram path
+print(result['status'])                        # 'ok' if amplification succeeded
+print(result['plot'])                          # List of saved file dicts [{"format": ..., "filename": ...}]
 ```
 
 ## Core Parameters Explained
+
+**`__init__(text_mode, algo_dir)` — Constructor parameters:**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `text_mode` | `str` | `'plain'` | Output text formatting mode. |
+| `algo_dir` | `str` or `None` | `None` | Directory to save results; auto-derived from cwd if `None`. |
+
+**`run(U, good_zero_qubits, p, reps, backend, device, dtype)` — Run parameters:**
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -71,7 +81,8 @@ print(result['status'])           # 'ok' if amplification succeeded
 | `p` | `float` | required | Estimated initial success probability. Must satisfy $0 < p < 1$. |
 | `reps` | `int` or `None` | `None` | Manual override for number of Grover iterations. If `None`, computed from `p`. |
 | `backend` | `str` | `'torch'` | Simulation backend. Only `'torch'` is supported. |
-| `algo_dir` | `str` or `None` | `None` | Directory to save circuit diagram. Auto-set if `None`. |
+| `device` | `str` | `'cpu'` | Device for simulation (e.g. `'cpu'` or `'cuda'`). |
+| `dtype` | dtype | `np.complex128` | Numerical dtype for simulation. |
 
 **Common misunderstandings:**
 - `good_zero_qubits` refers to indices within the **data register** (not the ancilla). The ancilla qubit is automatically appended at index `n_data`.
@@ -83,33 +94,37 @@ print(result['status'])           # 'ok' if amplification succeeded
 | Key | Type | Description |
 |---|---|---|
 | `status` | `str` | `'ok'` if amplified probability exceeds initial `p`; `'failed'` otherwise. |
-| `amplified_prob` | `float` | Measured probability of the good state after amplification. |
+| `Amplified Target Probability` | `float` | Measured probability of the good state after amplification. |
 | `circuit_path` | `str` | Path to the saved SVG circuit diagram. |
-| `message` | `str` | Human-readable summary. |
-| `plot` | `str` | ASCII art result panel. |
+| `plot` | `list` | List of saved file dicts, each with `'format'` and `'filename'` keys. |
+| `circuit` | `Circuit` | The `Circuit` object constructed for the algorithm. |
+| `Initial Success Probability` | `float` | The `p` value passed to `run()`. |
+| `Repetitions` | `int` | Number of Grover iterations actually used. |
+| `Computation Time (s)` | `float` | Quantum simulation wall-clock time in seconds. |
+| `Data register size` | `int` | Number of data qubits (derived from `U.get_num_qubits()`). |
 
 ## Implementation Architecture
 
 `AmplitudeAmplificationAlgorithm` in `algorithm.py` decomposes the full algorithm into five ordered stages inside `run()`, supported by four dedicated helper methods.
 
-**`run(U, good_zero_qubits, p, reps, backend, algo_dir)` — Five Stages:**
+**`run(U, good_zero_qubits, p, reps, backend, device, dtype)` — Five Stages:**
 
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Resolution | `n_data = U.get_num_qubits()`; `ancilla = n_data`; calls `_get_optimal_iterations(p)` if `reps is None` | Converts user-supplied probability into Grover iteration count $k$ |
-| 2 — Circuit Construction | Creates `Circuit(n_data+1)`, appends `U`, then loops `reps` times appending oracle and diffuser | Builds the full amplitude amplification circuit layer by layer |
-| 3 — Simulation Execution | `qc.execute()` → `State(re_state)` → `state_obj.calculate_state(data_qubits)` | Runs the statevector simulation; marginalizes ancilla to get data-register probabilities |
-| 4 — Post-Processing | Iterates `state_basis_dict`; sums probability for states where all `good_zero_qubits == '0'` | Classically extracts `target_prob`; sets `is_success = (target_prob > p)` |
-| 5 — Export | `qc.draw(filename=..., title=...)` | Saves SVG circuit diagram |
+| 2 — Circuit Construction | Creates `Circuit(n_data+1, name='Amplitude_Amplification')`, appends `U` to `data_qubits`, then loops `reps` times calling `_build_oracle(gs, good_zero_qubits, ancilla)` and `_build_diffuser(gs, U, data_qubits, ancilla)` | Builds the full amplitude amplification circuit layer by layer |
+| 3 — Simulation Execution | `gs.execute(backend, device, dtype)` → `re_state.calculate_state(data_qubits)` | Runs the statevector simulation; marginalizes ancilla to get data-register probabilities |
+| 4 — Post-Processing | Iterates `state_basis_dict`; sums probability for states where all `good_zero_qubits == '0'`; sets `is_success = (target_prob > p)` | Classically extracts `target_prob` (`result['Amplified Target Probability']`) |
+| 5 — Export | `self.save_circuit(gs)` / `self.save_txt()` → `_build_return_dict(is_success, circuit_path, filename, gs)` | Saves SVG circuit + text results; packages return dict |
 
 **Helper Methods:**
 
 - **`_get_optimal_iterations(p)`** — Computes `k = max(0, round(π/(4·arcsin(√p)) − 0.5))`. Uses `round()` instead of `floor()` to avoid floating-point precision errors near integer boundaries.
 - **`_build_oracle(qc, zero_qubits, ancilla)`** — Implements the phase-kickback oracle. Prepares ancilla in $|-\rangle$ via `_prepare_kickback_ancilla_minus`, applies X-flips on all `zero_qubits` to convert $|0\rangle$-control to $|1\rangle$-control, applies `qc.cx`/`qc.mcx` targeting the ancilla, then reverts X-flips and unprepares the ancilla. The net data-register effect is $|x\rangle \mapsto (-1)^{f(x)}|x\rangle$.
 - **`_build_diffuser(qc, U, data_qubits, ancilla)`** — Implements the Grover diffuser as `U†` → `_build_oracle(all data_qubits)` → `U`. This reflects the state about $U|0\rangle^n$. It reuses `_build_oracle` on the full data register, which is the $2|0^n\rangle\langle 0^n|-I$ reflection.
-- **`_update_last_result` / `_build_return`** — Store all runtime data into `self.last_result` and package the result dict (including the ASCII panel rendered by `format_result_ascii()`).
+- **`_build_return_dict(success, circuit_path, filepath, circuit)`** — Packages the final return dict. Sets `status` to `'ok'` or `'failed'`, wraps file paths as `[{"format": ext, "filename": path}]`, and merges `self.output` fields (`Amplified Target Probability`, `Initial Success Probability`, `Repetitions`, `Computation Time (s)`, `Data register size`) into the result.
 
-**Data flow:** `U` (user input) → `Circuit` circuit → `execute()` → `State.calculate_state()` → `target_prob` → `_build_return()` → result dict.
+**Data flow:** `U` → `Circuit(n_data+1)` → `gs.execute(backend, device, dtype)` → `re_state.calculate_state(data_qubits)` → `target_prob` (`result['Amplified Target Probability']`) → `_build_return_dict(is_success, circuit_path, filename, gs)` → result dict.
 
 ## Understanding the Key Quantum Components
 
@@ -139,7 +154,7 @@ $$G^k|\psi\rangle = \sin((2k+1)\theta)|\text{good}\rangle + \cos((2k+1)\theta)|\
 The good-state amplitude grows, reaching maximum near $(2k+1)\theta \approx \pi/2$.
 
 ### 5. Measurement
-The data register probabilities are extracted via `State.calculate_state(data_qubits)`, marginalizing over the ancilla.
+The data register probabilities are extracted via `re_state.calculate_state(data_qubits)`, marginalizing over the ancilla.
 
 ## Theory-to-Code Mapping
 
@@ -152,7 +167,7 @@ The data register probabilities are extracted via `State.calculate_state(data_qu
 | Angle $\theta = \arcsin(\sqrt{p})$ | `theta = math.asin(math.sqrt(p))` inside `_get_optimal_iterations()` |
 | Optimal iteration count $k = \lfloor\pi/(4\theta) - 1/2\rceil$ | `int(round(math.pi / (4.0 * theta) - 0.5))` in `_get_optimal_iterations()` |
 | Ancilla qubit for phase kickback | `ancilla = n_data` — automatically the last qubit in the `n_data+1` register |
-| Final probability of good state | `target_prob` accumulated in Stage 4; returned as `amplified_prob` |
+| Final probability of good state | `target_prob` accumulated in Stage 4; returned as `result['Amplified Target Probability']` |
 | Amplified probability $\sin^2((2k+1)\theta)$ | Not computed symbolically; arises from simulation measurement in Stage 3–4 |
 
 **Notes on encapsulation:** The README describes the ancilla-based kickback oracle. In the code, the oracle is fully encapsulated in `_build_oracle`, and the diffuser reuses it via `_build_diffuser`. The $2|0^n\rangle\langle 0^n|-I$ reflection is not built with explicit Hadamard or X gates on all qubits — instead, it is also an oracle call with `zero_qubits = list(data_qubits)`. The global phase correction seen in some QAE variants is **not** applied here; this implementation targets probability amplification, not eigenphase use.
@@ -191,18 +206,17 @@ U2 = Circuit(3, name="LowProb", backend='torch')
 U2.ry(1.4, 0)
 U2.ry(1.4, 1)
 
-algo = AmplitudeAmplificationAlgorithm()
+algo = AmplitudeAmplificationAlgorithm(algo_dir='./results/amp_amp')
 result = algo.run(
     U=U2,
     good_zero_qubits=[0, 1],  # Both qubit 0 and qubit 1 must be |0>
     p=0.05,                    # Estimated initial probability
-    backend='torch',
-    algo_dir='./results/amp_amp'
+    backend='torch'
 )
 
-print(f"Amplified probability: {result['amplified_prob']:.4f}")
+print(f"Amplified probability: {result['Amplified Target Probability']:.4f}")
 print(f"Status: {result['status']}")
-print(result['plot'])
+print(result['plot'])   # [{'format': 'txt', 'filename': '...'}]
 ```
 ## Reference Implementation (Qiskit)
 
