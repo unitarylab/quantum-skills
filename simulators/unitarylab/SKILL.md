@@ -135,16 +135,20 @@ qc.h(0)
 qc.cx(0, 1)
 
 initial_state = np.array([1.0, 0.0, 0.0, 0.0], dtype=complex)
-final_state = qc.execute(initial_state.copy())
+
+result = qc.execute(initial_state.copy())
+final_state = result.state
+
 probs = np.abs(final_state) ** 2
+
 print(final_state)
-print(probs)  # expected: [0.5, 0.0, 0.0, 0.5]
+print(probs)  # expected: probabilities concentrated on |00⟩ and |11⟩
 ```
 
 ---
 
 ## Working Standard for Future Examples
-- Do not stop at circuit construction; execute the circuit.
+- When the user asks to run, verify, or demonstrate executable behavior, do not stop at circuit construction; execute the circuit and print at least one validation artifact.
 - Print at least one validation artifact:
     - final statevector, or
     - measurement probabilities.

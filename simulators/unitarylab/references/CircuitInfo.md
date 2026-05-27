@@ -2,7 +2,7 @@
 
 ## Introduction
 
-`CircuitInfo` is a powerful helper class for analyzing quantum gate circuits. It takes a gate sequence object `qc`, extracts the gate data and the number of qubits, and provides comprehensive analytical capabilities:
+`CircuitInfo` is a helper class for statically analyzing quantum circuits. It takes a `Circuit` object, extracts gate data from `qc.gate_sequence.data()`, reads the total number of qubits from `qc.get_num_qubits()`, and provides a set of circuit analysis utilities:
 
 - **Circuit Overview**: Basic statistics including qubit count, gate count, and circuit depth
 - **Gate Statistics**: Detailed analysis of gate types and counts (single-qubit, two-qubit, multi-qubit, parameterized)
@@ -77,7 +77,7 @@ Coupling Map
     target           : [0]
     control          : []
     params           : {}
-    control_state : []
+    control_state : None
 ----------------------------------------------------
 [1] cx
     raw_name         : cx
@@ -91,14 +91,14 @@ Coupling Map
     target           : [0]
     control          : []
     params           : {}
-    control_state : []
+    control_state : None
 ----------------------------------------------------
 [3] rz
     raw_name         : rz
     target           : [1]
     control          : []
     params           : {'value': 0.7853981633974483}
-    control_state : []
+    control_state : None
 ----------------------------------------------------
 [4] mcx
     raw_name         : mcx
@@ -194,7 +194,7 @@ info.show("instructions")
     target           : [0]
     control          : []
     params           : {}
-    control_state : []
+    control_state : None
 ----------------------------------------------------
 [1] cx
     raw_name         : cx
@@ -208,14 +208,14 @@ info.show("instructions")
     target           : [0]
     control          : []
     params           : {}
-    control_state : []
+    control_state : None
 ----------------------------------------------------
 [3] rz
     raw_name         : rz
     target           : [1]
     control          : []
     params           : {'value': 0.7853981633974483}
-    control_state : []
+    control_state : None
 ----------------------------------------------------
 [4] mcx
     raw_name         : mcx

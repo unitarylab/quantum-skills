@@ -46,8 +46,7 @@ The top-level `unitarylab` package re-exports the most commonly used symbols for
 | `Circuit` | `unitarylab.core` | Quantum circuit container (see [Circuit](#Circuit)) |
 | `Register` | `unitarylab.core` | Quantum register (see [Register](#register)) |
 | `ClassicalRegister` | `unitarylab.core` | Classical register (see [ClassicalRegister](#classicalregister)) |
-| `QFT` | `unitarylab.library` | n-qubit Quantum Fourier Transform circuit |
-| `IQFT` | `unitarylab.library` | n-qubit Inverse Quantum Fourier Transform circuit |
+
 
 ---
 
@@ -63,7 +62,16 @@ from unitarylab import Circuit, Register, ClassicalRegister
 
 ### Circuit
 
-#### `Circuit(num_qubits, *classical_registers, name='Sequence')` or `Circuit(*registers)`
+#### `Circuit(*args, name="Circuit", **kwargs)`
+
+`Circuit` uses a flexible constructor. It parses different initialization patterns through `*args`.
+
+Common initialization patterns:
+
+- `Circuit(n, name="Circuit")`
+- `Circuit(state_vector, name="Circuit")`
+- `Circuit(*registers, name="Circuit")`
+
 
 Quantum circuit container. Wraps the backend gate-sequence implementation and adds register management, circuit composition, visualization, and execution.
 
@@ -71,8 +79,8 @@ Quantum circuit container. Wraps the backend gate-sequence implementation and ad
 
 | Form | Description |
 |------|-------------|
-| `Circuit(n)` | Create a circuit with `n` qubits using a single auto-named quantum register `'q'` |
-| `Circuit(n, cr1, cr2, ...)` | Same as above plus one or more `ClassicalRegister` objects |
+| `Circuit(n)` | Create a circuit with `n` qubits and default quantum registers |
+| `Circuit(state_vector)` | Create a circuit initialized from a normalized state vector |
 | `Circuit(reg1, reg2, ...)` | Create a circuit from explicit `Register` / `ClassicalRegister` objects |
 
 **Circuit management**
@@ -80,45 +88,44 @@ Quantum circuit container. Wraps the backend gate-sequence implementation and ad
 | Method | Return | Description |
 |--------|--------|-------------|
 | `get_num_qubits()` | int | Total qubit count |
-| `get_backend_type()` | str | Active backend name |
 | `update_name(name)` | — | Rename the circuit |
-| `data()` | list | Raw gate data of the underlying backend circuit |
-| `copy()` | `Circuit` | Shallow copy of the circuit |
+| `data()` | `GateSequence` | Return the underlying gate sequence object |
+| `copy()` | `Circuit` | Create an independent circuit copy with copied registers, mappings, and gate sequence |
 | `add_register(register)` | — | Append a `Register` and assign global qubit indices |
 | `add_classical_register(cl_register)` | — | Append a `ClassicalRegister` |
 
-**Single-qubit gates** — `qubit` may be an int, `Register` index result, or list thereof.
+**Single-qubit gates** — `target` may be an int, `Register` index result, or list thereof.
 
 | Method | Description |
 |--------|-------------|
-| `x(qubit)` | Pauli-X |
-| `y(qubit)` | Pauli-Y |
-| `z(qubit)` | Pauli-Z |
-| `h(qubit)` | Hadamard |
-| `s(qubit)` | S gate |
-| `sdag(qubit)` | S† gate |
-| `t(qubit)` | T gate |
-| `tdag(qubit)` | T† gate |
-| `sqrtx(qubit)` | √X gate |
-| `sqrtxdag(qubit)` | √X† gate |
-| `sqrty(qubit)` | √Y gate |
-| `sqrtydag(qubit)` | √Y† gate |
-| `i(qubit)` | Identity |
-| `gp(angle)` | Global phase |
+| `x(target)` | Pauli-X |
+| `y(target)` | Pauli-Y |
+| `z(target)` | Pauli-Z |
+| `h(target)` | Hadamard |
+| `s(target)` | S gate |
+| `sdag(target)` | S† gate |
+| `t(target)` | T gate |
+| `tdag(target)` | T† gate |
+| `sqrtx(target)` | √X gate |
+| `sqrtxdag(target)` | √X† gate |
+| `sqrty(target)` | √Y gate |
+| `sqrtydag(target)` | √Y† gate |
+| `i(target)` | Identity |
+| `gp(target)` | Global phase |
 
 **Parameterized single-qubit gates**
 
 | Method | Description |
 |--------|-------------|
-| `rx(angle, qubit)` | RX rotation |
-| `ry(angle, qubit)` | RY rotation |
-| `rz(angle, qubit)` | RZ rotation |
-| `u1(lambda_, qubit)` | U1 gate |
-| `u2(phi, lambda_, qubit)` | U2 gate |
-| `u3(theta, phi, lambda_, qubit)` | U3 gate |
-| `p(angle, qubit)` | Phase gate |
+| `rx(angle, target)` | RX rotation |
+| `ry(angle, target)` | RY rotation |
+| `rz(angle, target)` | RZ rotation |
+| `u1(lambda_, target)` | U1 gate |
+| `u2(phi, lambda_, target)` | U2 gate |
+| `u3(theta, phi, lambda_, target)` | U3 gate |
+| `p(angle, target)` | Phase gate |
 
-**Two-qubit gates** — `control_state` is an optional binary string specifying active control states (e.g. `'0'` for control-on-zero).
+**Two-qubit gates** — `control_state` can be `None`, an integer, a binary string, or a list/tuple of 0/1 values. `None` defaults to all-1 controls.
 
 | Method | Description |
 |--------|-------------|
@@ -150,7 +157,7 @@ Quantum circuit container. Wraps the backend gate-sequence implementation and ad
 **Custom unitary**
 
 ```python
-qc.unitary(matrix, target, control=[], control_state=None)
+qc.unitary(self, matrix, target, control=None, control_state=None)
 ```
 
 Apply an arbitrary unitary matrix to `target` qubits. `matrix` must be a unitary ndarray of shape `(2^len(target), 2^len(target))`.
@@ -161,15 +168,15 @@ Apply an arbitrary unitary matrix to `target` qubits. `matrix` must be a unitary
 qc.measure(target, clbit)
 ```
 
-Map `target` qubit(s) to `clbit` classical bit(s). Results are stored in the corresponding `ClassicalRegister.values` after `execute()`.
+Map `target` qubit(s) to `clbit` classical bit(s). Measurement results are available from the execution result, such as `result.classical_results_map`.
 
 **Circuit composition**
 
 | Method | Description |
 |--------|-------------|
-| `append(block, target, control=[], control_state=None)` | Append a sub-circuit at the end |
-| `prepend(block, target, control=[], control_state=None)` | Prepend a sub-circuit at the beginning |
-| `initialize(v, target, control=[], control_state=None)` | Prepare state vector `v` on `target` qubits (must be called before any gate on those qubits) |
+| `append(block, target, control=None, control_state=None)` | Append a sub-circuit at the end |
+| `prepend(block, target, control=None, control_state=None)` | Prepend a sub-circuit at the beginning |
+| `initialize(v, target, control=None, control_state=None)` | Prepare state vector `v` on `target` qubits (must be called before any gate on those qubits) |
 
 **Circuit transformations**
 
@@ -177,23 +184,23 @@ Map `target` qubit(s) to `clbit` classical bit(s). Results are stored in the cor
 |--------|--------|-------------|
 | `dagger()` | `Circuit` | Conjugate transpose |
 | `inverse()` | `Circuit` | Inverse circuit |
-| `reverse()` | `Circuit` | Gates in reverse order |
-| `decompose(times=1)` | `Circuit` | Decompose composite gates |
+| `reverse()` | `Circuit` | Return a new circuit with qubit indices mirrored |
+| `decompose(n=1, name=None)` | `Circuit` | Decompose composite gates |
 | `repeat(times=1)` | `Circuit` | Repeat circuit `times` times |
-| `control(num_ctrl_qubits=1, control_state=None)` | `Circuit` | Add `num_ctrl_qubits` control qubits |
+| `control(num_control_qubits, control_state=None)` | `Circuit` | Add `num_ctrl_qubits` control qubits |
 
 **Execution**
 
 | Method | Return | Description |
 |--------|--------|-------------|
-| `execute(initial_state=None)` | `ndarray` | Simulate the circuit. `initial_state` is a length-`2^n` complex vector; defaults to `|0…0⟩`. Returns the final statevector. |
-| `get_matrix(m=0)` | `ndarray` | Extract the `2^m × 2^n` unitary matrix. Uses all qubits when `m ≤ 0`. |
+| `execute(initial_state=None, backend="torch", device="cpu", dtype=np.complex64)` | `ExecutionResult` | Execute the circuit and return an object containing `.state` and `.classical_results_map` |
+| `get_matrix(m=None, backend="torch", dtype=np.complex128, device="cpu")` | `ndarray` | Compute the circuit matrix. If `m=None`, use all qubits. |
 
 **Visualization**
 
 | Method | Return | Description |
 |--------|--------|-------------|
-| `draw(filename=None, title=None, style='dark', compact=True)` | Figure | Render circuit diagram. Saves to file when `filename` is provided. |
+| `draw(filename=None, title=None, compact=True)` | Figure | Render circuit diagram. Saves to file when `filename` is provided. |
 | `analyze(sections=None, show=True, qubit=None)` | `CircuitInfo` | Print/return circuit analysis (gate count, depth, qubit history, etc.). |
 
 ---

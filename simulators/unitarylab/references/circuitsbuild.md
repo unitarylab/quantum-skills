@@ -16,7 +16,7 @@ qr = Register('qr', 2)
 cr = ClassicalRegister('cr', 2)
 qc = Circuit(qr, cr)
 
-# Form 3: state vector — initial state set to the given vector (must be length 2^n)
+# Form 3: state vector — must be 1-D, normalized, and length 2^n
 sv = np.array([0, 1, 0, 0], dtype=complex)
 qc = Circuit(sv)
 ```
@@ -91,7 +91,7 @@ qc.p(np.pi / 6, 0) # P phase gate, phase parameter π/6, operates on qubit 0
 
 
 
-### Two-bit swap gate
+### Two-Qubit SWAP Gate
 ```python
 qc.swap(0, 1) # SWAP gate, swaps the states of qubit 0 and qubit 1
 ```
@@ -123,7 +123,7 @@ qc.crz(np.pi / 7, 2, 1) # CRZ gate, control bit 2, target bit 1, rotates π/7 ar
 
 ```
 
-## Multi-Control Gate Gates
+## Multi-Control Gates
 
 ```python
 
@@ -159,6 +159,7 @@ It can also be used together with control qubits and a specified `control_state`
 
 Applying a Custom Unitary Matrix
 ```python
+from scipy.linalg import expm
 qc = Circuit(n + 1)  # Create an (n+1)-qubit circuit for custom unitary testing
 
 U = np.random.randn(2**n, 2**n) + 1j * np.random.randn(2**n, 2**n)
@@ -185,7 +186,7 @@ def test_gs_unitary_apply(n):
         initial_state[j] = 1.0
 
         # Execute the circuit
-        actual = qc.execute(initial_state.copy())
+        actual = qc.execute(initial_state.copy()).state
 
         # Construct the expected result
         expected = initial_state.copy()
@@ -216,13 +217,11 @@ qc = Circuit(2, name="measure_test")  # Create a 2-qubit circuit for measurement
 
 qc.h(0)  # Apply a Hadamard gate to qubit 0 before measurement
 
-qc.measure(0)  # Measure qubit 0
-
-qc.measure([0, 1])  # Measure qubits 0 and 1
+# Measure qubits 0 and 1, and store results in classical bits 0 and 1
+qc.measure([0, 1], [0, 1])
 
 data = qc.data()
-for i, g in enumerate(data):
-    print(i, g)
+print(data)
 ```
 
 
@@ -246,7 +245,7 @@ qs_copy = qc.copy()  # Create a copy of the circuit
 
 qs_dagger = qc.dagger()  # Create the dagger (Hermitian conjugate) of the circuit
 
-qs_reverse = qc.reverse()  # Create a circuit with the gate order reversed
+qs_reverse = qc.reverse()  # Create a circuit with mirrored qubit indices
 
 qs_inverse = qc.inverse()  # Create the inverse of the circuit
 
@@ -273,11 +272,11 @@ ctrl_qc = qc.control(2, control_state="11")  # Add 2 control qubits and require 
 
 # Viewing Circuit Information
 
-print("Number of qubits in the original subcircuit:", qc.get_num_qubits())` # Print the number of qubits in the original subcircuit.
+print("Number of qubits in the original subcircuit:", qc.get_num_qubits())
 
-print("Number of qubits after control:", ctrl_qc.get_num_qubits())` # Print the number of qubits in the controlled circuit.
+print("Number of qubits after control:", ctrl_qc.get_num_qubits())
 
-print("Name of the controlled circuit:", ctrl_qc.name)` # Print the name of the controlled circuit.
+print("Name of the controlled circuit:", ctrl_qc.name)
 
 ```
 
@@ -315,27 +314,25 @@ for g in qc.data():
 The `initialize()`, `execute()`, and `get_matrix()` methods are used to set the initial quantum state, run the circuit, and retrieve the unitary matrix representation of the circuit.
 
 ```python
-qc = Circuit(1, name="exec_test")  # Create a 1-qubit circuit for execution testing
+# Initialize by circuit operation
+qc = Circuit(1, name="initialize_test")
 
-# Initializing the Quantum State
-v = np.array([0, 1], dtype=complex)  # Define the initial state vector |1⟩
+v = np.array([0, 1], dtype=complex)  # |1⟩
+qc.initialize(v, [0])
+qc.h(0)
 
-qc.initialize(v, [0])  # Initialize qubit 0 to the state |1⟩
+result = qc.execute()
 
-# Applying Gates
-qc.h(0)  # Apply a Hadamard gate to qubit 0
+state = result.state
+probs = np.abs(state) ** 2
+classical = result.classical_results_map
 
-# Executing the Circuit
-# execute() returns an ExecutionResult object, not a raw array
-result = qc.execute()           # execute from |0...0⟩
-result = qc.execute(initial_state=np.array([0, 1], dtype=complex))  # from a given state
+matrix = qc.get_matrix()
 
-state = result.state            # final statevector (1-D complex ndarray)
-probs = result.probabilities    # dict {bitstring: probability} over all basis states
-classical = result.classical_results_map  # {classical_bit_index: measured_value}
-
-# Getting the Circuit Matrix
-matrix = qc.get_matrix()  # Get the matrix representation of the circuit
+print("Final state:", state)
+print("Probabilities:", probs)
+print("Classical results:", classical)
+print("Circuit matrix:", matrix)
 ```
 
 ## Drawing a Quantum Circuit
