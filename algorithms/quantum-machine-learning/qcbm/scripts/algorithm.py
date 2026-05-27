@@ -4,10 +4,10 @@ from unitarylab_algorithms import QCBMAlgorithm
 
 
 def main():
-    algo = QCBMAlgorithm(seed=42)
+    algo = QCBMAlgorithm(text_mode="plain")
     result = algo.run(
-        n_qubits=4,
-        n_layers=4,
+        n=4,
+        layers=4,
         epochs=40,
         lr=0.1,
         backend="torch",
@@ -16,9 +16,10 @@ def main():
     print("=" * 50)
     print("QCBM: 2x2 Bars-and-Stripes")
     print("=" * 50)
-    print(result.get("plot", ""))
+    for f in result.get("plot", []):
+        print(f"  Output file     : {f['filename']} ({f['format']})")
     print(f"  Status          : {result['status']}")
-    print(f"  Final KL div    : {result['loss']:.4f}")
+    print(f"  Final KL div    : {result['Final KL Loss']:.4f}")
 
 
 if __name__ == "__main__":

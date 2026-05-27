@@ -32,19 +32,20 @@ HHL proceeds in five steps:
 
 - QPE (Quantum Phase Estimation).
 - Matrix eigenvalues, Hermitian matrices, condition number.
-- Python: `numpy`, `Circuit`, `State`, and `QPEAlgorithm` (from `fundamental_algorithm.qpe`).
+- Python: `numpy`, `Circuit`, and `QPE` (from `unitarylab.library`).
 
 ## Using the Provided Implementation
 
 ```python
-from unitarylab_algorithms import HHLAlgorithm
+from unitarylab.core import Circuit
+from algorithms.linear_systems.hhl.algorithm import HHLAlgorithm
 import numpy as np
 
 # 2x2 Hermitian system
 A = np.array([[1.5, 0.5], [0.5, 1.5]])
 b = np.array([1.0, 0.0])
 
-algo = HHLAlgorithm()
+algo = HHLAlgorithm(text_mode="plain")
 result = algo.run(
     A=A,
     b=b,
@@ -52,11 +53,11 @@ result = algo.run(
     backend='torch'
 )
 
-print(result['quantum_solution'])    # Quantum solution vector x_q
-print(result['classical_solution'])  # Classical exact solution x_c
-print(result['diff_norm'])           # ||x_q - x_c||
-print(result['post_selection_prob'])    # Post-selection success probability
-print(result['circuit_path'])        # SVG circuit diagram
+print(result['Estimated solution (quantum)'])    # Quantum solution vector x_q
+print(result['Exact solution (classical)'])      # Classical exact solution x_c
+print(result['L2 error'])                        # ||x_q - x_c||
+print(result['Post-selection probability'])      # Post-selection success probability
+print(result['circuit_path'])                    # SVG circuit diagram
 ```
 
 ## Core Parameters Explained
@@ -66,34 +67,37 @@ print(result['circuit_path'])        # SVG circuit diagram
 | `A` | `np.ndarray` | required | Hermitian matrix of size $N \times N$ where $N = 2^n$. |
 | `b` | `np.ndarray` | required | Right-hand side vector of length $N$. |
 | `d` | `int` | required | Phase register bits. More bits → better eigenvalue resolution. |
-| `t` | `float` or `None` | `None` | Evolution time. Auto-computed from eigenvalues if `None`. |
 | `backend` | `str` | `'torch'` | Simulation backend. |
-| `algo_dir` | `str` or `None` | `None` | Directory to save SVG circuit diagram. |
+| `device` | `str` | `'cpu'` | Compute device (e.g. `'cpu'`, `'cuda'`). |
+| `dtype` | `type` | `np.complex128` | Numeric dtype for simulation. |
+
+> **Note:** `algo_dir` is set in `HHLAlgorithm.__init__(algo_dir=...)`, not in `run()`. Evolution time `t` is always auto-computed from the matrix eigenvalues and is not a `run()` parameter.
 
 **Common misunderstandings:**
 - `A` must be **Hermitian** (`A == A†`). Non-Hermitian matrices will raise `ValueError`.
 - `A` must be square with dimension a **power of 2**. Pad with zeros if needed.
-- `t` is auto-tuned to avoid phase wraparound. Setting `t` too large will force auto-correction with a warning.
-- The output `quantum_solution` contains the reconstructed classical vector, not the quantum state coefficients directly.
+- Evolution time `t` is auto-computed inside `run()` from eigenvalues (`t = target_phi_max / lam_max`). It is not a user-facing parameter.
+- The output key `'Estimated solution (quantum)'` contains the reconstructed classical vector, not the raw quantum state coefficients directly.
 
 ## Return Fields
 
 | Key | Type | Description |
 |---|---|---|
-| `status` | `str` | `'success'` if post-selection probability is nonzero. |
-| `solution_quantum` | `np.ndarray` | Reconstructed solution vector from quantum state. |
-| `solution_classical` | `np.ndarray` | Exact classical solution $A^{-1}b$ for comparison. |
-| `state_system`| `float`| ... |
-| `post_selection_prob` | `float` | Probability of post-selecting ancilla $= |1\rangle$. |
+| `status` | `str` | `'ok'` on success, `'failed'` on failure. |
+| `Estimated solution (quantum)` | `np.ndarray` | Reconstructed solution vector $x_q$ from quantum post-selection. |
+| `Exact solution (classical)` | `np.ndarray` | Exact classical solution $A^{-1}b$ via `np.linalg.solve`. |
+| `L2 error` | `float` | L2 norm \|\|x_q - x_classical\|\| between quantum and classical solutions. |
+| `Post-selection probability` | `float` | Probability of post-selecting ancilla $= |1\rangle$ and phase $= |0\rangle$. |
+| `Computation time (s)` | `float` | Low-level simulation execution time in seconds. |
 | `circuit_path` | `str` | Path to saved SVG circuit diagram. |
-| `message` | `str` | Result summary. |
-| `plot` | `str` | ASCII art result panel. |
+| `plot` | `list` | List of output file dicts, each with `'format'` and `'filename'` keys. |
+| `circuit` | `Circuit` | The assembled `Circuit` object for the full HHL circuit. |
 
 ## Implementation Architecture
 
-`HHLAlgorithm` in `algorithm.py` is the most architecturally complex single-algorithm file. It orchestrates five macro-stages with four specialized sub-circuit builders and reuses the `QPEAlgorithm.build_qpe_circuit()` module from the fundamental algorithms.
+`HHLAlgorithm` in `algorithm.py` is the most architecturally complex single-algorithm file. It orchestrates five macro-stages with four specialized sub-circuit builders and reuses `QPE` from `unitarylab.library`.
 
-**`run(A, b, d, t, backend, algo_dir)` — Five Stages:**
+**`run(A, b, d, backend, device, dtype)` — Five Stages:**
 
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
@@ -106,19 +110,19 @@ print(result['circuit_path'])        # SVG circuit diagram
 **Stage 2 — Four Sub-Circuit Steps:**
 
 - **Step A: State Preparation** — `qc.initialize(b_state, system_qubits)` loads normalized $b/\|b\|$ into the system register.
-- **Step B: QPE** — `_expi_hermitian(A, t)` computes $U = e^{iAt}$ numerically; `_unitary_circuit_from_matrix(U_mat)` wraps it in a `Circuit` via `qc.unitary()`; `QPEAlgorithm().build_qpe_circuit(U_circ, d)` builds the full QPE sub-circuit; it is appended to `phase_qubits + system_qubits`.
+- **Step B: QPE** — `_expi_hermitian(A, t)` computes $U = e^{iAt}$ numerically; `_unitary_circuit_from_matrix(U_mat)` wraps it in a `Circuit` via `gs.unitary()`; `QPE(U_circ, d, return_circuit=True)` builds the full QPE sub-circuit; it is appended to `phase_qubits + system_qubits`.
 - **Step C: Controlled Reciprocal Rotation** — `_controlled_reciprocal_rotation(d, t, k_start, signed_phase)` builds the ancilla rotation circuit. For each phase integer $k$, it applies X-flips to phase bits to select the $k$-th computational basis state, computes rotation angle $2\arcsin(C/k)$, and applies `mcry(theta, controls, ancilla=0)`. Then unflips X gates. This creates a distinct controlled-Ry for each eigenvalue bin.
 - **Step D: Inverse QPE** — `qc.append(qpe_circ.dagger(), ...)` uncomputes the phase register, removing entanglement.
 
 **Helper Methods:**
 
 - **`_expi_hermitian(A, t)`** — Eigendecomposition: `np.linalg.eigh(A)` → `V @ diag(exp(i*2π*λ*t)) @ V†`.
-- **`_unitary_circuit_from_matrix(U, backend)`** — Wraps an $N\times N$ matrix as a `Circuit` via `qc.unitary(U, range(n))`.
-- **`_controlled_reciprocal_rotation(d, t, k_start, signed_phase, backend)`** — Builds the ancilla rotation sub-circuit; handles both signed (negative eigenvalues) and unsigned phase modes.
+- **`_unitary_circuit_from_matrix(U)`** — Wraps an $N\times N$ matrix as a `Circuit` via `gs.unitary(U, list(range(n)))`.
+- **`_controlled_reciprocal_rotation(d, t, k_start, signed_phase)`** — Builds the ancilla rotation sub-circuit; handles both signed (negative eigenvalues) and unsigned phase modes.
 - **`_decode_signed_phase_index(k, d)`** — Converts raw QPE bin index to signed integer (negative for bins above `grid//2`).
 - **`_postselect_solution_state(state, scale, d, n)`** — Extracts the ancilla=1, phase=0 subspace: `state[1::2]` gives ancilla=1 slice; `[0::stride]` (with `stride = 2^d`) selects phase=0; scales by `scale_factor` to recover $A^{-1}b$.
 
-**Data flow:** `(A, b)` → eigenvalue analysis → circuit assembly (A→B→C→D) → `execute()` → `_postselect_solution_state()` → `solution_quantum` → `_build_return()`.
+**Data flow:** `(A, b)` → eigenvalue analysis → circuit assembly (A→B→C→D) → `execute()` → `_postselect_solution_state()` → `'Estimated solution (quantum)'` → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
 The normalized vector $b/\|b\|$ is loaded into the system register using `Circuit.initialize()`.
@@ -127,7 +131,7 @@ The normalized vector $b/\|b\|$ is loaded into the system register using `Circui
 The Hermitian matrix $A$ is exponentiated to produce a unitary $U = e^{iAt}$. QPE is applied to $U$; eigenphases of $U$ encode eigenvalues of $A$ as $\phi_j = \lambda_j t / (2\pi)$.
 
 ### 3. Quantum Phase Estimation
-`QPEAlgorithm.build_qpe_circuit()` is called internally with $U = e^{iAt}$ and $d$ phase bits. The phase register encodes the binary approximation of $\phi_j$.
+`QPE(U_circ, d, return_circuit=True)` is called internally with $U = e^{iAt}$ and $d$ phase bits. The phase register encodes the binary approximation of $\phi_j$.
 
 ### 4. Controlled Reciprocal Rotation (Ancilla Rotation)
 An ancilla qubit is rotated by angle $2\arcsin(C/\lambda_j)$ where $C$ is a normalization constant. After rotation, the ancilla amplitude $\sin(2\arcsin(C/\lambda_j)) \propto 1/\lambda_j$ encodes the inverse eigenvalue.
@@ -146,7 +150,7 @@ $$|x\rangle \propto \sum_j \frac{b_j}{\lambda_j}|u_j\rangle = A^{-1}|b\rangle$$
 | State preparation $|b\rangle = b/\|b\|$ | `qc.initialize(b_state, system_qubits)` — Step A |
 | Evolution time $t$ (avoids wraparound) | Auto-computed: `t = target_phi_max / lam_max` in Stage 1 |
 | Unitary $U = e^{iAt}$ | `_expi_hermitian(A, t)` → explicit matrix via NumPy eigendecomposition |
-| QPE to encode eigenphases | `QPEAlgorithm().build_qpe_circuit(U_circ, d)` — Step B |
+| QPE to encode eigenphases | `QPE(U_circ, d, return_circuit=True)` — Step B |
 | Ancilla rotation angle $2\arcsin(C/\lambda_j)$ | `_controlled_reciprocal_rotation()` — one `mcry` per phase bin $k$ |
 | Normalization constant $C = k_\text{start}$ | `C = k_start` inside `_controlled_reciprocal_rotation()` |
 | Inverse QPE (uncompute phase) | `qpe_circ.dagger()` appended to same qubit indices — Step D |
@@ -155,7 +159,7 @@ $$|x\rangle \propto \sum_j \frac{b_j}{\lambda_j}|u_j\rangle = A^{-1}|b\rangle$$
 | Scale factor for classical solution | `scale_factor = norm_b * t * grid / k_start` |
 | Signed phase mode (negative eigenvalues) | `signed_phase_mode` flag; `_decode_signed_phase_index()` maps bins > `grid//2` to negative |
 
-**Notes on encapsulation:** The QPE sub-circuit is sourced from `QPEAlgorithm.build_qpe_circuit()` rather than rebuilt inline — this is the primary example of algorithm reuse in this codebase. The controlled reciprocal rotation is built without any classical oracle: it exhaustively creates one `mcry` gate per eigenvalue bin (total $2^d$ gates), which is the dominant circuit cost. The post-selection extraction is done via array slicing rather than symbolic measurement.
+**Notes on encapsulation:** The QPE sub-circuit is sourced from `QPE(U_circ, d, return_circuit=True)` (imported from `unitarylab.library`) rather than rebuilt inline — this is the primary example of algorithm reuse in this codebase. The controlled reciprocal rotation is built without any classical oracle: it exhaustively creates one `mcry` gate per eigenvalue bin (total $2^d$ gates), which is the dominant circuit cost. The post-selection extraction is done via array slicing rather than symbolic measurement.
 
 ## Mathematical Deep Dive, $|b\rangle = \sum_j b_j |u_j\rangle$.
 
@@ -171,7 +175,7 @@ $$|x\rangle = \frac{1}{\mathcal{N}}\sum_j \frac{Cb_j}{\lambda_j}|u_j\rangle, \qu
 ## Hands-On Example
 
 ```python
-from unitarylab_algorithms import HHLAlgorithm
+from algorithms.linear_systems.hhl.algorithm import HHLAlgorithm
 import numpy as np
 
 # 4x4 example (requires 2 system qubits)
@@ -183,12 +187,12 @@ A = np.array([
 ], dtype=float)
 b = np.array([1, 1, 1, 1], dtype=float)
 
-algo = HHLAlgorithm()
+algo = HHLAlgorithm(text_mode="plain")
 result = algo.run(A=A, b=b, d=5, backend='torch')
 
-print(f"Quantum solution: {result['quantum_solution'].real.round(4)}")
-print(f"Classical solution: {result['classical_solution'].real.round(4)}")
-print(f"Post-selection prob: {result['post_selection_prob']:.4f}")
+print(f"Quantum solution: {result['Estimated solution (quantum)'].real.round(4)}")
+print(f"Classical solution: {result['Exact solution (classical)'].real.round(4)}")
+print(f"Post-selection prob: {result['Post-selection probability']:.4f}")
 ```
 
 ## Implementing Your Own Version
@@ -219,12 +223,12 @@ def unitary_circuit(U_mat: np.ndarray, backend: str = 'torch') -> Circuit:
 ### Stage B: QPE to Encode Eigenphases
 
 ```python
-# Exact usage — calls QPEAlgorithm.build_qpe_circuit() as in the real implementation
-from unitarylab_algorithms import QPEAlgorithm
+# Exact usage — mirrors QPE call in the real implementation
+from unitarylab.library import QPE
 
-def encode_eigenphases(U_circ: Circuit, d: int, backend: str = 'torch') -> Circuit:
+def encode_eigenphases(U_circ: Circuit, d: int) -> Circuit:
     """Build QPE sub-circuit for eigenvalue encoding."""
-    return QPEAlgorithm().build_qpe_circuit(U_circ, d, prepare_target=None, backend=backend)
+    return QPE(U_circ, d, return_circuit=True)
 ```
 
 ### Stage C: Controlled Reciprocal Rotation (ancilla rotation)
@@ -277,22 +281,21 @@ def extract_hhl_solution(state_arr: np.ndarray, d: int, n_sys: int, scale_factor
 
 import numpy as np
 from unitarylab.core import Circuit
-from unitarylab_algorithms import QPEAlgorithm
+from unitarylab.library import QPE
 
-def hhl_minimal(A, b, d, t=None, backend='torch'):
+def hhl_minimal(A, b, d, backend='torch'):
     n_sys = int(np.log2(len(b)))
-    # Auto-tune t to avoid phase wraparound
+    # t is auto-tuned inside HHLAlgorithm.run() — not a user parameter
     lam = np.linalg.eigvalsh(A)
     lam_max = np.max(np.abs(lam))
-    if t is None:
-        t = 0.45 / lam_max
+    t = 0.45 / lam_max   # approximate; real code uses target_phi_max / lam_max
 
     # Stage A: exp(iAt) as unitary circuit
     U_mat = expi_hermitian(A, t)
-    U_circ = unitary_circuit(U_mat, backend)
+    U_circ = unitary_circuit(U_mat)
 
     # Stage B: QPE sub-circuit
-    qpe_circ = encode_eigenphases(U_circ, d, backend)
+    qpe_circ = QPE(U_circ, d, return_circuit=True)
 
     # Full HHL circuit (simplified - excludes ancilla rotation sub-circuit assembly)
     # In the real implementation HHLAlgorithm._controlled_reciprocal_rotation()
@@ -302,6 +305,6 @@ def hhl_minimal(A, b, d, t=None, backend='torch'):
 
 1. **`A` not Hermitian**: Add `A = (A + A.conj().T) / 2` to symmetrize before calling.
 2. **`N` not a power of 2**: Pad `A` and `b` to the next power of 2 with zeros.
-3. **Large `diff_norm`**: Increase `d` for better phase resolution. Also check if $t$ is auto-corrected.
-4. **`post_selection_prob` near zero**: The condition number $\kappa$ is very large. HHL's efficiency degrades with large $\kappa$.
+3. **Large `L2 error`**: Increase `d` for better phase resolution. Evolution time `t` is always auto-computed.
+4. **`Post-selection probability` near zero**: The condition number $\kappa$ is very large. HHL's efficiency degrades with large $\kappa$.
 5. **Negative eigenvalues**: The code detects negative eigenvalues and enables `signed_phase_mode` automatically, which constrains phase to $[0, 0.5)$.

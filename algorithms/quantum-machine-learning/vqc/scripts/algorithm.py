@@ -4,9 +4,9 @@ from unitarylab_algorithms import VQCAlgorithm
 
 
 def main():
-    algo = VQCAlgorithm(seed=42)
+    algo = VQCAlgorithm(text_mode="plain")
     result = algo.run(
-        n_layers=3,
+        layers=3,
         epochs=20,
         lr=0.05,
         batch_size=16,
@@ -16,9 +16,12 @@ def main():
     print("=" * 50)
     print("VQC: Iris Classification (4 features, 3 classes)")
     print("=" * 50)
-    print(result.get("plot", ""))
+    for plot_file in result.get("plot", []):
+        print(f"  Plot           : {plot_file['filename']}")
     print(f"  Status         : {result['status']}")
-    print(f"  Test accuracy  : {result['accuracy']:.2%}")
+    print(f"  Test accuracy  : {result['Final Accuracy']:.2%}")
+    print(f"  Final loss     : {result['Final Loss']:.4f}")
+    print(f"  Quantum time   : {result['Quantal Computation Time (s)']:.4f}s")
 
 
 if __name__ == "__main__":

@@ -40,14 +40,14 @@ import numpy as np
 
 # Build two unitary operators U0, U1
 n_sys = 1
-U0 = Circuit(n_sys, backend='torch')
+U0 = Circuit(n_sys, name='H')
 U0.h(0)         # Hadamard
 
-U1 = Circuit(n_sys, backend='torch')
+U1 = Circuit(n_sys, name='X')
 U1.x(0)         # Pauli-X
 
 # Apply M = 0.6*H + 0.4*X to system
-algo = LCUAlgorithm()
+algo = LCUAlgorithm(text_mode='plain')
 result = algo.run(
     alphas=[0.6, 0.4],
     unitaries=[U0, U1],
@@ -56,9 +56,10 @@ result = algo.run(
     backend='torch'
 )
 
-print(result['lcu_success_probability'])   # Post-selection probability
-print(result['status'])         # 'ok' if success_prob > 1e-6
-print(result['circuit_path'])   # SVG circuit diagram
+print(result['Success probability'])   # Post-selection probability
+print(result['status'])                # 'ok' on success
+print(result['circuit_path'])          # SVG circuit diagram
+print(result['Result state'])          # Post-selected system state
 ```
 
 ## Core Parameters Explained
@@ -81,34 +82,35 @@ print(result['circuit_path'])   # SVG circuit diagram
 
 | Key | Type | Description |
 |---|---|---|
-| `status` | `str` | `'ok'` if `success_prob > 1e-6`; `'failed'` otherwise. |
-| `lcu_success_probability` | `float` | Probability of measuring ancilla $= |0\rangle^{n_{\text{anc}}}$. |
+| `status` | `str` | Always `'ok'` (success/failure reflected in `'Success probability'`). |
+| `Success probability` | `float` | Probability of measuring all ancilla qubits in $\|0\rangle$ — the LCU post-selection probability. |
+| `Computation time (s)` | `float` | Wall-clock simulation time in seconds. |
+| `Result state` | `np.ndarray` | Post-selected system state proportional to $M\|\psi\rangle$. |
 | `circuit_path` | `str` | Path to saved SVG circuit diagram. |
-| `message` | `str` | Result summary. |
-| `plot` | `str` | ASCII art result panel. |
+| `plot` | `list` | List of output file dicts, each with `'format'` (last 3 chars of filename) and `'filename'` keys. |
+| `circuit` | `Circuit` | The assembled `Circuit` object for the full LCU circuit. |
 
 ## Implementation Architecture
 
 `LCUAlgorithm` in `algorithm.py` builds the LCU circuit in five stages using two circuit constructor helpers: `_build_V` and `_build_select`.
 
-**`run(alphas, unitaries, n_sys, initial_state, backend, algo_dir)` — Five Stages:**
+**`run(alphas, unitaries, n_sys, initial_state, backend, device, dtype)` — Five Stages:**
 
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Setup | Validates `len(alphas)==len(unitaries)`; computes `m`, `n_anc = ceil(log2(m))`, `s_norm = sum(alphas)` | Determines ancilla size |
-| 2 — Circuit Construction | Creates `Circuit(n_anc + n_sys)`; optionally appends `initial_state` to system; calls `_build_V`, `_build_select`, `V_circ.dagger()` in sequence | Assembles full PREPARE → SELECT → UNPREPARE circuit |
-| 3 — Simulation | `qc.execute()` → `State(np.asarray(raw_result))` | Runs statevector simulation |
-| 4 — Post-Processing | `state_obj.probabilities_dict(anc_qubits, endian='little')` → extracts probability of `'0'*n_anc` | Computes LCU success probability |
-| 5 — Export | `qc.draw(filename=..., title=...)` | Saves SVG circuit diagram |
+| 2 — Circuit Construction | Creates `Circuit(n_anc + n_sys, name='LCU_circuit')`; optionally appends `initial_state` to system; calls `_build_V`, `_build_select`, `V_circ.dagger()` in sequence | Assembles full PREPARE → SELECT → UNPREPARE circuit |
+| 3 — Simulation | `qc.execute(backend=backend, device=device, dtype=dtype)` → `raw_result` | Runs statevector simulation |
+| 4 — Post-Processing | `raw_result._phase_probabilities_from_state(anc_qubits, endian="little", threshold=0.0)` → extracts probability of `'0'*n_anc`; builds `output` dict with `'Success probability'`, `'Computation time (s)'`, `'Result state'` | Computes LCU success probability and post-selected state |
+| 5 — Export | `self.save_circuit(qc)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
 
 **Helper Methods:**
 
-- **`_build_V(alphas, s_norm, m, n_anc, backend)`** — Constructs the PREPARE operator. Builds amplitude vector `state[j] = sqrt(alphas[j]/s_norm)` padded to `2^n_anc` elements. Calls `_state_preparation_tree(state)` to get a list of angle-decomposed Ry/McRy gate specs. Applies them as `qc.ry()` or `qc.mcry()` gates on the ancilla register.
-- **`_state_preparation_tree(alpha)`** — Recursive tree decomposition for amplitude encoding. Computes `theta = 2 * arctan2(norm_b, norm_a)` at each binary tree node and records whether the gate is unconditional (root) or conditional (controlled by parent nodes). Returns a list of gate dicts with `{name, target, angle, control_qubit, control_value}`.
-- **`_build_select(unitaries, m, n_anc, n_sys)`** — Constructs the SELECT operator. Loops over all `(j, U_j)` pairs; for each, calls `qc.append(U_j, target=sys_qubits, control=anc_qubits, control_state=format(j, f'0{n_anc}b'))`. This applies $U_j$ conditionally on ancilla = $|j\rangle$ in binary.
-- **`_update_last_result` / `_build_return`** — Store fields and package result dict. Note: `_build_return` returns `status='success'` regardless of `success_prob` value; the low-probability case is reflected in the `success_prob` field.
+- **`_build_V(alphas, s_norm, m, n_anc)`** — Constructs the PREPARE operator. Builds amplitude vector `state[j] = sqrt(alphas[j]/s_norm)` padded to `2^n_anc` elements. Creates `Circuit(n_anc, name='V')` and calls `qc.initialize(state, range(n_anc))` to directly load the amplitude distribution.
+- **`_build_select(unitaries, m, n_anc, n_sys)`** — Constructs the SELECT operator. Creates `Circuit(n_anc + n_sys, name='SELECT-U')`. Loops over all `(j, U_j)` pairs; for each, computes `ctrl_state = format(j, f"0{n_anc}b")` (reversed if `U.order == 'little'`) and calls `qc.append(U_j, target=sys_qubits, control=anc_qubits, control_state=ctrl_state)`. This applies $U_j$ conditionally on ancilla $= |j\rangle$ in binary.
+- **`_build_return_dict(success, circuit_path, filepath, circuit)`** — Packages the result. Sets `status='ok'` if `success=True`, `'failed'` otherwise. Wraps `filepath` into a list of `{'format': filename[-3:], 'filename': filename}` dicts stored under `'plot'`. Merges `self.output` (containing `'Success probability'`, `'Computation time (s)'`, `'Result state'`) into the returned dict.
 
-**Data flow:** `(alphas, unitaries)` → `_build_V()` → `_build_select()` → `V†` → `execute()` → `probabilities_dict()` → `success_prob` → `_build_return()`.
+**Data flow:** `(alphas, unitaries)` → `_build_V()` → `_build_select()` → `V_circ.dagger()` → `qc.execute()` → `_phase_probabilities_from_state()` → `success_prob` → `update_output()` → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
 Maps $|0\rangle_{\text{anc}} \rightarrow \sum_j \sqrt{\alpha_j/s}|j\rangle_{\text{anc}}$ where $s = \sum_k \alpha_k$. Implemented as a state-preparation circuit on the ancilla.
@@ -136,11 +138,11 @@ On success, the system register holds $M|\psi\rangle/\|M|\psi\rangle\|$.
 | UNPREPARE operator | `V_circ.dagger()` is appended after the SELECT block to implement `V†`, mapping the prepared ancilla/select state back toward `|0>`. |
 | Normalization factor | `s_norm = float(np.sum(alphas))` in Stage 1 computes `s = sum_k alpha_k`, which is used to normalize the LCU coefficients. |
 | Ancilla/select register size | `n_anc = int(np.ceil(np.log2(m)))` in Stage 1 determines the number of ancilla/select qubits required to index all `m` unitary terms. |
-| Post-selection condition | `probabilities_dict(anc_qubits)` is used to obtain the probability distribution on the ancilla/select register. The successful branch corresponds to the all-zero key: `'0' * n_anc`. |
+| Post-selection condition | `raw_result._phase_probabilities_from_state(anc_qubits, endian="little", threshold=0.0)` is used to obtain the probability distribution on the ancilla/select register. The successful branch corresponds to the all-zero key: `'0' * n_anc`. |
 | Success probability | `success_prob` is extracted from the Stage 4 measurement result. It represents the probability of successfully projecting the ancilla/select register onto `|0>^{n_anc}` after applying `PREPARE → SELECT → UNPREPARE`. |
 | LCU output relation | After successful post-selection, the system state is proportional to `M|psi> / s`, where `M = sum_j alpha_j U_j`. Therefore, the success probability is related to `||M|psi>||^2 / s^2`. |
 
-**Notes on encapsulation:** The PREPARE operator uses a recursive classical tree computation (`_state_preparation_tree`) to decompose an arbitrary $2^{n_\text{anc}}$-element state into a Ry/McRy gate sequence. This is entirely classical computation; the quantum part is just applying those gates. The SELECT operator directly calls `qc.append()` with `control_state` to avoid building separate MCX structures. The `_build_return` always sets `status='success'`; the actual LCU outcome quality is in `lcu_success_probability`.
+**Notes on encapsulation:** The PREPARE operator uses `qc.initialize(state, range(n_anc))` to directly load the amplitude distribution — no recursive gate decomposition in `_build_V` itself. The SELECT operator directly calls `qc.append()` with `control_state` and reverses `ctrl_state` when `U.order == 'little'`. `_build_return_dict` always receives `success=True` (hardcoded in `run()`), so `status` is always `'ok'`; the actual LCU outcome quality is in `result['Success probability']`.
 
 ## Mathematical Deep Dive
 $$V|0\rangle_{\text{anc}}|\psi\rangle = \sum_j \sqrt{\frac{\alpha_j}{s}}|j\rangle|\psi\rangle$$
@@ -163,20 +165,20 @@ from unitarylab_algorithms import LCUAlgorithm
 from unitarylab.core import Circuit
 
 n_sys = 2
-I_circ = Circuit(n_sys, backend='torch')   # Identity
-X0_circ = Circuit(n_sys, backend='torch')
+I_circ = Circuit(n_sys, name='II')    # Identity
+X0_circ = Circuit(n_sys, name='XI')
 X0_circ.x(0)
 
-algo = LCUAlgorithm()
+algo = LCUAlgorithm(text_mode='plain')
 result = algo.run(
     alphas=[0.8, 0.2],
     unitaries=[I_circ, X0_circ],
     n_sys=n_sys,
-    backend='torch',
-    algo_dir='./results/lcu'
+    backend='torch'
 )
-print(f"Success probability: {result['lcu_success_probability']:.4f}")
+print(f"Success probability: {result['Success probability']:.4f}")
 print(f"Status: {result['status']}")
+print(f"Result state: {result['Result state']}")
 ```
 
 ## Implementing Your Own Version
@@ -264,5 +266,5 @@ def lcu_circuit(alphas, unitaries, n_sys: int, initial_state=None, backend: str 
 1. **`len(alphas) != len(unitaries)`**: Raises `ValueError`. Always keep these lists the same length.
 2. **`initial_state.get_num_qubits() != n_sys`**: Raises `ValueError`. The initial state circuit must match `n_sys` exactly.
 3. **Very low `success_prob`**: This is expected when $\|M|\psi\rangle\| \ll s$. Use amplitude amplification to boost.
-4. **`status='failed'` (prob near 0)**: The operator $M$ may annihilate $|\psi\rangle$, or the unitaries cancel. Verify the operator structure.
+4. **Very low `'Success probability'` (near 0)**: `status` is always `'ok'` since `_build_return_dict` is always called with `success=True`. Check `result['Success probability']` directly. If near 0, the operator $M$ may annihilate $|\psi\rangle$, or the unitaries cancel.
 5. **Memory limit**: Ancilla adds $\lceil\log_2 m\rceil$ qubits. For $m=8$ unitaries, this is only 3 ancilla qubits.

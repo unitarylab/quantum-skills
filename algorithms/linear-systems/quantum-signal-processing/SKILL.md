@@ -6,7 +6,7 @@ description: A quantum algorithm for signal processing tasks, leveraging quantum
 
 ## Purpose
 
-Quantum Signal Processing implements a polynomial transformation $P(x)$ of a signal $x$ using a sequence of signal-processing rotations and signal operators. This implementation demonstrates QSP applied to Hamiltonian simulation: approximating $e^{-i\tau x}$ for a signal variable $x$.
+Quantum Signal Processing implements a polynomial transformation $P(x)$ of a signal $x$ using a sequence of signal-processing rotations and signal operators. This implementation demonstrates QSP applied to function approximation: approximating $\cos(t \cdot x)$ for a signal variable $x$.
 
 Use this skill when you need to:
 - Apply a polynomial function to the eigenvalues of a quantum operator.
@@ -27,7 +27,7 @@ QSP constructs a single-qubit circuit interleaving:
 The circuit implements the $(0,0)$ matrix element of:
 $$U_\Phi(x) = e^{i\phi_0 Z}\prod_{k=1}^d [W(x) \cdot e^{i\phi_k Z}] \approx \begin{pmatrix} P(x) & \cdot \\ \cdot & \cdot \end{pmatrix}$$
 
-The phase sequence $\Phi$ is optimized (via L-BFGS-B) to approximate the target polynomial $P(x) \approx e^{-i\tau x}$.
+The phase sequence $\Phi$ is optimized (via L-BFGS-B) to approximate the target polynomial $P(x) \approx \cos(t \cdot x)$.
 
 ## Prerequisites
 
@@ -40,73 +40,78 @@ The phase sequence $\Phi$ is optimized (via L-BFGS-B) to approximate the target 
 ```python
 from unitarylab_algorithms import QSPAlgorithm
 
-algo = QSPAlgorithm(seed=42)
+algo = QSPAlgorithm(text_mode="legacy")
 result = algo.run(
-    target_tau=1.0,    # Evolution parameter τ: targets e^{-iτx}
-    degree=10,         # Polynomial degree d
-    x_value=0.5,       # Test signal point x ∈ [-1, 1]
+    t=1.0,         # Evolution time t: targets cos(t * x)
+    d=10,          # Polynomial degree d
+    x=0.5,         # Test signal point x ∈ [-1, 1]
     backend='torch'
 )
 
-print(result['error'])         # Absolute error |QSP(x) - exp(-iτx)|
-print(result['circuit_path'])  # SVG circuit diagram
-print(result['plot'])          # ASCII result panel
+print(result['Absolute error'])    # Absolute error |QSP(x) - cos(t*x)|
+print(result['Estimated value'])   # QSP estimated value at x
+print(result['Ideal value'])       # cos(t * x) at test point
+print(result['circuit_path'])      # SVG circuit diagram
+print(result['plot'])              # List of saved output file dicts
 ```
 
 ## Core Parameters Explained
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `target_tau` | `float` | required | Hamiltonian evolution time $\tau$. The target function is $e^{-i\tau x}$. |
-| `degree` | `int` | required | Polynomial degree $d$. Higher degree achieves smaller error for complex targets. |
-| `x_value` | `float` | `0.5` | Test point $x \in [-1, 1]$ at which to evaluate the approximation error. |
+| `t` | `float` | required | Evolution time. The target function is $\cos(t \cdot x)$. |
+| `d` | `int` | required | Polynomial degree $d$. Higher degree achieves smaller error for complex targets. |
+| `x` | `float` | `0.5` | Test point $x \in [-1, 1]$ at which to evaluate the approximation error. |
 | `backend` | `str` | `'torch'` | Simulation backend. |
-| `algo_dir` | `str` or `None` | `None` | Directory to save SVG circuit diagram. |
+| `device` | `str` | `'cpu'` | Compute device (e.g. `'cpu'`, `'cuda'`). |
+| `dtype` | `type` | `np.complex128` | Numeric dtype for simulation. |
 
 **Common misunderstandings:**
-- `x_value` must be in $[-1, 1]$ (the domain of the signal operator $W(x)$). Values outside this range are clipped internally.
-- `degree` determines the number of signal $W(x)$ applications: $d+1$ total rotations in the circuit.
-- The phase sequence `_find_phases()` is computed via numerical optimization (L-BFGS-B), not analytically. The result may vary slightly with different `seed`.
+- `x` must be in $[-1, 1]$ (the domain of the signal operator $W(x)$). Values outside this range are clipped internally.
+- `d` determines the number of signal $W(x)$ applications: `d` signal operators and `d+1` phase rotations in the circuit.
+- The phase sequence `_find_phases()` is computed via numerical optimization (L-BFGS-B), not analytically. The result may vary across runs due to random initialization.
 
 ## Return Fields
 
 | Key | Type | Description |
 |---|---|---|
-| `status` | `str` | `'success'`. |
-| `error` | `float` | Absolute approximation error $|$QSP$(x) - e^{-i\tau x}|$ at `x_value`. |
-| `circuit` | `Circuit` | The built QSP circuit. |
+| `status` | `str` | `'ok'` on success, `'failed'` on failure. |
+| `Estimated value` | `complex` | QSP-estimated value $\langle 0|U_\Phi(x)|0\rangle$ at test point `x`. |
+| `Ideal value` | `float` | Ideal value $\cos(t \cdot x)$ at test point `x`. |
+| `Absolute error` | `float` | Absolute approximation error $|$QSP$(x) - \cos(t \cdot x)|$ at `x`. |
+| `Computation time (s)` | `float` | Wall-clock simulation execution time in seconds. |
+| `circuit` | `Circuit` | The built QSP circuit object. |
 | `circuit_path` | `str` | Path to saved SVG circuit diagram. |
-| `message` | `str` | Result summary including error. |
-| `plot` | `str` | ASCII art result panel. |
+| `plot` | `list` | List of saved output file dicts, each with `'format'` (last 3 chars of filename) and `'filename'` keys. |
 
 ## Implementation Architecture
 
-`QSPAlgorithm` in `algorithm.py` organizes the algorithm into five stages with one classical optimizer helper and one format helper.
+`QSPAlgorithm` in `algorithm.py` organizes the algorithm into five stages with one classical optimizer helper.
 
-**`run(target_tau, degree, x_value, backend, algo_dir)` — Five Stages:**
+**`run(t, d, x, backend, device, dtype)` — Five Stages:**
 
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
-| 1 — Phase Optimization | `_find_phases(target_tau, degree)` — runs L-BFGS-B minimization | Computes the QSP phase sequence $\Phi$ numerically |
-| 2 — Circuit Construction | Creates `Circuit(Register('q', 1))`; applies `qc.rz(2*phases[0], 0)` as initial phase; loops `degree` times applying `qc.rx(2*theta, 0)` (signal) then `qc.rz(2*phases[k], 0)` (phase rotation) | Builds the alternating signal/phase circuit |
-| 3 — Simulation | `qc.execute()` → `final_state[0]` | Runs statevector evolution of the single qubit |
-| 4 — Post-Processing | Compares `qsp_val = final_state[0]` to `ideal_val = exp(-i*tau*x_value)` | Computes absolute approximation error |
-| 5 — Export | `qc.draw(filename=..., title=...)` | Saves SVG circuit diagram |
+| 1 — Phase Optimization | `_find_phases(t, d)` — runs L-BFGS-B minimization | Computes the QSP phase sequence $\Phi$ numerically |
+| 2 — Circuit Construction | Creates `Circuit(Register('q', 1))`; applies `gs.rz(2*phases[0], 0)` as initial phase; loops `d` times applying `gs.rx(2*theta, 0)` (signal) then `gs.rz(2*phases[k], 0)` (phase rotation) | Builds the alternating signal/phase circuit |
+| 3 — Simulation | `gs.execute(backend=backend, device=device, dtype=dtype)` → `final_state[0]` | Runs statevector evolution of the single qubit |
+| 4 — Post-Processing | Compares `qsp_val = complex(final_state[0])` to `ideal_val = np.cos(t * x)` | Computes absolute approximation error |
+| 5 — Export | `self.save_circuit(gs)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
 
 **Helper Methods:**
 
-- **`_find_phases(tau, d)`** — Fully classical numerical optimizer. Builds an internal matrix-product simulation of the QSP circuit for a grid of `2d+1` samples. Defines loss as average squared magnitude error vs. `exp(-i*tau*x)`. Runs `scipy.optimize.minimize` with L-BFGS-B starting from random initial phases (`np.random.randn(d+1) * 0.1`). Returns `(d+1)` phase values.
-- **`format_result_ascii()`** — Renders the stored `self.last_result` as an ASCII panel. Note that `self.last_result` here is set as a plain dict (not via `_update_last_result`), a difference from other algorithms.
+- **`_find_phases(t, d)`** — Fully classical numerical optimizer. Builds an internal matrix-product simulation of the QSP circuit for a grid of `2d+1` samples. Defines loss as average squared magnitude error vs. `cos(t * x)`. Runs `scipy.optimize.minimize` with L-BFGS-B starting from random initial phases (`np.random.randn(d+1) * 0.1`). Returns `(d+1)` phase values.
+- **`_build_return_dict(success, circuit_path, filepath, circuit)`** — Packages the result. Sets `status='ok'` if `success=True`, `'failed'` otherwise. Wraps `filepath` into a list of `{'format': filename[-3:], 'filename': filename}` dicts stored under `'plot'`. Merges `self.output` (containing `'Estimated value'`, `'Ideal value'`, `'Absolute error'`, `'Computation time (s)'`) into the returned dict.
 
 **Single-qubit circuit structure (Stage 2):**
 ```
 Rz(2φ₀) → Rx(2θ) → Rz(2φ₁) → Rx(2θ) → Rz(2φ₂) → ... → Rx(2θ) → Rz(2φ_d)
 ```
-Total gates: `2d + 1`. The `theta = arccos(clip(x_value, -1, 1))` is a fixed parameter computed from `x_value`.
+Total gates: `2d + 1`. The `theta = arccos(clip(x, -1, 1))` is a fixed parameter computed from `x`.
 
 **Important implementation note:** The simulation in `_find_phases` uses explicit 2×2 matrix products (NumPy) — not the `Circuit` engine — so the optimization is fully classical and independent of the backend.
 
-**Data flow:** `(target_tau, degree)` → `_find_phases()` → `phases` array → `Circuit` with Rz/Rx gates → `execute()` → `final_state[0]` → `abs_error` vs. `ideal_val` → result dict.
+**Data flow:** `(t, d)` → `_find_phases()` → `phases` array → `Circuit` with Rz/Rx gates → `execute()` → `final_state[0]` → `abs_error` vs. `ideal_val = np.cos(t * x)` → `_build_return_dict()` → result dict.
 
 ## Understanding the Key Quantum Components
 $$W(x) = \begin{pmatrix} x & i\sqrt{1-x^2} \\ i\sqrt{1-x^2} & x \end{pmatrix}$$
@@ -130,38 +135,38 @@ over $2d+1$ Chebyshev sample points $x_j = \cos\left(\frac{(2j-1)\pi}{4\tilde{d}
 
 | README / Theory Concept | Code Object or Location |
 |---|---|
-| Signal operator $W(x)$ = $R_x(2\theta)$ | `qc.rx(2 * theta, 0)` where `theta = arccos(x_value)` |
-| Phase rotations $e^{i\phi_k Z}$ = $R_z(2\phi_k)$ | `qc.rz(2 * phases[k], 0)` in the main loop |
-| Initial phase $\phi_0$ | `qc.rz(2 * phases[0], 0)` before loop |
+| Signal operator $W(x)$ = $R_x(2\theta)$ | `gs.rx(2 * theta, 0)` where `theta = arccos(x)` |
+| Phase rotations $e^{i\phi_k Z}$ = $R_z(2\phi_k)$ | `gs.rz(2 * phases[k], 0)` in the main loop |
+| Initial phase $\phi_0$ | `gs.rz(2 * phases[0], 0)` before loop |
 | Phase sequence $\Phi = (\phi_0, \ldots, \phi_d)$ | `phases` returned by `_find_phases()` — `(d+1)` floats |
-| Target function $e^{-i\tau x}$ | `ideal_val = np.exp(-1j * target_tau * x_value)` in Stage 4 |
+| Target function $\cos(t \cdot x)$ | `ideal_val = np.cos(t * x)` in Stage 4 |
 | Loss function minimization | `minimize(loss, ...)` with `method='L-BFGS-B'` in `_find_phases()` |
-| $(0,0)$ matrix element $\langle 0|U_\Phi(x)|0\rangle$ | `final_state[0]` after `qc.execute()` |
-| Approximation error at test point | `abs_error = abs(qsp_val - ideal_val)` |
+| $(0,0)$ matrix element $\langle 0|U_\Phi(x)|0\rangle$ | `qsp_val = complex(final_state[0])` after `gs.execute()` |
+| Approximation error at test point | `abs_error = float(np.abs(qsp_val - ideal_val))` |
 | Sample points $x_j = \cos((2j-1)\pi/(4\tilde d))$ | `x_samples = np.linspace(-1, 1, 2*d+1)` (uniform, not Chebyshev nodes) |
 
-**Notes on implementation vs. theory:** The README describes exact Chebyshev sample points, but the code uses `np.linspace(-1, 1, 2*d+1)` (uniformly spaced) as the optimization grid. The loss function is identical in structure. The `_find_phases` uses 2×2 matrix products for efficiency, not the quantum simulator. The returned `error` is evaluated only at `x_value`, not over the full interval — it is a spot check, not a worst-case bound.
+**Notes on implementation vs. theory:** The README describes exact Chebyshev sample points, but the code uses `np.linspace(-1, 1, 2*d+1)` (uniformly spaced) as the optimization grid. The loss function is identical in structure. The `_find_phases` uses 2×2 matrix products for efficiency, not the quantum simulator. The returned `'Absolute error'` is evaluated only at `x`, not over the full interval — it is a spot check, not a worst-case bound.
 
 ## Mathematical Deep Dive with $|P(x)| \leq 1$ for all $x \in [-1,1]$ and parity $d \bmod 2$, there exist phases $\Phi$ such that:
 $$\langle 0|U_\Phi(x)|0\rangle = P(x)$$
 
-**Hamiltonian simulation target:** $P(x) = e^{-i\tau x}$, approximated by a degree-$d$ truncated Chebyshev expansion. For $\tau$ fixed, error decreases exponentially in $d$.
+**Function approximation target:** $P(x) = \cos(t \cdot x)$, approximated by a degree-$d$ truncated Chebyshev expansion. For $t$ fixed, error decreases exponentially in $d$.
 
 **Complexity:** The circuit uses $d+1$ single-qubit gates plus $2d+1$ $R_z$ gates — total $O(d)$ gates.
 
 ## Hands-On Example (UnitaryLab)
 
 ```python
-from unitarylab_algorithms import QSPAlgorithm
+from algorithms.linear_systems.quantum_signal_processing.algorithm import QSPAlgorithm
 import numpy as np
 
-algo = QSPAlgorithm(seed=0)
+algo = QSPAlgorithm(text_mode="legacy")
 
-# Approximate e^{-i*0.5*x} at several test points
+# Approximate cos(0.5 * x) at several test points
 for x_test in [0.0, 0.3, 0.7, 1.0]:
-    result = algo.run(target_tau=0.5, degree=8, x_value=x_test)
-    ideal = np.exp(-1j * 0.5 * x_test)
-    print(f"x={x_test:.1f}: error={result['error']:.2e}, ideal_re={ideal.real:.4f}")
+    result = algo.run(t=0.5, d=8, x=x_test)
+    ideal = np.cos(0.5 * x_test)
+    print(f"x={x_test:.1f}: error={result['Absolute error']:.2e}, ideal={ideal:.4f}")
 ```
 
 
@@ -267,19 +272,19 @@ def build_qsp_circuit(phases: np.ndarray, x_value: float, backend: str = 'torch'
     return qc
 
 # Full QSP pipeline
-def qsp_approximate(tau: float, d: int, x_value: float, backend: str = 'torch'):
-    phases = find_qsp_phases(tau, d)
-    circ = build_qsp_circuit(phases, x_value, backend)
-    state = circ.execute()
-    qsp_val = np.asarray(state, dtype=complex).reshape(-1)[0]
-    ideal = np.exp(-1j * tau * x_value)
+def qsp_approximate(t: float, d: int, x: float, backend: str = 'torch'):
+    phases = find_qsp_phases(t, d)
+    circ = build_qsp_circuit(phases, x, backend)
+    state = circ.execute(backend=backend).state
+    qsp_val = complex(state[0]) if hasattr(state, '__getitem__') else 0.0
+    ideal = np.cos(t * x)
     return qsp_val, abs(qsp_val - ideal)
 ```
 
 ## Debugging Tips
 
-1. **Large `error` for small `degree`**: $e^{-i\tau x}$ requires degree $\sim O(\tau + \log(1/\epsilon))$ for $\epsilon$-approximation. Increase `degree`.
-2. **Optimizer not converging**: The L-BFGS-B optimizer uses `maxiter=400`. Increase in `_find_phases()` if needed.
-3. **`x_value` outside $[-1, 1]$**: Internally clipped by `np.clip`. Ensure your signal values are in the valid domain.
-4. **Error non-zero at `x=0`**: $e^{-i\tau\cdot 0} = 1$; if error is large here with small $\tau$, the optimizer may have gotten stuck.
-5. **Random phase initialization**: Change `seed` in `QSPAlgorithm(seed=...)` to try different starting points.
+1. **Large `Absolute error` for small `d`**: $\cos(t \cdot x)$ requires degree $\sim O(t + \log(1/\epsilon))$ for $\epsilon$-approximation. Increase `d`.
+2. **Optimizer not converging**: The L-BFGS-B optimizer uses default iteration limits. Modify `_find_phases()` to pass `options={'maxiter': N}` to `minimize()` if needed.
+3. **`x` outside $[-1, 1]$**: Internally clipped by `np.clip`. Ensure your signal values are in the valid domain.
+4. **Error non-zero at `x=0`**: $\cos(t \cdot 0) = 1$; if error is large here with small `t`, the optimizer may have gotten stuck. Re-run to get a different random initialization.
+5. **Random phase initialization**: `_find_phases()` uses `np.random.randn(d+1)*0.1` as starting phases. Results may vary across runs; simply re-run `algo.run()` to try a different initialization.

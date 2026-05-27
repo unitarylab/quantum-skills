@@ -36,23 +36,23 @@ python ./scripts/algorithm.py
 ## Using the Provided Implementation
 
 ```python
-from unitarylab_algorithms import QAOAAlgorithm
+from algorithm import QAOAAlgorithm
 
 edges = [(0, 1), (1, 2), (2, 3), (3, 0), (0, 4), (1, 5)]
-n_qubits = 6
+n = 6
 
-algo = QAOAAlgorithm(seed=42)
+algo = QAOAAlgorithm(text_mode="plain")
 result = algo.run(
     edges=edges,
-    n_qubits=n_qubits,
-    p_layers=4,
+    n=n,
+    layers=4,
     max_iter=100,
     backend='torch'
 )
 
-print(f"Best cut value: {result['maxcut']}")
-print(f"Best partition: {result['best_partition']}")
-print(result['plot'])
+print(f"Best cut value: {result['Max-Cut Value']}")
+print(f"Best partition: {result['Optimal bitstring']}")
+print(result['plot'])  # list of {"format": "svg", "filename": "..."} dicts
 ```
 
 ## Core Parameters Explained
@@ -61,43 +61,44 @@ print(result['plot'])
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `seed` | `int` | `42` | Random seed for initialization. |
+| `text_mode` | `str` | `"plain"` | Output text formatting mode (`"plain"` or `"legacy"`). |
+| `algo_dir` | `str\|None` | `None` | Output directory for results. Auto-generated from cwd if `None`. |
 
 ### `run()` Parameters
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `edges` | `List[Tuple[int,int]]` | default graph | Edge list of the graph. Defaults to a 6-node example. |
-| `n_qubits` | `int` | `6` | Number of qubits = number of graph vertices. |
-| `p_layers` | `int` | `4` | Number of QAOA layers $p$. More layers = better approximation. |
+| `n` | `int` | `6` | Number of qubits = number of graph vertices. |
+| `layers` | `int` | `4` | Number of QAOA layers $p$. More layers = better approximation. |
 | `max_iter` | `int` | `100` | COBYLA maximum iterations. |
-| `backend` | `str` | `'torch'` | Simulation backend. |
-| `algo_dir` | `str\|None` | `None` | Output directory for plots and circuit. |
+| `backend` | `str` | `'torch'` | Simulation backend (`'torch'` or `'numpy'`). |
+| `device` | `str` | `'cpu'` | Compute device for the backend. |
+| `dtype` | `type` | `np.complex128` | Data type for statevector computation. |
 
 ## Return Fields
 
 | Key | Type | Description |
 |---|---|---|
-| `status` | `str` | `'success'`. |
-| `maxcut` | `int` | the `maxcut_val` in running, Maximum cut value found. |
-| `best_partition` | `str` | Bit string encoding the optimal partition. |
-| `optimal_params` | `np.ndarray` | Optimized $[\gamma_1,\ldots,\gamma_p,\beta_1,\ldots,\beta_p]$. |
-| `loss_history` | `List[float]` | $\langle H_C\rangle$ per iteration. |
-| `circuit` | `Circuit` | QAOA circuit at optimal parameters. |
-| `circuit_path` | `str` | Path to circuit SVG. |
-| `plot_path` | `str` | Path to training curve PNG. |
-| `plot` | `str` | ASCII art result panel. |
+| `status` | `str` | `'ok'` on success, `'failed'` on error. |
+| `circuit_path` | `str` | Path to saved circuit diagram SVG (`QAOA_Circuit.svg`). |
+| `plot` | `List[Dict]` | List of `{"format": "svg", "filename": "..."}` dicts for output plots (convergence + Max-Cut graph). |
+| `circuit` | `Circuit` | QAOA circuit object built from initial parameters (used for diagram export). |
+| `Optimal bitstring` | `str` | Bit string encoding the optimal partition (e.g. `"010110"`). |
+| `Max-Cut Value` | `int` | Maximum cut value found by the algorithm. |
+| `Optimized Energy` | `float` | Final COBYLA-optimized energy $\langle H_C \rangle$. |
+| `Quantum Computation Time` | `float` | Wall-clock time (seconds) for the quantum optimization stage. |
 
 ## Implementation Architecture
 
 `QAOAAlgorithm` in `algorithm.py` implements the QAOA hybrid loop in five stages using a Hamiltonian builder, a circuit builder, and COBYLA classical optimization.
 
-**`run(edges, n_qubits, p_layers, max_iter, backend, algo_dir)` — Five Stages:**
+**`run(edges, n, layers, max_iter, backend, device, dtype)` — Five Stages:**
 
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Initialization | `_get_h_cost(edges, n_qubits)` builds $H_C$ as a `(2^n × 2^n)` NumPy array; `np.linalg.eigvalsh(h_cost)[0]` gives exact ground energy | Creates cost Hamiltonian and initial parameters |
-| 2 — Circuit Mapping | `_build_circuit(initial_params, ..., backend)` builds example circuit for visualization | Architecture preview only |
+| 2 — Circuit Mapping | `_build_circuit(initial_params, n_qubits, edges)` builds example circuit for visualization | Architecture preview only |
 | 3 — Optimization Loop | `minimize(obj_func, x0, method='COBYLA', maxiter=max_iter)` — `obj_func` rebuilds circuit, executes, computes `psi† H_C psi` | Core QAOA hybrid quantum-classical loop |
 | 4 — Solution Decoding | Builds final circuit with `opt_res.x`; extracts `best_idx = argmax(|psi|²)`; decodes to bitstring; counts Max-Cut value | Greedy Max-Cut solution extraction |
 | 5 — Export | `_generate_outputs(edges, best_bits, history, qc_draw, ...)` | Saves circuit PNG, loss curve, Max-Cut graph visualization |
@@ -105,7 +106,7 @@ print(result['plot'])
 **Helper Methods:**
 
 - **`_get_h_cost(edges, n_qubits)`** — For each edge `(u,v)`: builds $Z_u \otimes Z_v$ via `np.kron` with identity padding; accumulates into `h_cost` matrix. Returns `(2^n, 2^n)` complex128 array.
-- **`_build_circuit(params, n_qubits, edges, backend)`** — Creates `Circuit(n_qubits, backend=backend)`. Applies `H` to all qubits (initial $|+\rangle^{\otimes n}$). Loops `p` QAOA layers: for each edge, applies `CX(u,v) → Rz(2γ, v) → CX(u,v)`; for each qubit, applies `Rx(2β, j)`.
+- **`_build_circuit(params, n_qubits, edges)`** — Creates `Circuit(n_qubits)`. Applies `H` to all qubits (initial $|+\rangle^{\otimes n}$). Loops `p` QAOA layers: for each edge, applies `CX(u,v) → Rz(2γ, v) → CX(u,v)`; for each qubit, applies `Rx(2β, j)`. Backend is passed to `execute()`, not to `Circuit()`.
 - **`obj_func(p_flat)` (closure)** — Called by COBYLA. Calls `_build_circuit`, then `qc.execute(initial_state=|0⟩)`; `np.real(psi.conj().T @ h_cost @ psi)`.
 - **`_generate_outputs`** — Saves three plots: circuit, energy convergence, and NetworkX Max-Cut graph.
 
@@ -171,17 +172,17 @@ $$
 ## Hands-On Example (UnitaryLab)
 
 ```python
-from unitarylab_algorithms import QAOAAlgorithm
+from algorithm import QAOAAlgorithm
 
 # Petersen graph-like structure
 edges = [(0,1), (1,2), (2,3), (3,4), (4,0), (0,5), (1,6), (2,7), (3,8), (4,9)]
-n_qubits = 10
+n = 10
 
-algo = QAOAAlgorithm(seed=0)
-result = algo.run(edges=edges, n_qubits=n_qubits, p_layers=2, max_iter=80)
+algo = QAOAAlgorithm()
+result = algo.run(edges=edges, n=n, layers=2, max_iter=80)
 
-print(f"Cut value: {result['maxcut']}")
-print(f"Partition: {result['best_partition']}")
+print(f"Cut value: {result['Max-Cut Value']}")
+print(f"Partition: {result['Optimal bitstring']}")
 ```
 ## Reference Implementation (Qiskit)
 
@@ -247,12 +248,11 @@ def build_cost_hamiltonian(edges, n_qubits: int) -> np.ndarray:
         H_c += -0.5 * (identity - ZuZv)
     return H_c
 
-def build_qaoa_circuit(params: np.ndarray, edges, n_qubits: int,
-                        backend: str = 'torch') -> Circuit:
+def build_qaoa_circuit(params: np.ndarray, edges, n_qubits: int) -> Circuit:
     """QAOA circuit: H^n initial state → p layers of cost + mixer gates."""
     p = len(params) // 2
     gammas, betas = params[:p], params[p:]
-    qc = Circuit(n_qubits, backend=backend)
+    qc = Circuit(n_qubits)                       # backend passed to execute(), not Circuit()
     for i in range(n_qubits): qc.h(i)           # uniform superposition |+>^n
     for layer in range(p):
         # Cost layer: e^{-i*gamma*Z_u*Z_v} via CX-Rz-CX
@@ -265,40 +265,42 @@ def build_qaoa_circuit(params: np.ndarray, edges, n_qubits: int,
             qc.rx(2 * betas[layer], j)
     return qc
 
-def run_qaoa(edges, n_qubits: int, p_layers: int = 2,
-             max_iter: int = 100, backend: str = 'torch', seed: int = 42):
+def run_qaoa(edges, n: int = 6, layers: int = 2,
+             max_iter: int = 100, backend: str = 'torch', device: str = 'cpu'):
     """Full QAOA hybrid loop for Max-Cut."""
-    np.random.seed(seed)
-    H_c = build_cost_hamiltonian(edges, n_qubits)
-    params0 = np.random.uniform(0, np.pi, 2 * p_layers)
+    np.random.seed(42)
+    H_c = build_cost_hamiltonian(edges, n)
+    params0 = np.random.uniform(0, np.pi, 2 * layers)
     history = []
 
     def obj(params):
-        qc = build_qaoa_circuit(params, edges, n_qubits, backend)
+        qc = build_qaoa_circuit(params, edges, n)
         psi = np.asarray(qc.execute(
-            initial_state=np.eye(2**n_qubits, 1, dtype=np.complex128)
-        ))
+            initial_state=np.eye(2**n, 1, dtype=np.complex128),
+            backend=backend, device=device, dtype=np.complex128
+        ).state)
         energy = float(np.real(psi.conj().T @ H_c @ psi))
         history.append(energy); return energy
 
     res = minimize(obj, x0=params0, method='COBYLA', options={'maxiter': max_iter})
 
     # Decode: most probable basis state as partition
-    qc_final = build_qaoa_circuit(res.x, edges, n_qubits, backend)
+    qc_final = build_qaoa_circuit(res.x, edges, n)
     psi_final = np.asarray(qc_final.execute(
-        initial_state=np.eye(2**n_qubits, 1, dtype=np.complex128)
-    ))
+        initial_state=np.eye(2**n, 1, dtype=np.complex128),
+        backend=backend, device=device, dtype=np.complex128
+    ).state)
     best_idx = int(np.argmax(np.abs(psi_final.flatten())**2))
-    best_bits = format(best_idx, f'0{n_qubits}b')
-    cut_val = sum(1 for u, v in edges if best_bits[u] != best_bits[v])
-    return {'energy': res.fun, 'best_partition': best_bits, 'best_cut': cut_val}
+    best_bits = format(best_idx, f'0{n}b')
+    cut_val = len([(u, v) for u, v in edges if best_bits[u] != best_bits[v]])
+    return {'status': 'ok', 'Optimal bitstring': best_bits, 'Max-Cut Value': cut_val, 'Optimized Energy': res.fun}
 ```
 
 ## Debugging Tips
 
-1. **`edges` contains invalid vertex indices**: Vertex indices must be in `[0, n_qubits)`. Out-of-range indices cause circuit construction errors.
-2. **Low cut value with small `p_layers`**: QAOA quality improves with $p$. Use `p_layers=4+` for better approximation.
-3. **COBYLA stuck in local minimum**: Re-run with different `seed`. COBYLA is sensitive to initialization.
-4. **Large `n_qubits`**: Circuit simulation grows exponentially as $2^{n\_qubits}$. Practical limit is ~20 qubits.
-5. **`edges=None`**: Uses the built-in default 6-node graph. Always pass explicit `edges` and matching `n_qubits`.
-6. **Approximation ratio interpretation**: The bit string `best_partition` maps qubit $q$ to side 0 or 1. Count edges between different sides to verify `best_cut`.
+1. **`edges` contains invalid vertex indices**: Vertex indices must be in `[0, n)`. Out-of-range indices cause circuit construction errors.
+2. **Low cut value with small `layers`**: QAOA quality improves with $p$. Use `layers=4+` for better approximation.
+3. **COBYLA stuck in local minimum**: Seeds are fixed at 42 inside `QAOAAlgorithm`. Try a different initial graph or increase `layers`. COBYLA is sensitive to initialization.
+4. **Large `n`**: Circuit simulation grows exponentially as $2^{n}$. Practical limit is ~20 qubits.
+5. **`edges=None`**: Uses the built-in default 6-node graph. Always pass explicit `edges` and matching `n`.
+6. **Approximation ratio interpretation**: The `Optimal bitstring` maps qubit $q$ to side 0 or 1. Count edges between different sides to verify `Max-Cut Value`.

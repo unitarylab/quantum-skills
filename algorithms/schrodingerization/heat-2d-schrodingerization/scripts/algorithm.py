@@ -4,67 +4,79 @@ Compares classical Schrodingerization solver with Trotter quantum circuit.
 """
 
 import numpy as np
-from unitarylab.core import Circuit
-from unitarylab.library import schro_classical, schro_trotter
-from unitarylab.library.differential_operator import TDiff
-from unitarylab.library.differential_operator.classical_matrices import (
-    matrix_exponential,
-    second_order_derivative,
+import scipy.sparse as sp
+from scipy.linalg import expm
+
+from unitarylab import Circuit
+from unitarylab.library.equation.schrodingerization import (
+    schro_classical,
+    schro_trotter,
+    circuit_classical,
 )
+from unitarylab.library.equation.differential_operator import CDiff, TDiff
 
 
 def main():
     # --- Parameters ---
-    nx_q = 2              # qubits per spatial dimension
-    Nx = 2 ** nx_q        # grid points per dim = 4
+    nx = 2              # qubits per spatial dimension
+    Nx = 2 ** nx        # grid points per dim = 4
     L = 1.0
-    ax, ay = 0.08, 0.12
+    a1, a2 = 0.08, 0.12
     T = 0.02
-    dx = L / Nx
     na = 6
     R = 4.0
     order = 2
     point = 1
     Nt = 10
     bd = "periodic"
+    scheme = "central"
+    device = "cpu"
 
-    # --- Grid & initial condition ---
-    x = np.linspace(0.0, L, Nx, endpoint=False)
-    y = np.linspace(0.0, L, Nx, endpoint=False)
+    # --- Grid (periodic BC: dx = L / Nx) ---
+    dx = L / Nx
+    x = np.arange(0, L, dx)
+    y = np.arange(0, L, dx)
+
+    # --- Initial condition & source term ---
     X, Y = np.meshgrid(x, y, indexing="ij")
-    fxy = 0.05 * np.sin(2 * np.pi * X) * np.cos(2 * np.pi * Y)
-    b = fxy.reshape(-1).astype(complex)
     u0 = np.exp(-35 * ((X - 0.45) ** 2 + (Y - 0.45) ** 2)).reshape(-1).astype(complex)
+    b_src = 0.05 * np.sin(2 * np.pi * X) * np.cos(2 * np.pi * Y)
+    b = b_src.reshape(-1).astype(complex)
 
-    # --- Classical operators ---
-    D2x, _ = second_order_derivative(N=Nx, dx=dx, boundary_condition=bd)
-    D2y, _ = second_order_derivative(N=Nx, dx=dx, boundary_condition=bd)
-    Ix = np.eye(Nx)
-    A = (ax * np.kron(D2x.toarray(), Ix)
-         + ay * np.kron(Ix, D2y.toarray())).astype(complex)
+    # --- Assemble 2D Laplacian via Kronecker product (Step 3) ---
+    A0 = CDiff(N=Nx, dx=dx, order=2, scheme=scheme, boundary=bd).get_matrix()
+    A = a1 * sp.kron(A0, sp.eye(Nx)) + a2 * sp.kron(sp.eye(Nx), A0)
 
-    # --- Reference ---
-    u_ref = np.asarray(matrix_exponential(A, u0, T=T, dt=0.001), dtype=complex)
+    # --- Reference: dense matrix exponential ---
+    A_dense = A.toarray().astype(complex)
+    u_ref = (expm(A_dense * T) @ u0).astype(complex)
 
-    # --- Method 1: Classical Schrodingerization ---
+    # --- Method 1: Classical Schrodingerization (Steps 5) ---
     u_cls = np.asarray(
         schro_classical(A, u0, T=T, na=na, R=R, order=order, point=point, b=b),
         dtype=complex,
     )
+    u_cls_2d = u_cls.reshape((Nx, Nx))
+    qc_cls = circuit_classical(nx, na, dim=2)
 
-    # --- Method 2: Trotter quantum circuit ---
-    dt_trotter = T / Nt
-    func1_x = TDiff(nx_q, dx, order=2, boundary=bd).data()[0]
-    func1_y = TDiff(nx_q, dx, order=2, boundary=bd).data()[0]
+    # --- Method 2: Trotter quantum circuit (Steps 6-7) ---
+    dt = T / Nt
+    func1 = TDiff(nx, dx, 2, scheme=scheme, boundary=bd).data()[0]
+    D1 = lambda a: func1(a * dt / R)
 
-    H1 = Circuit(2 * nx_q)
-    H1.append(func1_x(ax * dt_trotter / R), list(range(nx_q)))
-    H1.append(func1_y(ay * dt_trotter / R), list(range(nx_q, 2 * nx_q)))
+    H1 = Circuit(2 * nx)
+    H1.append(D1(a1), range(nx))
+    H1.append(D1(a2), range(nx, 2 * nx))
+    H2 = None
 
     u_trot, qc = schro_trotter(
-        u0=u0, H1=H1, H2=None, Nt=Nt, na=na,
+        u0=u0, H1=H1, H2=H2,
+        Nt=Nt, na=na, R=R,
+        order=order, point=point,
+        device=device,
     )
     u_trot = np.asarray(u_trot, dtype=complex)
+    u_trot_2d = u_trot.reshape((Nx, Nx))
 
     # --- Report ---
     print("=" * 55)
@@ -74,7 +86,8 @@ def main():
     print(f"  Trotter steps     : {Nt}")
     print(f"  Classical L2 err  : {np.linalg.norm(u_cls - u_ref):.6e}")
     print(f"  Trotter   L2 err  : {np.linalg.norm(u_trot - u_ref):.6e}")
-    print(f"  Circuit qubits    : {qc.get_num_qubits()}")
+    print(f"  Classical circuit : {qc_cls.get_num_qubits()} qubits")
+    print(f"  Trotter circuit   : {qc.get_num_qubits()} qubits")
 
 
 if __name__ == "__main__":

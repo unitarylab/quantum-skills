@@ -56,29 +56,50 @@ Otherwise, full Schrödingerization procedure is required.
 Import necessary modules for parsing, solvers, operators, and circuit generation:
 ```python
 # import parser
-from unitarylab.library import parse_equation
+from unitarylab.library.equation import parse_equation
 
-# import solvers
-from unitarylab.library import schro_classical, schro_trotter
-from unitarylab.library.differential_operator.classical_matrices import first_order_derivative, second_order_derivative
-from unitarylab.library.schrodingerization.classical import circuit_classical
-from scipy.integrate import cumulative_trapezoid
+# import circuit builder
+from unitarylab import Circuit
+
+# import classical solver and circuit generator
+from unitarylab.library.equation.schrodingerization import schro_classical
+from unitarylab.library.equation.schrodingerization import circuit_classical
+
+# import Trotter solver
+from unitarylab.library.equation.schrodingerization import schro_trotter
+
+# import finite-difference operators
+from unitarylab.library.equation.differential_operator import CDiff   # classical matrix
+from unitarylab.library.equation.differential_operator import TDiff   # Trotter unitary
+
+import scipy.sparse as sp
+import numpy as np
 ```
 
 ### Step 1: Parse 2D Domain & Parameters
 
-Extract coefficients, domain, grid, qubits, boundary type:
+Extract coefficients, domain, grid, qubits, boundary type. `eq` is the object returned by `parse_equation(params)`:
 
 ```python
+# Parse equation object from params dict / JSON path
+eq = parse_equation(params)
+
 a1 = eq.get_parameter('a1')
 a2 = eq.get_parameter('a2')
-L, T, nx, na, R, order, f0 = eq.get_common_coefficients()
-bd = eq.boundary.type
+L, T, source, nx, na, R, point, order, f0 = eq.get_common_coefficients()
+bd   = eq.boundary.type
+scheme = eq.discrete.type
 
 Nx = 2**nx
 dx = L / (Nx + 1)
 x = np.arange(dx, L, dx)
 y = np.arange(dx, L, dx)
+
+# Periodic BC uses different grid
+if bd == 'periodic':
+    dx = L / Nx
+    x = np.arange(0, L, dx)
+    y = np.arange(0, L, dx)
 ```
 
 ------
@@ -113,26 +134,39 @@ b = a1 * np.kron(b0, np.ones(Nx)) + a2 * np.kron(np.ones(Nx), b0)
 
 ------
 
-### Step 5: Schrödingerization Solver
+### Step 5: Schrödingerization Solver (Classical Method)
 
 ```python
-u = schro_classical(A, u0, T=T, na=na, R=R, order=order, b=b)
-u = u.reshape((Nx, Nx))  # reshape to 2D
+u = schro_classical(A, u0, T=T, na=na, R=R, order=order, point=point, b=b)
+u = u.reshape((Nx, Nx))          # reshape back to 2D field
 qc = circuit_classical(nx, na, dim=2)
 ```
 
-The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
+`point` selects the Fourier-basis evaluation point for the ancilla register. The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 ------
 
 ### Step 6: Trotter Quantum Circuit (Optional)
 
 ```python
-func1 = TDiff(nx, dx, 2, boundary=bd).data()[0]
-D1 = lambda a: func1(a * dt/R)
+# Trotter-specific extra parameters
+dt = eq.solver.dt
+Nt = int(T / dt)
 
-H1 = Circuit(2*nx)
-H1.append(D1(a1), range(nx))      # x-direction
-H1.append(D1(a2), range(nx, 2*nx))# y-direction
+# Neumann BC uses yet another grid
+if bd == 'neumann':
+    dx = L / (Nx - 1)
+    x = np.arange(0, L + dx, dx)
+    y = np.arange(0, L + dx, dx)
+
+# Build per-direction Trotter unitary factory
+func1 = TDiff(nx, dx, 2, scheme=scheme, boundary=bd).data()[0]
+D1 = lambda a: func1(a * dt / R)
+
+# Compose 2D Hamiltonian (2*nx qubits: first nx for x, next nx for y)
+H1 = Circuit(2 * nx)
+H1.append(D1(a1), range(nx))           # x-direction block
+H1.append(D1(a2), range(nx, 2 * nx))   # y-direction block
+H2 = None
 ```
 
 ------
@@ -140,15 +174,25 @@ H1.append(D1(a2), range(nx, 2*nx))# y-direction
 ### Step 7: Run Trotter Evolution
 
 ```python
-u, qc = schro_trotter(u0=u0, H1=H1, H2=None, Nt=Nt, na=na)
+u, qc = schro_trotter(
+    u0=u0, H1=H1, H2=H2,
+    Nt=Nt, na=na, R=R,
+    order=order, point=point,
+    device=device,          # e.g. 'cpu'
+)
 u = u.reshape((Nx, Nx))
 ```
 
 ------
 
-### Step 8: Visualization
+### Step 8: Visualization via `_generate_solution_plot`
 
 ```python
+# Called internally; returns the saved filename (relative to algo_dir)
+name = f"2D Heat Classical nx={nx} na={na} T={T}"
+solution_plot_path = self._generate_solution_plot(name, x, y, u)
+
+# The method builds a 3D surface using meshgrid:
 X, Y = np.meshgrid(x, y)
 ax.plot_surface(X, Y, u, cmap='viridis')
 ```
@@ -178,10 +222,25 @@ $$
 
 ## Outputs
 
-- 2D temperature field $u(x,y,T)$
-- 3D surface plot
-- Full quantum circuit diagram
-- H1 decomposed Trotter circuit
+All solver methods return a dictionary built by `_build_return_dict(success, circuit_path, filepath, circuit)`. The structure is:
+
+```python
+{
+    "status": "ok" | "failed",      # bool success converted to string
+    "circuit_path": circuit_path,   # path(s) to saved circuit diagram files
+    "plot": [
+        {"format": "svg", "filename": "<solution_plot_filename>"},
+        # one entry per file in filepath
+    ],
+    "circuit": circuit,             # circuit object(s) (qc / H1 etc.)
+    # ...self.output fields merged in
+}
+```
+
+Key fields populated by the algorithm:
+- `circuit_path`: paths returned by `_generate_circuit_plots(name, qc, ...)` — list of circuit diagram filenames
+- `plot[].filename`: filename returned by `_generate_solution_plot(name, x, y, u)` — 3D surface SVG
+- `circuit`: the `Circuit` / `qc` object from the solver (`circuit_classical(nx, na, dim=2)` or from `schro_trotter`)
 
 ------
 
