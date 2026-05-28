@@ -48,12 +48,54 @@ Run the tutorial script directly:
 python script/algorithm.py
 ```
 
+Recommended local environment (project-specific):
+
+```bash
+conda activate ceshiskill
+python script/algorithm.py
+```
+
 Expected outcomes:
 - A Tanner graph plot for a simple classical LDPC code
 - Printed syndrome from an example error vector
 - CSS code shape and commutation validation (`H_X H_Z^T = 0 mod 2`)
 - Code dimension (`k`) calculation for a sample code
 - HGP construction validation output
+
+## Direct-Run Generation Contract (Mandatory)
+When generating `script/algorithm.py` from this skill, the output MUST satisfy all items below without requiring manual edits.
+
+1. Runtime behavior:
+- The script must run with `python script/algorithm.py` in a properly prepared environment.
+- The script must include `if __name__ == "__main__": main()`.
+- The script must save the Tanner graph to file (for example `tanner_graph.png`) and must not depend on interactive `plt.show()`.
+
+2. Required sections in execution order:
+- Classical LDPC demo (matrix, Tanner graph, syndrome)
+- CSS demo with explicit commutation check
+- HGP demo with explicit commutation check
+- Small PennyLane demo context (for example a tiny QNode)
+
+3. Mathematical correctness checks:
+- CSS check must print `True` for the built-in sample matrices.
+- HGP check must print `True` for the built-in sample matrices.
+- Code dimension computation must use binary rank over `Z_2`.
+
+4. HGP construction must use the following standard form:
+
+$$
+H_X = [H_1 \otimes I_{n_2} \mid I_{r_1} \otimes H_2^T]
+$$
+
+$$
+H_Z = [I_{n_1} \otimes H_2 \mid H_1^T \otimes I_{r_2}]
+$$
+
+where `H1` has shape `(r1, n1)` and `H2` has shape `(r2, n2)`.
+
+5. Built-in CSS sample requirement:
+- Use a commuting sample by default, e.g. `H_X = rep_code(3)` and `H_Z = [[1, 1, 1]]`.
+- Avoid default samples that produce `False` commutation in the main demo.
 
 ## Concept Map (Simple)
 1. Classical LDPC:
@@ -99,13 +141,22 @@ Use this checklist after modifications:
 - CSS commutation checks return `True`.
 - Computed code dimension matches expected theory.
 - HGP commutation check returns `True`.
+- Script does not crash from matrix shape mismatch in `np.hstack` during HGP build.
 
 ## Common Issues and Fixes
 - `ModuleNotFoundError: pennylane`:
   - Install with `pip install pennylane`.
 
+- Environment mismatch (packages installed but not found):
+  - Activate the intended env first, e.g. `conda activate ceshiskill`.
+  - Then run `python script/algorithm.py` from the same terminal.
+
 - Plot window does not appear:
   - Use a local GUI backend or save figures with `plt.savefig(...)`.
+
+- HGP `ValueError` during horizontal concatenation:
+  - This usually means the HGP formula blocks were arranged incorrectly.
+  - Re-check the mandatory HGP equations in this skill and verify row dimensions before `np.hstack`.
 
 - Binary rank mismatch:
   - Confirm all matrices are binary (`0/1`) and operations are modulo 2.

@@ -17,9 +17,13 @@ They estimate gradients of:
 SPSA is useful when circuits have many parameters, because each batch needs only `2 * batch_size` circuit evaluations, independent of parameter count.
 
 ## One-Step Run Command
-There is no standalone script entry point in this folder.
+Run the local demo script in this folder:
 
-Use the classes as library components inside the full package.
+```bash
+python scripts/algorithm.py
+```
+
+Or use the classes as library components inside the full package.
 
 ## Overview
 For each random perturbation vector `delta in {+1, -1}^d`, the implementation evaluates:
@@ -271,3 +275,4 @@ This matches the core logic of the estimator implementation; the sampler version
 - Larger `batch_size` reduces variance but increases runtime.
 - In estimator mode, transpilation changes layout, so observables are remapped.
 - In sampler mode, gradients are built from normalized counts, so shot count matters.
+- In some Qiskit versions, constructor arguments such as `epsilon` and `batch_size` are not exposed as public attributes on gradient objects; prefer tracking configured values in local variables rather than reading `grad.epsilon` or `grad.batch_size`.

@@ -92,7 +92,9 @@ If `phase_fix=True`, the phase-fix term is explicitly subtracted in the computed
 
 Engineering constraints:
 
-- Supported parameterized gates: `rx`, `ry`, `rz`, `cp`, `crx`, `cry`, `crz`.
+- API-declared parameterized gates: `rx`, `ry`, `rz`, `cp`, `crx`, `cry`, `crz`.
+- Practical compatibility note (`qiskit_algorithms==0.4.0`): circuits containing parameterized two-qubit controlled rotations/phases (`cp`, `crx`, `cry`, `crz`) may raise `KeyError` during internal gradient-parameter preprocessing.
+- Robust workaround for current environments: use only parameterized `rx`/`ry`/`rz`, and keep entanglers non-parameterized (e.g., `cx`) in demo circuits.
 - Circuits should use unique parameters per gate path; unsupported gates must be decomposed first.
 - Runtime scales exponentially with qubit count due to statevector simulation.
 - No external estimator backend is required by users; classes internally satisfy base interfaces.
