@@ -39,7 +39,7 @@ python ./scripts/algorithm.py
 ```python
 import numpy as np
 from sklearn.datasets import make_moons
-from algorithms.quantum_machine_learning.cvqnn.algorithm import CVQNNAlgorithm
+from unitarylab_algorithms.quantum_machine_learning.cvqnn.algorithm import CVQNNAlgorithm
 
 X, y = make_moons(n_samples=40, noise=0.1, random_state=42)
 
@@ -182,7 +182,7 @@ Training minimizes $\mathcal{L} = \frac{1}{N}\sum_i (\hat{y}_i - t_i)^2$ with $t
 ```python
 import numpy as np
 from sklearn.datasets import make_moons
-from algorithms.quantum_machine_learning.cvqnn.algorithm import CVQNNAlgorithm
+from unitarylab_algorithms.quantum_machine_learning.cvqnn.algorithm import CVQNNAlgorithm
 
 # Moon-shaped binary classification dataset
 X, y = make_moons(n_samples=60, noise=0.15, random_state=0)

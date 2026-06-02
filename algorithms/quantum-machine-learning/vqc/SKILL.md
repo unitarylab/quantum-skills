@@ -37,7 +37,7 @@ python ./scripts/algorithm.py
 ## Using the Provided Implementation
 
 ```python
-from algorithms.quantum_machine_learning.vqc.algorithm import VQCAlgorithm
+from unitarylab_algorithms.quantum_machine_learning.vqc.algorithm import VQCAlgorithm
 
 algo = VQCAlgorithm()
 result = algo.run(
@@ -167,7 +167,7 @@ $$\nabla_\theta E = \frac{1}{2}[E(\theta+\pi/2) - E(\theta-\pi/2)]$$
 ## Hands-On Example
 
 ```python
-from algorithms.quantum_machine_learning.vqc.algorithm import VQCAlgorithm
+from unitarylab_algorithms.quantum_machine_learning.vqc.algorithm import VQCAlgorithm
 
 # Deeper model for better accuracy
 algo = VQCAlgorithm()
