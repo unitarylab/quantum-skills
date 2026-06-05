@@ -1,4 +1,4 @@
-﻿---
+---
 name: quantum-signal-processing
 description: A quantum algorithm for signal processing tasks, leveraging quantum phase estimation and amplitude amplification techniques to achieve efficient signal analysis and transformation. This skill includes implementations and educational resources for understanding and utilizing quantum signal processing algorithms in various applications.
 ---
@@ -157,7 +157,7 @@ $$\langle 0|U_\Phi(x)|0\rangle = P(x)$$
 ## Hands-On Example (UnitaryLab)
 
 ```python
-from unitarylab_algorithms.linear_algebra.qsp.algorithm import QSPAlgorithm
+from unitarylab_algorithms import QSPAlgorithm
 import numpy as np
 
 algo = QSPAlgorithm(text_mode="legacy")

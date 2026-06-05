@@ -1,4 +1,4 @@
-﻿---
+---
 name: qaoa
 description: Skill for understanding, using, and implementing the Quantum Approximate Optimization Algorithm (QAOA) for Max-Cut problems via the QAOAAlgorithm class.
 ---

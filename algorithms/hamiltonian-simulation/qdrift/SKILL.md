@@ -1,4 +1,4 @@
-﻿---
+---
 name: qdrift
 description: QDrift randomized Hamiltonian simulation, approximating e^{-iHt} by stochastically sampling Pauli-term evolutions with probability proportional to coefficient magnitude.
 ---

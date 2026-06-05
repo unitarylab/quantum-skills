@@ -1,4 +1,4 @@
-﻿---
+---
 name: qcbm
 description: Skill for understanding, using, and implementing the Quantum Circuit Born Machine (QCBM) for learning discrete probability distributions (Bars-and-Stripes) via the QCBMAlgorithm class.
 ---

@@ -1,4 +1,4 @@
-﻿---
+---
 name: discretelog
 description: "Use when users ask about solving the discrete logarithm problem g^x ≡ y (mod P) with Shor's quantum algorithm, building/explaining DLP circuits, running simulator demos, or debugging post-processing (continued fractions, order recovery, congruence solving). Triggers: discrete log, DLP, Shor discrete logarithm, g^x mod P, modular exponentiation, continued fractions, quantum cryptography demo."
 ---

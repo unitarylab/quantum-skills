@@ -1,4 +1,4 @@
-﻿---
+---
 name: quantum-phase-estimation
 description: A quantum phase estimation algorithm that can estimate the eigenvalues of a unitary operator with high precision, which is a fundamental component in many quantum algorithms such as Shor's algorithm and quantum simulation.
 ---

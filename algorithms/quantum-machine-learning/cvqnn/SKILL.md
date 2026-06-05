@@ -1,4 +1,4 @@
-﻿---
+---
 name: cvqnn
 description: Skill for understanding, using, and implementing the Continuous Variable Quantum Neural Network (CVQNN) for binary classification via the CVQNNAlgorithm class, CVSimulator, and CVClassifier.
 ---

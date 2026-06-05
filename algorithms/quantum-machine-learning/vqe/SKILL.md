@@ -1,4 +1,4 @@
-﻿---
+---
 name: vqe
 description: Skill for understanding, using, and implementing the Variational Quantum Eigensolver (VQE) for finding the ground state energy of any user-supplied or randomly generated Hermitian Hamiltonian via the VQEAlgorithm class.
 ---

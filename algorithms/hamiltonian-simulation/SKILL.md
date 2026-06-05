@@ -1,4 +1,4 @@
-﻿---
+---
 name: hamiltonian-simulation
 description: Quantum Hamiltonian simulation methods for approximating time evolution e^{-iHt}. Includes Trotter-Suzuki decomposition, QDrift randomized sampling, Cartan decomposition, QSP polynomial spectral transformation, and Taylor series LCU expansion.
 ---

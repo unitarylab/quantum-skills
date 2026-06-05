@@ -1,4 +1,4 @@
-﻿# CircuitInfo User Guide
+# CircuitInfo User Guide
 
 ## Introduction
 

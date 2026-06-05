@@ -254,16 +254,6 @@ Classical register for storing measurement results.
 
 ---
 
-### State
-
-#### `State(data, num_qubits=None)`
-
-Quantum statevector class backed by PyTorch tensors.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `data` | int \| Tensor \| list \| ndarray | If int, creates a `2^n`-dimensional `|0…0⟩` state; otherwise interprets as a state vector (automatically normalized). |
-
 **Properties**
 
 | Property | Type | Description |
@@ -681,24 +671,7 @@ All PDE algorithm classes inherit from `BaseAlgorithm` and are executed via `.ru
 |-------|----------|
 | `HeatEquationAlgorithm` | 1D heat equation |
 | `Heat2dEquationAlgorithm` | 2D heat equation |
-| `HeatVariableCoefficientEquationAlgorithm` | 1D variable-coefficient heat equation |
-| `backHeatEquationAlgorithm` | 1D backward heat equation (ill-posed) |
-| `backHeat2dEquationAlgorithm` | 2D backward heat equation |
 | `AdvectionEquationAlgorithm` | 1D advection equation |
-| `BurgersEquationAlgorithm` | 1D Burgers equation |
-| `Burgers2DEquationAlgorithm` | 2D Burgers equation |
-| `BlackScholesEquationAlgorithm` | 1D Black-Scholes equation |
-| `ElasticWaveEquationAlgorithm` | 1D elastic wave equation |
-| `ElasticWave2DEquationAlgorithm` | 2D elastic wave equation |
-| `HelmholtzEquationAlgorithm` | 1D Helmholtz equation |
-| `MaxwellEquationAlgorithm` | Maxwell equations |
-| `MultiEllipticEquationAlgorithm` | Multiscale elliptic equation |
-| `MultiTransportEquationAlgorithm` | Multiscale transport equation |
-| `OUProcessEquationAlgorithm` | Ornstein-Uhlenbeck process |
-| `SchrABCEquationAlgorithm` | Schrödinger equation with artificial boundary conditions |
-| `TrafficFlowEquationAlgorithm` | Traffic flow equation |
-| `HamiltonJacobiEquationAlgorithm` | Hamilton-Jacobi equation |
-| `BaseAlgorithm` | Base class for all PDE algorithms |
 
 ---
 
@@ -751,7 +724,6 @@ All PDE algorithm classes inherit from `BaseAlgorithm` and are executed via `.ru
 
 | Class | Algorithm |
 |-------|-----------|
-| `QNNAlgorithm` | Quantum Neural Network (QNN) |
 | `QCBMAlgorithm` | Quantum Circuit Born Machine (QCBM) |
 | `CVQNNAlgorithm` | Continuous-Variable Quantum Neural Network (CV-QNN) |
 | `VQCAlgorithm` | Variational Quantum Classifier (VQC) |

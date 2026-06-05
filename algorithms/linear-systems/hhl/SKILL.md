@@ -1,4 +1,4 @@
-﻿---
+---
 name: hhl
 description: A quantum algorithm for solving linear systems of equations, providing exponential speedup over classical methods for certain types of problems. This skill includes efficient implementations and educational resources for understanding and utilizing quantum linear systems algorithms in various applications.
 ---
@@ -37,8 +37,8 @@ HHL proceeds in five steps:
 ## Using the Provided Implementation
 
 ```python
-from unitarylab.core import Circuit
-from unitarylab_algorithms.linear_algebra.hhl.algorithm import HHLAlgorithm
+from unitarylab import Circuit
+from unitarylab_algorithms import HHLAlgorithm
 import numpy as np
 
 # 2x2 Hermitian system
