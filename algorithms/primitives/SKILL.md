@@ -18,6 +18,3 @@ See reference: `./hadamard-test/SKILL.md`
 
 ## 5. Hadamard Transform
 See reference: `./hadamard-transform/SKILL.md`
-
-## 6. Quantum Fourier Transform
-See reference: `./quantum-fourier-transform/SKILL.md`

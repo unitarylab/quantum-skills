@@ -1,6 +1,6 @@
 ---
 name: linear-systems
-description: A set of quantum algorithms for solving linear systems of equations, providing exponential speedup over classical methods for certain types of problems. This skill includes efficient implementations and educational resources for understanding and utilizing quantum linear systems algorithms in various applications.
+description: A set of quantum algorithms for solving linear systems of equations and related Fourier/signal-processing subroutines. This skill includes UnitaryLab implementations and educational resources for HHL, LCU, QFT, QSP, QSVT-QLSA, and VQLS.
 ---
 # Quantum Linear Systems Algorithms
 
@@ -10,11 +10,14 @@ See reference: `./hhl/SKILL.md`
 ## 2. LCU (Linear Combination of Unitaries)
 See reference: `./lcu/SKILL.md`
 
-## 3. Quantum Signal Processing
+## 3. Quantum Fourier Transform
+See reference: `./quantum-fourier-transform/SKILL.md`
+
+## 4. Quantum Signal Processing
 See reference: `./quantum-signal-processing/SKILL.md`
 
-## 4. QSVT QLSA
+## 5. QSVT QLSA
 See reference: `./qsvt-qlsa/SKILL.md`
 
-## 5. VQLS
+## 6. VQLS
 See reference: `./vqls/SKILL.md`
