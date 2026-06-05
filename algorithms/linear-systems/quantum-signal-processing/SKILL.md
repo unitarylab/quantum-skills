@@ -157,7 +157,7 @@ $$\langle 0|U_\Phi(x)|0\rangle = P(x)$$
 ## Hands-On Example (UnitaryLab)
 
 ```python
-from unitarylab_algorithms.linear_systems.quantum_signal_processing.algorithm import QSPAlgorithm
+from unitarylab_algorithms.linear_algebra.qsp.algorithm import QSPAlgorithm
 import numpy as np
 
 algo = QSPAlgorithm(text_mode="legacy")

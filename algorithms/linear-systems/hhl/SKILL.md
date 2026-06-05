@@ -38,7 +38,7 @@ HHL proceeds in five steps:
 
 ```python
 from unitarylab.core import Circuit
-from unitarylab_algorithms.linear_systems.hhl.algorithm import HHLAlgorithm
+from unitarylab_algorithms.linear_algebra.hhl.algorithm import HHLAlgorithm
 import numpy as np
 
 # 2x2 Hermitian system
@@ -175,7 +175,7 @@ $$|x\rangle = \frac{1}{\mathcal{N}}\sum_j \frac{Cb_j}{\lambda_j}|u_j\rangle, \qu
 ## Hands-On Example
 
 ```python
-from unitarylab_algorithms.linear_systems.hhl.algorithm import HHLAlgorithm
+from unitarylab_algorithms.linear_algebra.hhl.algorithm import HHLAlgorithm
 import numpy as np
 
 # 4x4 example (requires 2 system qubits)

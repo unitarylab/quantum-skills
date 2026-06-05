@@ -36,7 +36,7 @@ python ./scripts/algorithm.py
 ## Using the Provided Implementation
 
 ```python
-from algorithm import QAOAAlgorithm
+from unitarylab_algorithms.quantum_machine_learning.qaoa.algorithm import QAOAAlgorithm
 
 edges = [(0, 1), (1, 2), (2, 3), (3, 0), (0, 4), (1, 5)]
 n = 6
@@ -172,7 +172,7 @@ $$
 ## Hands-On Example (UnitaryLab)
 
 ```python
-from algorithm import QAOAAlgorithm
+from unitarylab_algorithms.quantum_machine_learning.qaoa.algorithm import QAOAAlgorithm
 
 # Petersen graph-like structure
 edges = [(0,1), (1,2), (2,3), (3,4), (4,0), (0,5), (1,6), (2,7), (3,8), (4,9)]

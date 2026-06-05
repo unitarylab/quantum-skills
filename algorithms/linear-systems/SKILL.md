@@ -12,3 +12,9 @@ See reference: `./lcu/SKILL.md`
 
 ## 3. Quantum Signal Processing
 See reference: `./quantum-signal-processing/SKILL.md`
+
+## 4. QSVT QLSA
+See reference: `./qsvt-qlsa/SKILL.md`
+
+## 5. VQLS
+See reference: `./vqls/SKILL.md`

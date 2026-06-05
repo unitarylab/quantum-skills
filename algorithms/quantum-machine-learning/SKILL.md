@@ -18,3 +18,6 @@ See reference: `./vqc/SKILL.md`
 
 ## 5. Variational Quantum Eigensolver
 See reference: `./vqe/SKILL.md`
+
+## 6. Continuous-Variable Quantum Neural Network
+See reference: `./cvqnn/SKILL.md`
