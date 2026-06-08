@@ -16,7 +16,7 @@ Use the following workflow when handling `unitarylab_algorithms`:
 	- If yes, do not install the package.
 2. Install only when you are going to run code that imports `unitarylab_algorithms`, or when you see `No module named unitarylab_algorithms`.
 3. Run:
-	- `uv pip install unitarylab_algorithms`
+	- `pip install unitarylab-algorithms`
 4. Re-run the script or notebook cell and confirm the import works.
 
 
@@ -46,13 +46,13 @@ See reference: `./hamiltonian-simulation/SKILL.md`
 
 ## 5. Schrodingerization
 
-PDE-to-quantum mapping via Schrodingerization, covering 1D/2D heat equations, advection, and backward-heat problems.
+PDE-to-quantum mapping via Schrodingerization, covering advection and 1D/2D heat equation examples.
 
 See reference: `./schrodingerization/SKILL.md`
 
 ## 6. Quantum Machine Learning
 
-Variational and hybrid quantum-classical learning algorithms, including VQE, VQC, QAOA, QNN, and QCBM.
+Variational and hybrid quantum-classical learning algorithms, including VQE, VQC, QAOA, QCBM, and CVQNN.
 
 See reference: `./quantum-machine-learning/SKILL.md`
 

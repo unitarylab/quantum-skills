@@ -4,20 +4,37 @@ description: A set of quantum algorithms for solving linear systems of equations
 ---
 # Quantum Linear Systems Algorithms
 
-## 1. HHL Algorithm
-See reference: `./hhl/SKILL.md`
+## Purpose
+This file routes requests for quantum linear algebra algorithms and related Fourier or signal-processing subroutines.
 
-## 2. LCU (Linear Combination of Unitaries)
-See reference: `./lcu/SKILL.md`
+Use this category when the user asks to solve linear systems, compare quantum linear-system solvers, build QFT/QSP components, or use QSVT-style linear algebra workflows.
 
-## 3. Quantum Fourier Transform
-See reference: `./quantum-fourier-transform/SKILL.md`
+## Routing Rules
 
-## 4. Quantum Signal Processing
-See reference: `./quantum-signal-processing/SKILL.md`
+- If the user asks for the HHL algorithm, phase-estimation-based linear solving, or textbook quantum linear systems:
+  - Read `./hhl/SKILL.md`
+- If the user asks about Linear Combination of Unitaries, block construction from weighted unitaries, or LCU-based solving:
+  - Read `./lcu/SKILL.md`
+- If the user asks about the Quantum Fourier Transform, inverse QFT, Fourier basis changes, or QFT as a subroutine:
+  - Read `./quantum-fourier-transform/SKILL.md`
+- If the user asks about Quantum Signal Processing, polynomial transformations, phase factors, or QSP circuits:
+  - Read `./quantum-signal-processing/SKILL.md`
+- If the user asks about QSVT-based quantum linear-system solving or singular-value transformation:
+  - Read `./qsvt-qlsa/SKILL.md`
+- If the user asks for a variational linear-system solver or NISQ-style Ax=b workflow:
+  - Read `./vqls/SKILL.md`
 
-## 5. QSVT QLSA
-See reference: `./qsvt-qlsa/SKILL.md`
+## Available Leaf Skills
 
-## 6. VQLS
-See reference: `./vqls/SKILL.md`
+1. HHL Algorithm: `./hhl/SKILL.md`
+2. LCU: `./lcu/SKILL.md`
+3. Quantum Fourier Transform: `./quantum-fourier-transform/SKILL.md`
+4. Quantum Signal Processing: `./quantum-signal-processing/SKILL.md`
+5. QSVT QLSA: `./qsvt-qlsa/SKILL.md`
+6. VQLS: `./vqls/SKILL.md`
+
+## Response Contract
+
+1. Decide whether the task is solving a linear system or using a supporting transform/subroutine.
+2. Read the matching leaf skill before writing code or commands.
+3. Keep solver-specific assumptions, parameters, and examples in the leaf skill.
