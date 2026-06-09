@@ -6,63 +6,38 @@ description: Root entrypoint for the quantum-skills package. Use this skill to r
 # Quantum Skills Root Entrypoint
 
 ## Purpose
-This file is the package-level entrypoint.
+This file is only the package-level router.
 
-It only chooses between the two top-level domains:
+Use it to choose one domain index:
 
 - `./algorithms/SKILL.md`
 - `./simulators/SKILL.md`
 
-Detailed routing, setup notes, examples, and implementation guidance belong in those domain indexes or their child skills.
+Detailed routing, setup, examples, and implementation guidance belong in those domain indexes or their child skills.
 
-## Mandatory Read Chain
-Before producing code or execution commands, read skills in this order:
+## Read Chain
+Before writing code or commands:
 
-1. Read this file: `./SKILL.md`.
-2. Read one domain index:
-   - `./simulators/SKILL.md`, or
-   - `./algorithms/SKILL.md`.
-3. Continue from that domain index to the relevant child skill, if the task requires it.
+1. Read this file.
+2. Read either `./algorithms/SKILL.md` or `./simulators/SKILL.md`.
+3. Continue to the relevant child skill when needed.
 
-Rule: Never skip to coding from this root file alone.
+Never code from this root file alone.
 
-## Routing Rules
-Use only these root-level routing rules:
+## Routing
 
-- If user asks simulator choice, runtime environment, execution setup, or backend comparison:
-  - Read `./simulators/SKILL.md` first.
-- If user asks circuit primitive, algorithm design, complexity, or implementation:
-  - Read `./algorithms/SKILL.md` first.
+- Algorithm design, primitives, complexity, or implementations:
+  - Read `./algorithms/SKILL.md`
+- Simulator choice, runtime setup, backend comparison, or execution environment:
+  - Read `./simulators/SKILL.md`
 
 ## Package Map
-Root-level map of this skill package:
 
 - `./simulators/SKILL.md`
 - `./algorithms/SKILL.md`
 
-Use each index file as the source of truth for its children.
-
-## Execution Policy
-Only provide environment installation commands when the user explicitly needs to run code.
-
-For conceptual explanation, code review, pseudocode, or architecture discussion:
-- Skip environment setup.
-- Continue with theory and structure using the correct sub-skill.
-
-For execution/debug tasks:
-- Follow simulator selection from `./simulators/SKILL.md`.
-- Follow exact installation and verification steps from the chosen simulator skill.
-
-## Response Contract
-When answering user requests with this package:
-
-1. Identify the task type (simulator vs algorithm).
-2. Open and use the matching domain index.
-3. Follow that domain index to any required child skill.
-4. Keep response focused on the user task; avoid repeating package index content.
-
-## Maintenance Notes
+## Maintenance
 When adding a new sub-skill:
-1. Add it to the nearest domain or category index SKILL.
-2. Keep this root file focused on routing only.
-3. Avoid adding detailed setup or implementation sections here.
+
+1. Add it to the nearest domain or category index.
+2. Keep this file limited to root-level routing.

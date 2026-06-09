@@ -30,11 +30,6 @@ Use this category when the user asks about optimization with parameterized circu
 4. Variational Quantum Eigensolver: `./vqe/SKILL.md`
 5. Continuous-Variable Quantum Neural Network: `./cvqnn/SKILL.md`
 
-## Missing or External Topics
-
-- There is currently no `./qnn/SKILL.md` leaf in this folder.
-- If the user asks for a generic QNN, route to `./vqc/SKILL.md` for supervised classifier workflows, `./qcbm/SKILL.md` for generative workflows, or `./cvqnn/SKILL.md` for continuous-variable workflows.
-
 ## Response Contract
 
 1. Identify the learning objective: optimization, classification, generative modeling, energy minimization, or continuous-variable modeling.

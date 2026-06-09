@@ -25,11 +25,6 @@ Use this category when the user asks to transform non-unitary PDE dynamics into 
 2. 1D Heat Equation: `./heat-1d-schrodingerization/SKILL.md`
 3. 2D Heat Equation: `./heat-2d-schrodingerization/SKILL.md`
 
-## Missing or External Topics
-
-- If the user asks about backward heat, first check whether `./backward-heat-1d-schrodingerization/SKILL.md` exists before routing there.
-- If no matching leaf skill exists, answer conceptually or ask whether a new leaf skill should be created.
-
 ## Response Contract
 
 1. Match the PDE type and dimension to a leaf skill.
