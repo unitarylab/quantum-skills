@@ -35,7 +35,7 @@ or set manually via `reps`.
 
 - Familiarity with quantum gates: H, X, multi-controlled-X (MCX), CX.
 - Understanding of quantum state vectors and measurement probabilities.
-- Python: `numpy`, project core classes `Circuit`, `Register`, `State`.
+- Python: `numpy`, project core classes `Circuit`, `Register`.
 
 ## Using the Provided Implementation
 
@@ -45,7 +45,7 @@ from unitarylab.core import Circuit
 
 # Prepare state U such that some target qubits land in |0>
 # Example: 2-qubit state preparation
-U = Circuit(2, name="PrepU", backend='torch')
+U = Circuit(2, name="PrepU")
 U.ry(0.6, 0)   # Partially rotates qubit 0
 U.cx(0, 1)     # Entangles
 
@@ -113,7 +113,7 @@ print(result['plot'])                          # List of saved file dicts [{"for
 |---|---|---|
 | 1 — Parameter Resolution | `n_data = U.get_num_qubits()`; `ancilla = n_data`; calls `_get_optimal_iterations(p)` if `reps is None` | Converts user-supplied probability into Grover iteration count $k$ |
 | 2 — Circuit Construction | Creates `Circuit(n_data+1, name='Amplitude_Amplification')`, appends `U` to `data_qubits`, then loops `reps` times calling `_build_oracle(gs, good_zero_qubits, ancilla)` and `_build_diffuser(gs, U, data_qubits, ancilla)` | Builds the full amplitude amplification circuit layer by layer |
-| 3 — Simulation Execution | `gs.execute(backend, device, dtype)` → `re_state.calculate_state(data_qubits)` | Runs the statevector simulation; marginalizes ancilla to get data-register probabilities |
+| 3 — Simulation Execution | `gs.execute(backend=backend, device=device, dtype=dtype)` → `result.calculate_state(data_qubits)` | Runs the statevector simulation; marginalizes ancilla to get data-register probabilities |
 | 4 — Post-Processing | Iterates `state_basis_dict`; sums probability for states where all `good_zero_qubits == '0'`; sets `is_success = (target_prob > p)` | Classically extracts `target_prob` (`result['Amplified Target Probability']`) |
 | 5 — Export | `self.save_circuit(gs)` / `self.save_txt()` → `_build_return_dict(is_success, circuit_path, filename, gs)` | Saves SVG circuit + text results; packages return dict |
 
@@ -124,7 +124,7 @@ print(result['plot'])                          # List of saved file dicts [{"for
 - **`_build_diffuser(qc, U, data_qubits, ancilla)`** — Implements the Grover diffuser as `U†` → `_build_oracle(all data_qubits)` → `U`. This reflects the state about $U|0\rangle^n$. It reuses `_build_oracle` on the full data register, which is the $2|0^n\rangle\langle 0^n|-I$ reflection.
 - **`_build_return_dict(success, circuit_path, filepath, circuit)`** — Packages the final return dict. Sets `status` to `'ok'` or `'failed'`, wraps file paths as `[{"format": ext, "filename": path}]`, and merges `self.output` fields (`Amplified Target Probability`, `Initial Success Probability`, `Repetitions`, `Computation Time (s)`, `Data register size`) into the result.
 
-**Data flow:** `U` → `Circuit(n_data+1)` → `gs.execute(backend, device, dtype)` → `re_state.calculate_state(data_qubits)` → `target_prob` (`result['Amplified Target Probability']`) → `_build_return_dict(is_success, circuit_path, filename, gs)` → result dict.
+**Data flow:** `U` → `Circuit(n_data+1)` → `gs.execute(backend=backend, device=device, dtype=dtype)` → `result.calculate_state(data_qubits)` → `target_prob` (`result['Amplified Target Probability']`) → `_build_return_dict(is_success, circuit_path, filename, gs)` → result dict.
 
 ## Understanding the Key Quantum Components
 
@@ -154,7 +154,7 @@ $$G^k|\psi\rangle = \sin((2k+1)\theta)|\text{good}\rangle + \cos((2k+1)\theta)|\
 The good-state amplitude grows, reaching maximum near $(2k+1)\theta \approx \pi/2$.
 
 ### 5. Measurement
-The data register probabilities are extracted via `re_state.calculate_state(data_qubits)`, marginalizing over the ancilla.
+The data register probabilities are extracted via `result.calculate_state(data_qubits)`, marginalizing over the ancilla.
 
 ## Theory-to-Code Mapping
 
@@ -195,14 +195,14 @@ import numpy as np
 
 # Build a 3-qubit state with small success probability
 # Target: qubits 0 and 1 in |0> simultaneously
-U = Circuit(3, name="MyPrep", backend='torch')
+U = Circuit(3, name="MyPrep")
 U.ry(0.3, 0)   # rotates qubit 0 slightly away from |0>
 U.ry(0.3, 1)
 U.ry(1.5, 2)   # qubit 2 not in target condition
 
 # Initial success probability ≈ cos^2(0.15) * cos^2(0.15) ≈ 0.956 * 0.956 ≈ 0.91
 # Use a smaller angle for a more interesting demo: p ~ 0.05
-U2 = Circuit(3, name="LowProb", backend='torch')
+U2 = Circuit(3, name="LowProb")
 U2.ry(1.4, 0)
 U2.ry(1.4, 1)
 
@@ -326,7 +326,7 @@ def amplitude_amplification(U: Circuit, good_zero_qubits, p: float, backend='tor
     ancilla = n_data
     reps = max(1, round(math.pi / (4 * math.asin(math.sqrt(p))) - 0.5))
 
-    qc = Circuit(n_data + 1, backend=backend)
+    qc = Circuit(n_data + 1)
     qc.append(U, list(range(n_data)))
 
     for _ in range(reps):

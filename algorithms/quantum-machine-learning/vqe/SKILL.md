@@ -110,7 +110,7 @@ Returned by `_build_return_dict(success, circuit_path, filepath, circuit)` merge
 - **`_random_hermitian(num_qubits, seed, normalize)`** — Generates a random Hermitian via $(A + A^\dagger)/2$; optionally divides by spectral norm. Returns `np.ndarray`.
 - **`_build_ansatz(layer_parameters, num_qubits)`** — Applies `ry` then `rz` to each qubit, followed by ring CX entanglement (`cx(q, q+1)` for all $q$, then `cx(num_qubits-1, 0)`). `layer_parameters` has shape `(num_qubits, 2)`.
 - **`_build_circuit(parameters_flat, num_qubits, layers)`** — Reshapes `parameters_flat` to `(layers, num_qubits, 2)`, creates a `Circuit(num_qubits)`, and appends one `_build_ansatz` sub-circuit per layer.
-- **`_expectation(parameters_flat, hamiltonian, num_qubits, layers, history)`** — Called by COBYLA at each iteration. Calls `_build_circuit(...).execute(backend, device, dtype).state`, computes `state.conj().T @ hamiltonian @ state`, appends to `history`, returns real part.
+- **`_expectation(parameters_flat, hamiltonian, num_qubits, layers, history)`** — Called by COBYLA at each iteration. Calls `_build_circuit(...).execute(backend=backend, device=device, dtype=dtype).state`, computes `state.conj().T @ hamiltonian @ state`, appends to `history`, returns real part.
 
 **Key execution pattern:** `_expectation` calls `_build_circuit` and `.execute()` on every optimizer iteration. Full statevector simulation, no gradient computation — COBYLA uses only function values. Total circuit executions: `max_iter` (approximately).
 
@@ -147,7 +147,7 @@ The variational principle guarantees $E(\theta) \geq E_0$ for all $\theta$. As o
 | Convergence history | `history` list appended inside every `_expectation` call |
 | Result dict | `_build_return_dict(True, circuit_path, filename, qc_draw)` merged with `self.output` |
 
-**Notes on implementation:** The Hamiltonian works for any $2^n \times 2^n$ Hermitian matrix; `n` only matters when generating a random one. The COBYLA optimizer never computes gradients. `.execute(backend, device, dtype).state` returns the full statevector.
+**Notes on implementation:** The Hamiltonian works for any $2^n \times 2^n$ Hermitian matrix; `n` only matters when generating a random one. The COBYLA optimizer never computes gradients. `.execute(backend=backend, device=device, dtype=dtype).state` returns the full statevector.
 
 ## Mathematical Deep Dive
 

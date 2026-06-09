@@ -33,7 +33,7 @@ The `QPEAlgorithm` class also exposes `build_qpe_circuit()` for embedding QPE as
 
 - Understanding of controlled unitary gates.
 - Understanding of the Quantum Fourier Transform (QFT) and iQFT.
-- Python: `numpy`, `Circuit`, `State`, project library `IQFT`.
+- Python: `numpy`, `Circuit`, project library `IQFT`.
 
 ## Using the Provided Implementation
 
@@ -44,11 +44,11 @@ import numpy as np
 
 # Build a 1-qubit unitary with known phase phi = 1/4
 # U = diag(1, e^{2pi*i*phi}) so with phi=0.25: U = diag(1, i) = S gate
-U = Circuit(1, name="S_gate", backend='torch')
+U = Circuit(1, name="S_gate")
 U.s(0)   # S gate has phase e^{i*pi/2} = e^{2pi*i*0.25}
 
 # Prepare eigenstate |1> (eigenstate of S is |1> with eigenvalue i=e^{i*pi/2})
-prepare_psi = Circuit(1, name="prep_1", backend='torch')
+prepare_psi = Circuit(1, name="prep_1")
 prepare_psi.x(0)   # |0> -> |1>
 
 algo = QPEAlgorithm()          # algo_dir can be set here; defaults to results/
@@ -113,7 +113,7 @@ print(result['circuit_path'])            # SVG circuit diagram path
 |---|---|---|
 | 1 — Parameter Setup | Extracts `n_target`, computes `total_qubits = d + n_target` | Establishes qubit layout: phase (`d` qubits) + target (`n_target` qubits) |
 | 2 — Circuit Construction | Calls `self.build_qpe_circuit(U, d, prepare_target)` | Delegates all circuit building to the reusable helper |
-| 3 — Simulation | `gs.execute(backend, device, dtype)` → `final_state` | Runs statevector simulation and returns the final state object directly |
+| 3 — Simulation | `gs.execute(backend=backend, device=device, dtype=dtype)` → `final_state` | Runs statevector simulation and returns the final state object directly |
 | 4 — Phase Extraction | `final_state._phase_probabilities_from_state(phase_qubits, endian='little', threshold=1e-8)` → picks best bit-string → `phi_est = int(best_bits_str, 2) / (2 ** d)` | Marginalizes target register; converts binary readout to decimal phase |
 | 5 — Export | `self.save_circuit(gs)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
 
@@ -161,7 +161,7 @@ The iQFT transforms the phase-encoded register to: if $\phi = k_0/2^d$ exactly, 
 | Phase register $|0\rangle^d$ → $H^{\otimes d}$ | `for q in phase_qubits: qc.h(q)` in `build_qpe_circuit()` |
 | Eigenstate preparation $|\psi\rangle$ | `prepare_target` appended via `qc.append(prepare_target, target_qubits)` |
 | Controlled $U^{2^k}$ | `cU = U.control(1, '1')` repeated `2^k` times per phase qubit `k` |
-| Inverse QFT | `IQFT(d, backend)` from `unitarylab.library`, appended to `phase_qubits` |
+| Inverse QFT | `IQFT(d)` from `unitarylab.library`, appended to `phase_qubits` |
 | Phase readout $\phi = k_0/2^d$ | `int(best_bits_str, 2) / (2 ** d)` in Stage 4 |
 | Probability of best phase | `best_prob = sorted_phases[0][1]` from `final_state._phase_probabilities_from_state()` |
 | Phase precision $\delta\phi = 1/2^d$ | Implicit: determined by number of bits `d` in phase register |
@@ -189,10 +189,10 @@ from unitarylab.core import Circuit
 import numpy as np
 
 # Estimate phase of T gate (T|1> = e^{i*pi/4}|1>, phi = 1/8 = 0.125)
-U = Circuit(1, name="T_gate", backend='torch')
+U = Circuit(1, name="T_gate")
 U.t(0)
 
-prepare_psi = Circuit(1, name="prep1", backend='torch')
+prepare_psi = Circuit(1, name="prep1")
 prepare_psi.x(0)  # |1> is eigenstate of T with phase pi/4
 
 algo = QPEAlgorithm()

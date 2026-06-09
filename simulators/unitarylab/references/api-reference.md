@@ -254,29 +254,27 @@ Classical register for storing measurement results.
 
 ---
 
-**Properties**
+**ExecutionResult properties**
+
+`Circuit.execute(...)` returns an `ExecutionResult`, not a separate `State` object.
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `data` | `torch.Tensor` | Raw state vector (complex128, shape `(2^n,)`) |
-| `num_qubits` | int | Number of qubits |
-| `dim` | int | Hilbert space dimension (`2^n`) |
-| `dtype` | dtype | Tensor dtype |
+| `state` | `np.ndarray` | Final statevector, converted lazily from the backend state. |
+| `backend_state` | backend object | Raw backend state, for example a torch tensor. |
+| `classical_results_map` | `dict[int, int]` | Final-shot measured classical-bit values. |
+| `counts` | `dict[str, int]` | Aggregated measured bitstrings when circuit measurements are present. |
+| `classical_registers` | `dict[str, list[int]]` | Classical values grouped by register name. |
+| `num_qubits` | int | Number of qubits inferred from `state`. |
+| `probabilities` | dict | Full computational-basis probability distribution. |
 
-**Methods**
+**ExecutionResult methods**
 
 | Method | Return | Description |
 |--------|--------|-------------|
-| `norm()` | float | L2 norm of the state vector |
-| `normalize()` | self | Normalize in-place |
-| `inner_product(other)` | complex | ⟨self\|other⟩ |
-| `tensor(other)` | `State` | Tensor product self ⊗ other |
-| `expectation_value(matrix)` | complex | ⟨ψ\|O\|ψ⟩ for operator matrix |
-| `probabilities()` | `Tensor` | Probability of every basis state |
-| `probabilities_dict(target_indices, endian='little', threshold=1e-9)` | dict | Marginal probability dict `{bitstring: prob}` for selected qubits |
-| `measure(target_indices, endian='little')` | str | Collapse measurement; returns outcome bitstring and updates internal state |
-| `sample_counts(shots=1024)` | dict | Simulated measurement sampling: `{bitstring: count}` |
-| `calculate_state(target_indices, endian='little', threshold=1e-5)` | dict | Detailed probability dict `{bitstring: {'prob': float, 'int': int}}` |
+| `numpy()` | tuple | `(statevector, classical_results_map)` as plain Python objects. |
+| `measure(target_indices, endian='little')` | str | Projective measurement on selected qubits; collapses `state`. |
+| `calculate_state(target_indices, endian='little', threshold=1e-5)` | dict | Marginal probability dict `{bitstring: {prob: float, int: int}}`. |
 
 ---
 

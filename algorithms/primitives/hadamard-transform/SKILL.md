@@ -87,7 +87,7 @@ print(result2['status'])         # 'ok' if H^2 recovers original state
 |---|---|---|
 | 1 — Parameter Validation | Checks `n >= 1`, validates `mode` string | Guards against invalid inputs |
 | 2 — Circuit Construction | Creates `Circuit(n, name=...)`; dispatches on mode: `'superposition'` calls `_apply_hadamard_layer` once; `'reflexive_test'` generates random state via `numpy` and calls `gs.initialize(psi, target)`, then calls `_apply_hadamard_layer` **twice** | Builds the transform circuit appropriate to each mode |
-| 3 — Simulation | `gs.execute(backend, device, dtype)` → `_as_statevector(raw_result.state)` | Runs statevector simulation; wraps result as `numpy` array |
+| 3 — Simulation | `gs.execute(backend=backend, device=device, dtype=dtype)` → `_as_statevector(raw_result.state)` | Runs statevector simulation; wraps result as `numpy` array |
 | 4 — Post-Processing | `'superposition'`: uses `raw_result.probabilities` and checks uniformity; `'reflexive_test'`: computes `np.allclose(raw_result.state, original_state)` | Verifies algorithm correctness based on mode |
 | 5 — Export | `self.save_circuit(gs)` and `self.save_txt()` | Saves SVG circuit diagram and text results; returns `_build_return_dict()` |
 
@@ -169,7 +169,7 @@ from unitarylab.core import Circuit
 
 def hadamard_transform(n: int, backend: str = 'torch') -> Circuit:
     """Apply H to all n qubits."""
-    qc = Circuit(n, name=f"H^{n}", backend=backend)
+    qc = Circuit(n, name=f"H^{n}")
     for q in range(n):
         qc.h(q)
     return qc

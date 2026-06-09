@@ -215,7 +215,7 @@ def expi_hermitian(A: np.ndarray, t: float) -> np.ndarray:
 def unitary_circuit(U_mat: np.ndarray, backend: str = 'torch') -> Circuit:
     """Wrap a unitary matrix as a Circuit."""
     n = int(np.log2(U_mat.shape[0]))
-    qc = Circuit(n, backend=backend)
+    qc = Circuit(n)
     qc.unitary(U_mat, list(range(n)))
     return qc
 ```
@@ -238,7 +238,7 @@ def encode_eigenphases(U_circ: Circuit, d: int) -> Circuit:
 
 def controlled_reciprocal_rotation(d: int, k_start: int, backend: str = 'torch') -> Circuit:
     """For each eigenvalue bin k, rotate ancilla by 2*arcsin(k_start/k)."""
-    qc = Circuit(d + 1, backend=backend)   # d phase qubits + 1 ancilla
+    qc = Circuit(d + 1)   # d phase qubits + 1 ancilla
     ancilla = 0
     phase_qubits = list(range(1, d + 1))
     grid = 2 ** d

@@ -6,10 +6,10 @@ from unitarylab.core import Circuit
 
 def example_expectation():
     """Estimate Re and Im of <+|RZ(0.8)|+>.  Expected: cos(0.4), -sin(0.4)."""
-    U = Circuit(1, name="RZ_0.8", backend="torch")
+    U = Circuit(1, name="RZ_0.8")
     U.rz(0.8, 0)
 
-    prepare_psi = Circuit(1, name="|+>", backend="torch")
+    prepare_psi = Circuit(1, name="|+>")
     prepare_psi.h(0)
 
     algo = HadamardTestAlgorithm()
@@ -33,10 +33,10 @@ def example_expectation():
 
 def example_swap_test():
     """Estimate overlap |<phi|psi>|^2 via swap test."""
-    prepare_psi = Circuit(1, name="|+>", backend="torch")
+    prepare_psi = Circuit(1, name="|+>")
     prepare_psi.h(0)
 
-    prepare_phi = Circuit(1, name="ry_0.4", backend="torch")
+    prepare_phi = Circuit(1, name="ry_0.4")
     prepare_phi.ry(0.4, 0)
 
     algo = HadamardTestAlgorithm()

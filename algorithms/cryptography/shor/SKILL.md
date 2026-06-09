@@ -35,7 +35,7 @@ Two circuit methods are supported:
 - Quantum Fourier Transform (QFT) and inverse QFT.
 - Modular arithmetic and Euler's theorem.
 - Continued fractions algorithm.
-- Python: `numpy`, `Circuit`, `State`, `unitarylab.library.QFT`, `unitarylab.library.IQFT`.
+- Python: `numpy`, `Circuit`, `unitarylab.library.QFT`, `unitarylab.library.IQFT`.
 
 ## Using the Provided Implementation
 
@@ -121,7 +121,7 @@ print(result['plot'])             # List of saved output files: [{'format': 'svg
 - `_Ph(n, a, gs)` / `_Controlled_Ph(n, a, gs, control_qubit, data_qubits)` — Apply phase rotations in QFT domain.
 - `self.update_output(output)` / `_build_return_dict(success, circuit_path, filepath, circuit)` — Store runtime fields and package result dict.
 
-**Data flow:** `N` → random `a` → circuit method dispatch → `Circuit` → `execute()` → `state.measure()` → continued fractions → `gcd()` → factors → `_build_return()`.
+**Data flow:** `N` → random `a` → circuit method dispatch → `Circuit` → `execute()` → `result.measure()` → continued fractions → `gcd()` → factors → `_build_return()`.
 
 ## Understanding the Key Quantum Components
 The $n_{\text{count}} = 2 \cdot \lfloor\log_2 N\rfloor$ counting qubits are placed in uniform superposition via Hadamard:
@@ -242,7 +242,7 @@ Below is a skeleton that reconstructs Shor's algorithm at the component level, m
 import math, random
 from fractions import Fraction
 import numpy as np
-from unitarylab.core import Circuit, State
+from unitarylab.core import Circuit
 from unitarylab.library import IQFT
 
 def get_modular_matrix(mult: int, N: int, n_work: int) -> np.ndarray:
@@ -254,11 +254,10 @@ def get_modular_matrix(mult: int, N: int, n_work: int) -> np.ndarray:
         U[y, x] = 1.0
     return U.astype(complex)
 
-def build_shor_circuit(a: int, N: int, n_count: int, n_work: int,
-                        backend: str = 'torch') -> Circuit:
+def build_shor_circuit(a: int, N: int, n_count: int, n_work: int) -> Circuit:
     """Construct the quantum phase-estimation circuit for order finding."""
     total = n_count + n_work
-    qc = Circuit(total, backend=backend)
+    qc = Circuit(total)
 
     # 1. Superpose counting register; set work register to |1>
     qc.h(range(n_count))
@@ -271,7 +270,7 @@ def build_shor_circuit(a: int, N: int, n_count: int, n_work: int,
         qc.unitary(U, range(n_count, total), j, '1')  # controlled on qubit j
 
     # 3. Inverse QFT on counting register
-    qc.append(IQFT(n_count, backend=backend), range(n_count))
+    qc.append(IQFT(n_count), range(n_count))
     return qc
 
 def shor_factor(N: int, max_retries: int = 15, backend: str = 'torch'):
@@ -288,12 +287,11 @@ def shor_factor(N: int, max_retries: int = 15, backend: str = 'torch'):
         if g > 1:
             return [g, N // g]   # classical shortcut
 
-        qc = build_shor_circuit(a, N, n_count, n_work, backend)
+        qc = build_shor_circuit(a, N, n_count, n_work)
 
         # Measure counting register
-        sv   = qc.execute()
-        from unitarylab.core import State
-        meas = State(sv).measure(range(n_count), endian='little')
+        result = qc.execute(backend=backend)
+        meas = result.measure(range(n_count), endian='little')
         phase_int = int(meas, 2)
 
         # Classical post-processing: continued fractions -> period r

@@ -263,7 +263,7 @@ def build_qsp_circuit(phases: np.ndarray, x_value: float, backend: str = 'torch'
     """Construct the QSP circuit: Rz(2φ₀) → [Rx(2θ) → Rz(2φₖ)] × d."""
     d = len(phases) - 1
     theta = float(np.arccos(np.clip(x_value, -1.0, 1.0)))
-    qc = Circuit(Register('q', 1), backend=backend)
+    qc = Circuit(Register('q', 1))
     # Initial phase rotation
     qc.rz(2 * phases[0], 0)
     for k in range(1, d + 1):

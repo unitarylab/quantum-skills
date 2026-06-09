@@ -38,7 +38,7 @@ The core circuit (for mode `'expectation'`):
 ## Prerequisites
 
 - Quantum gates: H, S, $S^\dagger$, controlled-U.
-- Python: `numpy`, `Circuit`, `State`.
+- Python: `numpy`, `Circuit`.
 
 ## Using the Provided Implementation
 
@@ -48,10 +48,10 @@ from unitarylab.core import Circuit
 import numpy as np
 
 # Example: estimate Re(<+|RZ(0.8)|+>) = cos(0.4)
-U = Circuit(1, name="RZ_0.8", backend='torch')
+U = Circuit(1, name="RZ_0.8")
 U.rz(0.8, 0)
 
-prepare_psi = Circuit(1, name="|+>", backend='torch')
+prepare_psi = Circuit(1, name="|+>")
 prepare_psi.h(0)
 
 algo = HadamardTestAlgorithm()
@@ -106,7 +106,7 @@ print(result_im['Estimated Value'])   # ≈ -sin(0.4) ≈ -0.3894
 |---|---|---|
 | 1 — Validation | Checks `mode` string and required parameters per mode | Prevents invalid mode / missing input combinations |
 | 2 — Circuit Construction | Dispatches to `_build_hadamard_test_circuit()` based on mode; for `swap_test` builds joint prep and U_swap; for `phase_estimation` builds both real and imag circuits | Creates one or two `Circuit` objects stored in `circuits` dict |
-| 3 — Simulation + Sampling | For each circuit: `circ.execute()` → `State.probabilities_dict([0])` → extracts `p0_exact`; simulates shot noise via `numpy.random.binomial(shots, p0_exact)` | Runs statevector simulation; converts ancilla probabilities to noisy `<Z>` estimate |
+| 3 — Simulation + Sampling | For each circuit: `circ.execute()` → `result.calculate_state([0])` → extracts `p0_exact`; simulates shot noise via `numpy.random.binomial(shots, p0_exact)` | Runs statevector simulation; converts ancilla probabilities to noisy `<Z>` estimate |
 | 4 — Post-Processing | Accumulates `measurements` from `<Z> = p0 - p1`; computes final `est_val` per mode | Expectation: returns `<Z>` directly; Swap test: clips to `[0,1]`; Phase estimation: calls `_estimate_phi_from_real_imag()` |
 | 5 — Export | `self.save_circuit(circ, filename)` for each circuit; `self.save_txt()` for text output | Saves SVG circuit diagram(s) and result text file; calls `_build_return_dict()` |
 
@@ -181,10 +181,10 @@ import numpy as np
 
 # Swap test: estimate |<phi|psi>|^2
 n = 2
-prep_phi = Circuit(n, name="phi", backend='torch')
+prep_phi = Circuit(n, name="phi")
 prep_phi.h(0); prep_phi.h(1)  # |++>
 
-prep_psi = Circuit(n, name="psi", backend='torch')
+prep_psi = Circuit(n, name="psi")
 prep_psi.h(0); prep_psi.cx(0, 1)  # Bell state
 
 algo = HadamardTestAlgorithm()
@@ -199,7 +199,7 @@ print(f"Overlap^2: {result['Estimated Value']:.4f}")
 # |<Bell|++>|^2 = |(<00|+<11|)/sqrt(2) * (|++>)|^2 = 0.5
 
 # Phase estimation mode
-U2 = Circuit(1, name="T_gate", backend='torch')
+U2 = Circuit(1, name="T_gate")
 U2.t(0)  # T|0> = |0> so <0|T|0> = 1
 result2 = algo.run(mode='phase_estimation', U=U2, shots=20000)
 print(result2['Estimated Value'])

@@ -40,7 +40,7 @@ from unitarylab_algorithms import AmplitudeEstimationAlgorithm
 from unitarylab.core import Circuit
 
 # Build state preparation U (data register only, no ancilla)
-U = Circuit(2, name="PrepU", backend='torch')
+U = Circuit(2, name="PrepU")
 U.ry(1.1, 0)
 U.cx(0, 1)
 
@@ -105,7 +105,7 @@ The result dict is built by `_build_return_dict(success, circuit_path, filepath,
 |---|---|---|
 | 1 — Parameter Setup | Computes `n_data`, sets `total_qubits = d + n_data + 1` | Establishes register layout: phase (`d` qubits) + data (`n_data` qubits) + Grover ancilla (1 qubit) |
 | 2 — Circuit Construction | Builds `prepare` (data init), calls `_grover_operator_from_zero_oracle(U, good_zero_qubits)` to get `G`, then calls `_qpe_circuit(G, d, prepare)` | Assembles the complete QPE circuit around the Grover operator |
-| 3 — Simulation | `qpe_circ.execute(backend, device, dtype)` → `.state` → `np.asarray(state)` → `_phase_histogram(statevector, d)` | Runs statevector simulation; extracts phase register probability histogram |
+| 3 — Simulation | `qpe_circ.execute(backend=backend, device=device, dtype=dtype)` → `.state` → `np.asarray(state)` → `_phase_histogram(statevector, d)` | Runs statevector simulation; extracts phase register probability histogram |
 | 4 — Classical Post-Processing | Reads top bit-string; computes `phi_raw = int(bits, 2) / 2^d`; folds to `[0, 0.5]`; computes `est_amp = sin²(π·φ)`; calls `update_output()` | Converts QPE phase readout back to amplitude estimate; stores output fields |
 | 5 — Export | `save_circuit(qpe_circ)` + `save_txt()` → `_build_return_dict(True, circuit_path, filename, qpe_circ)` | Saves SVG circuit diagram and text report; assembles return dict |
 
@@ -192,7 +192,7 @@ import numpy as np
 # Single qubit state: |psi> = cos(theta)|0> + sin(theta)|1>
 # Good state: qubit 0 in |0>
 theta = np.pi / 8
-U = Circuit(1, name="prep", backend='torch')
+U = Circuit(1, name="prep")
 U.ry(2 * theta, 0)  # cos(theta)|0> + sin(theta)|1>; good = |0>, p = cos^2(theta)
 
 algo = AmplitudeEstimationAlgorithm()
@@ -305,7 +305,7 @@ import numpy as np
 from unitarylab.core import Circuit
 
 def build_iqft(n: int, do_swaps: bool = True, backend: str = 'torch') -> Circuit:
-    qc = Circuit(n, name=f"iQFT_{n}", backend=backend)
+    qc = Circuit(n, name=f"iQFT_{n}")
     if do_swaps:
         for i in range(n // 2):
             qc.swap(i, n - 1 - i)
@@ -324,7 +324,7 @@ def build_iqft(n: int, do_swaps: bool = True, backend: str = 'torch') -> Circuit
 
 def build_phase_oracle(n_data: int, good_zero_qubits: list, backend: str = 'torch') -> Circuit:
     """Phase-kickback oracle: flips phase of states where good_zero_qubits are all |0>."""
-    qc = Circuit(n_data + 1, backend=backend)
+    qc = Circuit(n_data + 1)
     ancilla = n_data
     # 1. Prepare ancilla in |->
     qc.x(ancilla); qc.h(ancilla)
@@ -344,7 +344,7 @@ def build_grover_operator(U: Circuit, good_zero_qubits: list, backend: str = 'to
     n_data = U.get_num_qubits()
     ancilla = n_data
     data = list(range(n_data))
-    qc = Circuit(n_data + 1, name="GroverIter", backend=backend)
+    qc = Circuit(n_data + 1, name="GroverIter")
     # Oracle
     oracle = build_phase_oracle(n_data, good_zero_qubits, backend)
     qc.append(oracle, list(range(n_data + 1)))
@@ -369,7 +369,7 @@ def build_qpe_circuit(G: Circuit, d: int,
                       prepare_target=None, backend: str = 'torch') -> Circuit:
     """QPE circuit: controlled-G^(2^k) powers + iQFT on phase register."""
     n_target = G.get_num_qubits()
-    qc = Circuit(d + n_target, name=f"QPE_d{d}", backend=backend)
+    qc = Circuit(d + n_target, name=f"QPE_d{d}")
     phase = list(range(d))
     target = list(range(d, d + n_target))
 
@@ -409,7 +409,7 @@ def qae_full(U, good_zero_qubits, d, backend='torch'):
     """End-to-end QAE: returns estimated amplitude."""
     G = build_grover_operator(U, good_zero_qubits, backend)
     n_data = U.get_num_qubits()
-    prepare = Circuit(n_data + 1, backend=backend)
+    prepare = Circuit(n_data + 1)
     prepare.append(U, list(range(n_data)))
     qpe_circ = build_qpe_circuit(G, d, prepare_target=prepare, backend=backend)
     state = qpe_circ.execute()

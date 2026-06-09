@@ -33,7 +33,7 @@ Simon's algorithm:
 
 - Hadamard gates and their effect on computational basis states.
 - XOR (bitwise addition mod 2) and binary linear algebra.
-- Python: `numpy`, `Circuit`, `Register`, `ClassicalRegister`, `State`.
+- Python: `numpy`, `Circuit`, `Register`, `ClassicalRegister`.
 
 ## Using the Provided Implementation
 
@@ -99,7 +99,7 @@ print(result['plot'])            # List of saved file dicts [{"format": ..., "fi
 |---|---|---|
 | 1 — Parameter Validation | Extracts `n = len(s)`; checks for all-zero string | Guards against trivial inputs |
 | 2 — Circuit Construction | Creates `Circuit(rx, ry, cqr)` with two `n`-qubit registers + classical register; applies `gs.h(rx[:])`, calls `_build_simon_oracle(gs, s)`, measures `ry` to `cqr`, applies `gs.h(rx[:])` again | Full Simon protocol circuit in 4 lines |
-| 3 — Simulation | `gs.execute(backend, device, dtype)` → `re_state.calculate_state(range(n))` | Runs mid-circuit-measurement simulation; extracts x-register basis dictionary |
+| 3 — Simulation | `gs.execute(backend=backend, device=device, dtype=dtype)` → `result.calculate_state(range(n))` | Runs mid-circuit-measurement simulation; extracts x-register basis dictionary |
 | 4 — Classical Post-Processing | `_get_basis_simple(state_basis_dict.keys(), n)` extracts $n-1$ linearly independent vectors; `_solve_simon_general(basis, n)` back-substitutes to recover `s` | $\mathbb{F}_2$ linear algebra |
 | 5 — Export | `self.save_circuit(gs)` / `self.save_txt()` → `_build_return_dict(is_success, circuit_path, filename, gs)` | Saves SVG circuit + text results; packages return dict |
 
@@ -112,7 +112,7 @@ print(result['plot'])            # List of saved file dicts [{"format": ..., "fi
 
 **Key design detail:** The circuit uses `Register`, `ClassicalRegister`, and `Circuit` with mixed quantum/classical registers. The mid-circuit measurement (`qc.measure(ry[:], cqr[:])`) collapses the output register during simulation, which is why only the `'torch'` backend is supported.
 
-**Data flow:** `s` → `_build_simon_oracle(gs, s)` → `gs.execute()` → `re_state.calculate_state(range(n))` → `_get_basis_simple()` → `_solve_simon_general()` → `found_s` (`result['Computed s']`) → `_build_return_dict()`.
+**Data flow:** `s` → `_build_simon_oracle(gs, s)` → `gs.execute()` → `result.calculate_state(range(n))` → `_get_basis_simple()` → `_solve_simon_general()` → `found_s` (`result['Computed s']`) → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
 The $n$-qubit input register $|x\rangle$ starts in $|0\rangle^n$. After Hadamard:
@@ -143,7 +143,7 @@ The measured bit-strings form a system of linear equations over $\mathbb{F}_2$. 
 | Oracle $U_f|x\rangle|0\rangle \to |x\rangle|f(x)\rangle$ | `_build_simon_oracle(gs, s)` — CNOT pattern |
 | Mid-circuit collapse of output register | `gs.measure(ry[:], cqr[:])` between oracle and final Hadamard |
 | Final Hadamard layer (interference) | `gs.h(rx[:])` after measurement |
-| Linear equations $y \cdot s \equiv 0$ | Bitstrings from `re_state.calculate_state(range(n))` |
+| Linear equations $y \cdot s \equiv 0$ | Bitstrings from `result.calculate_state(range(n))` |
 | Basis extraction (Gaussian elimination) | `_get_basis_simple(state_basis_dict.keys(), n)` — pivot selection |
 | Back-substitution recovery of $s$ | `_solve_simon_general(basis, n)` — $\mathbb{F}_2$ algebra |
 | Success condition | `found_s == s` in Stage 4 |
@@ -318,7 +318,7 @@ def build_simon_oracle(qc, s: str, n: int):
 ```python
 # Exact usage example (uses actual API)
 from unitarylab_algorithms import SimonAlgorithm
-from unitarylab.core import Circuit, Register, State
+from unitarylab.core import Circuit, Register
 
 def simon_circuit(s_target: str, backend: str = 'torch'):
     n = len(s_target)
@@ -326,7 +326,7 @@ def simon_circuit(s_target: str, backend: str = 'torch'):
     ry = Register('y', n)
     from unitarylab.core import ClassicalRegister
     cqr = ClassicalRegister('c', n)
-    qc = Circuit(rx, ry, cqr, backend=backend)
+    qc = Circuit(rx, ry, cqr)
 
     # H on input
     for i in range(n): qc.h(i)

@@ -7,10 +7,10 @@ from unitarylab.core import Circuit
 
 def example_s_gate():
     """Estimate phase of S gate eigenstate |1>.  Expected phi = 0.25."""
-    U = Circuit(1, name="S_gate", backend="torch")
+    U = Circuit(1, name="S_gate")
     U.s(0)
 
-    prepare_target = Circuit(1, name="prep_1", backend="torch")
+    prepare_target = Circuit(1, name="prep_1")
     prepare_target.x(0)
 
     algo = QPEAlgorithm()
@@ -33,10 +33,10 @@ def example_s_gate():
 
 def example_t_gate():
     """Estimate phase of T gate eigenstate |1>.  Expected phi = 0.125."""
-    U = Circuit(1, name="T_gate", backend="torch")
+    U = Circuit(1, name="T_gate")
     U.p(np.pi / 4, 0)
 
-    prepare_target = Circuit(1, name="prep_1", backend="torch")
+    prepare_target = Circuit(1, name="prep_1")
     prepare_target.x(0)
 
     algo = QPEAlgorithm()

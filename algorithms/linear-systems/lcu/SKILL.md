@@ -29,7 +29,7 @@ The LCU circuit has three components:
 
 - Controlled unitary gates.
 - Ancilla qubits and post-selection.
-- Python: `numpy`, `Circuit`, `State`.
+- Python: `numpy`, `Circuit`.
 
 ## Using the Provided Implementation
 
@@ -204,7 +204,7 @@ def build_prepare(alphas, n_anc: int, backend: str = 'torch') -> Circuit:
     # The real implementation calls _state_preparation_tree() which does this recursively
     # For a flat 2-element case:
     if m == 2:
-        qc = Circuit(n_anc, backend=backend)
+        qc = Circuit(n_anc)
         theta = 2 * np.arctan2(state[1], state[0])
         qc.ry(theta, 0)
         return qc
@@ -220,7 +220,7 @@ def build_prepare(alphas, n_anc: int, backend: str = 'torch') -> Circuit:
 def build_select(unitaries, n_anc: int, n_sys: int, backend: str = 'torch') -> Circuit:
     """SELECT = sum_j |j><j|_anc ⊗ U_j: apply U_j conditional on ancilla=|j>."""
     m = len(unitaries)
-    qc = Circuit(n_anc + n_sys, backend=backend)
+    qc = Circuit(n_anc + n_sys)
     sys_qubits = list(range(n_anc, n_anc + n_sys))
     anc_qubits = list(range(n_anc))
     for j, U_j in enumerate(unitaries):
@@ -238,7 +238,7 @@ def lcu_circuit(alphas, unitaries, n_sys: int, initial_state=None, backend: str 
     """Full LCU circuit: PREPARE ⊗ I |psi> → SELECT → UNPREPARE ⊗ I."""
     m = len(alphas)
     n_anc = int(np.ceil(np.log2(max(m, 2))))
-    qc = Circuit(n_anc + n_sys, backend=backend)
+    qc = Circuit(n_anc + n_sys)
 
     anc_qubits = list(range(n_anc))
     sys_qubits = list(range(n_anc, n_anc + n_sys))
