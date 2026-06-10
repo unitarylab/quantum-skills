@@ -13,12 +13,6 @@ Use this skill when you need to:
 - Estimate an eigenphase of a known unitary.
 - Use QPE as a subroutine in HHL, QAE, or Shor's algorithm.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 1. Initialize a $d$-qubit phase register in $|0\rangle^d$ and a target register in the eigenstate $|\psi\rangle$.

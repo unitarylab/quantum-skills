@@ -3,9 +3,34 @@ name: heat-2d-schrodingerization
 description: A quantum-compatible solver for the 2D Heat Equation using Schrödingerization to transform the non-unitary diffusion equation into a unitary evolution problem. Supports anisotropic diffusion, Dirichlet and periodic boundary conditions, source terms, and both classical and Trotter-based quantum evolution with automatic 2D circuit generation and 3D temperature field visualization.
 ---
 
-## One-Step Run Example Command
-```bash
-python ./scripts/algorithm.py
+## Entry Point
+
+Use the provided algorithm class first. It owns parameter parsing, solver dispatch, plotting, and circuit export.
+
+```python
+from unitarylab_algorithms.schrodingerization.equation_heat2d.algorithm import Heat2dEquationAlgorithm
+
+algo = Heat2dEquationAlgorithm()
+result = algo.run()  # loads equation_heat2d/setup.json when params is None
+
+print(result["status"])
+print(result["grid"])
+print(result["plot"]["filename"])
+```
+
+To provide parameters explicitly, pass a `params` dict using the same schema as `unitarylab_algorithms/schrodingerization/equation_heat2d/setup.json`:
+
+```python
+import json
+from pathlib import Path
+
+from unitarylab_algorithms.schrodingerization.equation_heat2d.algorithm import Heat2dEquationAlgorithm
+
+setup_path = Path("unitarylab_algorithms/schrodingerization/equation_heat2d/setup.json")
+params = json.loads(setup_path.read_text(encoding="utf-8"))
+
+algo = Heat2dEquationAlgorithm()
+result = algo.run(params=params, backend="torch", device="cpu")
 ```
 
 # Skill: 2D Heat Equation (Schrödingerization-based Solver)
@@ -52,8 +77,18 @@ Otherwise, full Schrödingerization procedure is required.
 
 ## Full Algorithm Pipeline (Step-by-Step)
 
-### Step 0: Import Libraries
-Import necessary modules for parsing, solvers, operators, and circuit generation:
+### Step 0: Import the Algorithm Class
+
+For normal use, import and call the implemented class:
+
+```python
+from unitarylab_algorithms.schrodingerization.equation_heat2d.algorithm import Heat2dEquationAlgorithm
+
+result = Heat2dEquationAlgorithm().run()
+```
+
+The lower-level imports below are implementation details used inside `Heat2dEquationAlgorithm`:
+
 ```python
 # import parser
 from unitarylab.library.equation import parse_equation
@@ -222,25 +257,38 @@ $$
 
 ## Outputs
 
-All solver methods return a dictionary built by `_build_return_dict(success, circuit_path, filepath, circuit)`. The structure is:
+`Heat2dEquationAlgorithm.run()` dispatches to `_solve_classical`, `_solve_trotter`, or `_solve_block`. The block path currently logs a fallback message and calls the classical solver. Classical and Trotter paths return dictionaries with this shape:
 
 ```python
 {
-    "status": "ok" | "failed",      # bool success converted to string
-    "circuit_path": circuit_path,   # path(s) to saved circuit diagram files
-    "plot": [
-        {"format": "svg", "filename": "<solution_plot_filename>"},
-        # one entry per file in filepath
-    ],
-    "circuit": circuit,             # circuit object(s) (qc / H1 etc.)
-    # ...self.output fields merged in
+    "status": "ok",
+    "message": "2D Heat equation solved",
+    "grid": {
+        "n_points": 2**nx,
+        "dx": dx,
+        # Trotter only:
+        "dt": dt,
+        "nt": Nt,
+    },
+    "x": [...],
+    "y": [...],
+    "u": [[...], ...],
+    "circuit": circuit_plot_paths,
+    "plot": {
+        "format": "svg",
+        "filename": "<solution_plot_filename>",
+    },
 }
 ```
 
-Key fields populated by the algorithm:
-- `circuit_path`: paths returned by `_generate_circuit_plots(name, qc, ...)` — list of circuit diagram filenames
-- `plot[].filename`: filename returned by `_generate_solution_plot(name, x, y, u)` — 3D surface SVG
-- `circuit`: the `Circuit` / `qc` object from the solver (`circuit_classical(nx, na, dim=2)` or from `schro_trotter`)
+Key fields:
+- `grid.n_points`: number of grid points per spatial dimension
+- `grid.dx`: spatial step size
+- `grid.dt` and `grid.nt`: present for the Trotter solver
+- `x`, `y`: spatial grids
+- `u`: final 2D solution array serialized as nested lists
+- `circuit`: filenames returned by `_generate_circuit_plots(name, qc, ...)`
+- `plot.filename`: filename returned by `_generate_solution_plot(name, x, y, u)`
 
 ------
 

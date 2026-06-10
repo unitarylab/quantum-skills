@@ -13,12 +13,6 @@ Use this skill when you need to:
 - Precisely estimate a probability amplitude output by a quantum circuit.
 - Apply QAE as a subroutine in quantum finance, quantum Monte Carlo, or other estimation tasks.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 QAE combines Grover/Amplitude Amplification with Quantum Phase Estimation (QPE):

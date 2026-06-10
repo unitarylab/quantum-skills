@@ -13,12 +13,6 @@ Use this skill when you need to:
 - Boost the probability of sampling a desired outcome from a quantum circuit.
 - Apply the quantum quadratic speedup over classical random sampling.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 The algorithm works by:

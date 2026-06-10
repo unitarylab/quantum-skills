@@ -3,11 +3,6 @@ name: trotter
 description: Trotter-Suzuki product-formula Hamiltonian simulation, approximating e^{-iHt} via structured short-time exponential products with controllable order and step count.
 ---
 
-## One-Step Run Example Command
-```bash
-python ./scripts/algorithm.py
-```
-
 # Trotter-Suzuki Hamiltonian Simulation Skill Guide
 
 ## Overview

@@ -13,12 +13,6 @@ Use this skill when you need to:
 - Demonstrate a quantum attack on DLP-based cryptography (Diffie-Hellman, ECC).
 - Understand the 2D quantum period-finding extension of Shor's algorithm.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 1. Prepare three registers: reg_A ($n_{\text{count}}$ bits), reg_B ($n_{\text{count}}$ bits), work ($n_{\text{work}}$ bits).

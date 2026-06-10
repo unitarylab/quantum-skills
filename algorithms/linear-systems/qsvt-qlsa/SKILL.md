@@ -9,14 +9,6 @@ description: "Quantum Singular Value Transformation (QSVT) based Linear System S
 
 Use this skill for the `QSVT QLSA` algorithm implemented in `unitarylab_algorithms/linear_algebra/qsvt_qlsa`.
 
-## Generated Verification Script
-
-```bash
-python ./scripts/algorithm.py
-```
-
-Use this command only after generating or updating `scripts/algorithm.py` from this skill. The script is a verification artifact for testing whether the skill can produce correct runnable code; it is not copied from the source implementation.
-
 ## Source Of Truth
 
 - Algorithm source: `unitarylab_algorithms/linear_algebra/qsvt_qlsa/algorithm.py`
@@ -51,7 +43,6 @@ Adjust the parameters according to the table below and the source `run()` signat
 
 - Main class: `QSVTLinearSolverAlgorithm`
 - Run signature observed from source: `run(A, b, epsilon, backend='torch', device='cpu', dtype=np.complex128)`
-- Keep `scripts/algorithm.py` as a generated verification artifact, not a direct copy of the source implementation.
 - If result keys or generated output files change, update the usage example and return-field notes in this file.
 
 ## Return Fields
@@ -164,6 +155,5 @@ When updating this skill after algorithm changes:
 
 1. Re-read `algorithm.py` and parameter metadata.
 2. Update parameter defaults, constraints, return fields, and examples.
-3. Preserve existing `scripts/algorithm.py` unless explicitly regenerating the verification artifact from this skill.
-4. Run or dry-run the updater skill script from the workspace root.
-5. Keep this leaf skill focused on usage and implementation guidance; keep category routing in the parent `SKILL.md`.
+3. Run or dry-run the updater skill script from the workspace root.
+4. Keep this leaf skill focused on usage and implementation guidance; keep category routing in the parent `SKILL.md`.

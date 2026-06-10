@@ -14,12 +14,6 @@ Use this skill when you need to:
 - Measure $|\langle\phi|\psi\rangle|^2$ (overlap between two states) via the swap test.
 - Reconstruct a complex eigenphase from real and imaginary parts.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 Three supported modes:

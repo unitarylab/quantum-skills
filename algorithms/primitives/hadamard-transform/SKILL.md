@@ -14,12 +14,6 @@ Use this skill when you need to:
 - Verify the self-inverse property $H^2 = I$ numerically.
 - Understand the relationship between QFT and Hadamard transforms.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 The algorithm supports two modes:

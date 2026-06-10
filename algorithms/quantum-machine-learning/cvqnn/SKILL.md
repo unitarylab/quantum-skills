@@ -14,12 +14,6 @@ Use this skill when you need to:
 - Understand the structure of optical quantum gates in truncated Fock space.
 - Run gradient-based training over quantum circuit parameters using PyTorch.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 1. Normalize input features and encode each 2D sample as coherent-state displacements $D(x_0)$, $D(x_1)$ on two optical modes initialized in the vacuum state.

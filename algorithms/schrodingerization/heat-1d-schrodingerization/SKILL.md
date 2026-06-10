@@ -3,11 +3,6 @@ name: heat-1d-schrodingerization
 description: A quantum-compatible solver for the 1D Heat Equation using Schrödingerization to transform the non-unitary diffusion equation into a unitary evolution problem. Supports Dirichlet and periodic boundary conditions, source terms, and both classical and Trotter-based quantum evolution with automatic circuit generation and solution visualization.
 ---
 
-## One-Step Run Example Command
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Entry Point
 
 ```python

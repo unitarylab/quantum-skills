@@ -14,12 +14,6 @@ Use this skill when you need to:
 - Explain the `QFTAlgorithm` implementation in `unitarylab_algorithms.linear_algebra.qft.algorithm`.
 - Diagnose phase-ordering, inverse-transform, or bit-reversal issues.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 For an $n$-qubit register, QFT acts on basis state $|x\rangle$ as:

@@ -3,9 +3,34 @@ name: advection-schrodingerization
 description: A Schrödingerization-based solver for the 1D advection equation, supporting both direct unitary evolution (under periodic and central difference discretization) and general transformation for non-unitary cases. Enables classical and quantum simulation through Hamiltonian formulation.
 ---
 
-## One-Step Run Example Command
-```bash
-python ./scripts/algorithm.py
+## Entry Point
+
+Use the implemented algorithm class first. It handles default parameter loading, equation parsing, solver dispatch, plotting, and circuit export.
+
+```python
+from unitarylab_algorithms.schrodingerization.equation_advection.algorithm import AdvectionEquationAlgorithm
+
+algo = AdvectionEquationAlgorithm()
+result = algo.run()  # loads equation_advection/setup.json when params is None
+
+print(result["status"])
+print(result["grid"])
+print(result["plot"]["filename"])
+```
+
+To provide parameters explicitly, pass a `params` dict using the same schema as `unitarylab_algorithms/schrodingerization/equation_advection/setup.json`:
+
+```python
+import json
+from pathlib import Path
+
+from unitarylab_algorithms.schrodingerization.equation_advection.algorithm import AdvectionEquationAlgorithm
+
+setup_path = Path("unitarylab_algorithms/schrodingerization/equation_advection/setup.json")
+params = json.loads(setup_path.read_text(encoding="utf-8"))
+
+algo = AdvectionEquationAlgorithm()
+result = algo.run(params=params, backend="torch", device="cpu")
 ```
 
 # Skill: Advection Equation Solver via Schrödingerization
@@ -18,6 +43,23 @@ Enable the agent to **solve the 1D Advection Equation** using a Schrödingerizat
 - Quantum (Trotterized) simulation
 
 ------
+
+## Using the Provided Implementation
+
+For normal use, import and call the algorithm class:
+
+```python
+from unitarylab_algorithms.schrodingerization.equation_advection.algorithm import AdvectionEquationAlgorithm
+
+result = AdvectionEquationAlgorithm().run()
+```
+
+`AdvectionEquationAlgorithm.run()` accepts:
+- `params`: parsed setup dict; when omitted, the implementation loads `equation_advection/setup.json`
+- `algo_dir`: output directory; when omitted, results are written under `results/schrodingerization/equation_advection`
+- `backend`, `device`, `dtype`: passed to the Trotter solver path
+
+The lower-level snippets below describe the implementation internals and should not replace the class entry point.
 
 ## Mathematical Model
 
@@ -231,43 +273,37 @@ u, qc = schro(
 
 ### 7. Output Generation
 
-After solving, populate `self.output` with result data, then call `_build_return_dict()` to assemble the return value:
+`AdvectionEquationAlgorithm.run()` dispatches to `_solve_classical` or `_solve_trotter`. Both paths generate the solution plot and circuit diagrams internally, then return a plain dictionary:
 
 ```python
-# Store solution data into self.output (merged into return dict automatically)
-self.output.update({
+{
+    "status": "ok",
     "message": "Advection equation solved",
-    "grid": {"n_points": Nx, "dx": dx},
-    "x": x.tolist(),
-    "u": u.tolist(),
-})
-
-# Generate plots and circuit diagrams
-name = f"1D_Advection_Classical_nx={nx}_na={na}_T={T}"
-solution_plot_path = self._generate_solution_plot(name, x, u)
-circuit_plot_paths = self._generate_circuit_plots(name, qc)
-
-# Build return dict using base class helper
-result = self._build_return_dict(
-    success=True,
-    circuit_path=circuit_plot_paths,
-    filepath=[solution_plot_path],
-    circuit=qc
-)
+    "grid": {
+        "n_points": 2**nx,
+        "dx": dx,
+        # Trotter only:
+        "dt": dt,
+        "nt": Nt,
+    },
+    "x": [...],
+    "u": [...],
+    "circuit": circuit_plot_paths,
+    "plot": {
+        "format": "svg",
+        "filename": "<solution_plot_filename>",
+    },
+}
 ```
 
-Return value keys (from `_build_return_dict`):
-
-| Key | Type | Description |
-|---|---|---|
-| `status` | `str` | `'ok'` or `'failed'` |
-| `circuit_path` | `list` | Paths to circuit diagram files |
-| `plot` | `list[dict]` | `[{"format": "svg", "filename": ...}]` |
-| `circuit` | object | Circuit object (`qc`) |
-| `message` | `str` | Human-readable result message (from `self.output`) |
-| `grid` | `dict` | `{"n_points": Nx, "dx": dx}` — spatial grid info (from `self.output`) |
-| `x` | `list` | Grid point coordinates (from `self.output`) |
-| `u` | `list` | Solution values $u(x,T)$ (from `self.output`) |
+Key fields:
+- `grid.n_points`: number of spatial grid points
+- `grid.dx`: spatial step size
+- `grid.dt` and `grid.nt`: present for the Trotter solver
+- `x`: spatial grid coordinates
+- `u`: final solution values $u(x,T)$ serialized as a list
+- `circuit`: filenames returned by `_generate_circuit_plots(name, qc)`
+- `plot.filename`: filename returned by `_generate_solution_plot(name, x, u)`
 
 ------
 
@@ -305,6 +341,8 @@ Return value keys (from `_build_return_dict`):
 ## Usage Interface
 
 ```python
+from unitarylab_algorithms.schrodingerization.equation_advection.algorithm import AdvectionEquationAlgorithm
+
 algo = AdvectionEquationAlgorithm()
 result = algo.run(params)
 ```

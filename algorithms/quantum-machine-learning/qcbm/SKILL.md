@@ -13,12 +13,6 @@ Use this skill when you need to:
 - Learn and generate samples from a discrete probability distribution using a quantum circuit.
 - Demonstrate generative quantum machine learning with Born-rule probabilities.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 1. Target: 2×2 Bars-and-Stripes (BAS) distribution over 4 bits (6 valid patterns out of 16).

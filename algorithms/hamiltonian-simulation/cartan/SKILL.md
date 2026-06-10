@@ -3,11 +3,6 @@ name: cartan
 description: "Simulate the time evolution of a quantum system using Cartan decomposition."
 ---
 
-## One-Step Run Example Command
-```bash
-python ./scripts/algorithm.py
-```
-
 # Cartan Decomposition Hamiltonian Simulation Skill Guide
 
 ## Algorithm Overview

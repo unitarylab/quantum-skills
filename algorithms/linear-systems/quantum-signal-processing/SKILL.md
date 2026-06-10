@@ -12,12 +12,6 @@ Use this skill when you need to:
 - Apply a polynomial function to the eigenvalues of a quantum operator.
 - Implement Hamiltonian simulation via a phase sequence (QSVT predecessor).
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 QSP constructs a single-qubit circuit interleaving:

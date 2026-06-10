@@ -16,15 +16,6 @@ They estimate gradients of:
 
 SPSA is useful when circuits have many parameters, because each batch needs only `2 * batch_size` circuit evaluations, independent of parameter count.
 
-## One-Step Run Command
-Run the local demo script in this folder:
-
-```bash
-python scripts/algorithm.py
-```
-
-Or use the classes as library components inside the full package.
-
 ## Overview
 For each random perturbation vector `delta in {+1, -1}^d`, the implementation evaluates:
 - `f(theta + epsilon * delta)`

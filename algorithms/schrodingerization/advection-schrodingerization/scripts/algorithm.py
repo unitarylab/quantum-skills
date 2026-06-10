@@ -1,71 +1,52 @@
-"""1D Advection via Schrodingerization — u_t = a * u_x.
+#!/usr/bin/env python3
+"""Run the 1D advection Schrodingerization skill entry point.
 
-Compares classical Schrodingerization solver with Trotter quantum circuit.
+This script is generated from the leaf SKILL.md. It uses the implemented
+AdvectionEquationAlgorithm class rather than re-implementing solver internals.
 """
 
-import numpy as np
-from unitarylab.library.equation.schrodingerization import schro_classical, schro_trotter
-from unitarylab.library.equation.differential_operator import TDiff
-from unitarylab.library.equation.differential_operator.classical_matrices import (
-    first_order_derivative,
-    matrix_exponential,
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+
+def find_workspace_root(start: Path) -> Path:
+    for candidate in [start.resolve(), *start.resolve().parents]:
+        if (candidate / "unitarylab_algorithms").is_dir() and (candidate / "quantum-skills").is_dir():
+            return candidate
+    raise RuntimeError("Could not find workspace root containing unitarylab_algorithms and quantum-skills.")
+
+
+ROOT = find_workspace_root(Path(__file__))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from unitarylab_algorithms.schrodingerization.equation_advection.algorithm import (  # noqa: E402
+    AdvectionEquationAlgorithm,
 )
 
 
-def main():
-    # --- Parameters ---
-    nx = 3                # spatial qubits
-    Nx = 2 ** nx          # grid points = 8
-    L = 1.0
-    a = 1.0               # advection velocity
-    T = 0.02
-    dx = L / Nx
-    na = 6                # auxiliary qubits
-    R = 4.0
-    order = 2
-    point = 1
-    Nt = 10               # Trotter time steps
+def main() -> None:
+    setup_path = ROOT / "unitarylab_algorithms" / "schrodingerization" / "equation_advection" / "setup.json"
+    params = json.loads(setup_path.read_text(encoding="utf-8"))
+    algo_dir = ROOT / "results" / "schrodingerization" / "equation_advection"
+    algo_dir.mkdir(parents=True, exist_ok=True)
 
-    # --- Grid & initial condition ---
-    x = np.linspace(0.0, L, Nx, endpoint=False)
-    u0 = np.exp(-100.0 * (x - 0.5) ** 2).astype(complex)
-
-    # --- Classical operators ---
-    A0, b0 = first_order_derivative(N=Nx, dx=dx, boundary_condition="dirichlet")
-    A = (a * A0).toarray().astype(complex)
-    b = np.asarray(a * b0, dtype=complex)
-
-    # --- Reference: direct matrix exponential ---
-    u_ref = np.asarray(matrix_exponential(A, u0, T=T, dt=0.001), dtype=complex)
-
-    # --- Method 1: Classical Schrodingerization ---
-    u_cls = np.asarray(
-        schro_classical(A, u0, T=T, na=na, R=R, order=order, point=point, b=b),
-        dtype=complex,
+    result = AdvectionEquationAlgorithm().run(
+        params=params,
+        algo_dir=str(algo_dir),
+        backend="torch",
+        device="cpu",
     )
 
-    # --- Method 2: Trotter quantum circuit ---
-    dt_trotter = T / Nt
-    # central scheme: H1 is None (already unitary), H2 from first-order derivative
-    H1 = None
-    func2 = (a * TDiff(nx, dx, 1, boundary="dirichlet")).data()[1]
-    H2 = func2(dt_trotter)
-
-    u_trot, qc = schro_trotter(
-        u0=u0, H1=H1, H2=H2, Nt=Nt, na=na, R=R, order=order, point=point, b=b,
-        theta=dt_trotter,
-    )
-    u_trot = np.asarray(u_trot, dtype=complex)
-
-    # --- Report ---
-    print("=" * 55)
-    print("1D Advection Schrodingerization")
-    print("=" * 55)
-    print(f"  Grid points       : {Nx}")
-    print(f"  Trotter steps     : {Nt}")
-    print(f"  Classical L2 err  : {np.linalg.norm(u_cls - u_ref):.6e}")
-    print(f"  Trotter   L2 err  : {np.linalg.norm(u_trot - u_ref):.6e}")
-    print(f"  Circuit qubits    : {qc.get_num_qubits()}")
+    print("Advection Schrodingerization")
+    print(f"status: {result['status']}")
+    print(f"grid: {result['grid']}")
+    print(f"plot: {result['plot']['filename']}")
+    print(f"circuit files: {len(result.get('circuit', []))}")
+    print(f"solution points: {len(result.get('u', []))}")
 
 
 if __name__ == "__main__":

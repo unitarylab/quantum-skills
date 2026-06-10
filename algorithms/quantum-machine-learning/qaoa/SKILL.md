@@ -13,12 +13,6 @@ Use this skill when you need to:
 - Solve Max-Cut or weighted graph partitioning with a quantum algorithm.
 - Learn the QAOA workflow: cost encoding → variational layers → COBYLA optimization.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 1. Encode the Max-Cut cost Hamiltonian: $H_C = -\frac{1}{2}\sum_{(u,v)\in E}(I - Z_u Z_v)$.

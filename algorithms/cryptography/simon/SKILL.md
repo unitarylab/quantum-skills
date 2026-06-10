@@ -13,12 +13,6 @@ Use this skill when you need to:
 - Demonstrate an exponential quantum speedup over classical algorithms.
 - Understand the hidden subgroup problem structure behind Shor's algorithm.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 Simon's algorithm:

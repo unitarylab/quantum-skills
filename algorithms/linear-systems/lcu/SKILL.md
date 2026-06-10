@@ -12,12 +12,6 @@ Use this skill when you need to:
 - Apply a weighted sum of unitaries to a quantum state.
 - Implement block-encodings for non-unitary operations.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 The LCU circuit has three components:

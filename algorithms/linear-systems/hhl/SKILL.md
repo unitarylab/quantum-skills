@@ -13,12 +13,6 @@ Use this skill when you need to:
 - Solve $Ax = b$ for a Hermitian matrix $A$ of size $N = 2^n$.
 - Use HHL as a subroutine in quantum simulation or optimization.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 HHL proceeds in five steps:

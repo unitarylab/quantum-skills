@@ -9,14 +9,6 @@ description: "Variational Quantum Linear Solver for solving linear systems Ax = 
 
 Use this skill for the `VQLS` algorithm implemented in `unitarylab_algorithms/linear_algebra/vqls`.
 
-## Generated Verification Script
-
-```bash
-python ./scripts/algorithm.py
-```
-
-Use this command only after generating or updating `scripts/algorithm.py` from this skill. The script is a verification artifact for testing whether the skill can produce correct runnable code; it is not copied from the source implementation.
-
 ## Source Of Truth
 
 - Algorithm source: `unitarylab_algorithms/linear_algebra/vqls/algorithm.py`
@@ -50,7 +42,6 @@ Adjust the parameters according to the table below and the source `run()` signat
 
 - Main class: `VQLSAlgorithm`
 - Run signature observed from source: `run(n_qubits=3, coefficients=None, max_iterations=200, tolerance=1e-06, initial_spread=0.5, backend='torch', device='cpu', dtype=np.complex128)`
-- Keep `scripts/algorithm.py` as a generated verification artifact, not a direct copy of the source implementation.
 - If result keys or generated output files change, update the usage example and return-field notes in this file.
 
 ## Return Fields
@@ -170,6 +161,5 @@ When updating this skill after algorithm changes:
 
 1. Re-read `algorithm.py` and parameter metadata.
 2. Update parameter defaults, constraints, return fields, and examples.
-3. Preserve existing `scripts/algorithm.py` unless explicitly regenerating the verification artifact from this skill.
-4. Run or dry-run the updater skill script from the workspace root.
-5. Keep this leaf skill focused on usage and implementation guidance; keep category routing in the parent `SKILL.md`.
+3. Run or dry-run the updater skill script from the workspace root.
+4. Keep this leaf skill focused on usage and implementation guidance; keep category routing in the parent `SKILL.md`.

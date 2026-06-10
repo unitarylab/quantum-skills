@@ -12,12 +12,6 @@ Use this skill when you need to:
 - Factor a composite integer using a quantum simulator.
 - Understand the quantum period-finding subroutine.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 1. **Classical pre-checks**: Even numbers and perfect powers are handled classically.

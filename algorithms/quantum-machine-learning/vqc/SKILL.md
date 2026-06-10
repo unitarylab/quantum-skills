@@ -13,12 +13,6 @@ Use this skill when you need to:
 - Classify tabular data with a hybrid quantum-classical neural network.
 - Demonstrate quantum machine learning with the Parameter Shift Rule.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 1. Load and standardize the Iris dataset (4 features, 3 classes; 80/20 split).

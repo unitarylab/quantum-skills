@@ -13,12 +13,6 @@ Use this skill when you need to:
 - Find ground-state energies of arbitrary small quantum systems.
 - Learn the variational quantum eigensolver workflow: ansatz → expectation → optimize.
 
-## One-Step Run Example Command
-
-```bash
-python ./scripts/algorithm.py
-```
-
 ## Overview
 
 1. Validate or randomly generate a Hermitian Hamiltonian matrix $H$.
