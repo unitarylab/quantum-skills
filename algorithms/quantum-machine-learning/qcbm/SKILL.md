@@ -110,7 +110,7 @@ This is the squared amplitude — the uniquely quantum mechanism. All $2^n$ prob
 ### 2. Variational Circuit Ansatz
 Each layer applies:
 ```
-Per-qubit: Rz(θ[l,q])
+Per-qubit: Ry(θ[l,q])
 Entanglement: CNOT(q, q+1 mod n_qubits)  [ring topology]
 ```
 The ring entanglement generates long-range correlations needed to represent BAS patterns.
@@ -141,11 +141,11 @@ $$\frac{\partial \mathcal{L}}{\partial \theta_{l,q}} = \frac{1}{2}\left[\mathcal
 | KL gradient wrt $\theta_{l,q}$ | `grad_theta[l,q] = sum(-(target/(curr+ε)) * grad_p)` |
 | Adam optimizer update | `torch.optim.Adam([theta], lr=lr)` |
 | BAS valid states | `[0(0000), 3(0011), 5(0101), 10(1010), 12(1100), 15(1111)]` |
-| Note — gate type | Circuit uses `ry(theta[l,q], q)` (RY gates); the "Rz" reference in Key Quantum Components is a discrepancy — actual gate is RY |
+| Note — gate type | Circuit uses `ry(theta[l,q], q)` (RY gates) |
 
 ## Mathematical Deep Dive
 
-**State:** $|\psi(\theta)\rangle = U(\theta)|0^n\rangle = \prod_{l=1}^{L}[\text{CX-ring} \cdot \bigotimes_q R_z(\theta_{l,q})]|0^n\rangle$.
+**State:** $|\psi(\theta)\rangle = U(\theta)|0^n\rangle = \prod_{l=1}^{L}[\text{CX-ring} \cdot \bigotimes_q R_y(\theta_{l,q})]|0^n\rangle$.
 
 **Probabilities:** $\mathbf{p}_\theta = (p_\theta(0), \ldots, p_\theta(2^n-1))$ where $\sum_x p_\theta(x) = 1$.
 

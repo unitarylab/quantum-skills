@@ -53,7 +53,7 @@
 | **Linear Systems** | HHL, LCU, QSVT, Quantum Signal Processing (QSP) |
 | **Cryptography** | Shor's Algorithm, Discrete Logarithm, Simon's Algorithm |
 | **Hamiltonian Simulation** | Trotter, QDrift, Taylor Series, QSP |
-| **Schrodingerization** | Advection, Heat (1D/2D), Burgers, Black-Scholes, Maxwell, Helmholtz, Elastic Wave, Multiscale, OU Process, … |
+| **Schrodingerization** | Advection, Heat (1D/2D) |
 | **Eigensolvers** | NumPyEigensolver, VQD |
 | **Gradients** | Parameter-shift, Finite-difference, Linear-combination, SPSA, Reverse-mode, QFI |
 | **Quantum Error Correction** | qLDPC, CSS Codes, Hypergraph Product Codes |
@@ -83,7 +83,7 @@ quantum-skills/
 |   +-- linear-systems/         # HHL, LCU, QSVT, QSP
 |   +-- cryptography/           # Shor, discrete logarithm, Simon
 |   +-- hamiltonian-simulation/ # Trotter, QDrift, Taylor, QSP
-|   +-- schrodingerization/     # PDE solvers (20+ problem types)
+|   +-- schrodingerization/     # PDE solvers 
 |   +-- eigensolvers/           # NumPyEigensolver, VQD
 |   +-- gradients/              # Parameter-shift, finite-diff, SPSA, reverse, QFI
 |   +-- quantum-error-correction/ # qLDPC, CSS codes
@@ -128,7 +128,7 @@ git clone https://github.com/unitarylab/quantum-skills `
 
 ### &#128161; Usage
 
-This skill is automatically invoked by Copilot when you ask about quantum computing topics. The agent reads the relevant `SKILL.md` files and drills down to the appropriate leaf-level guide before generating any code.
+When you ask Copilot a question about quantum computing in VS Code, the agent reads the corresponding `SKILL.md` file level by level, finds the most matching leaf-level guide, and then generates the code.
 
 **Example prompts:**
 
@@ -178,7 +178,7 @@ see the `LICENSE` and `LICENSE-PROPRIETARY` files bundled inside the wheel.
 | **线性系统** | HHL、LCU、QSVT、量子信号处理（QSP） |
 | **密码学** | Shor 算法、离散对数、Simon 算法 |
 | **哈密顿量模拟** | Trotter、QDrift、Taylor 级数、QSP |
-| **Schrodingerization** | 对流、热方程（一维/二维）、Burgers、Black-Scholes、Maxwell、Helmholtz、弹性波、多尺度、OU 过程 … |
+| **Schrodingerization** | 对流、热方程（一维/二维）|
 | **本征求解器** | NumPyEigensolver、VQD |
 | **梯度方法** | 参数位移、有限差分、线性组合、SPSA、反向模式、QFI |
 | **量子纠错** | qLDPC、CSS 码、超图乘积码 |
@@ -208,7 +208,7 @@ quantum-skills/
 |   +-- linear-systems/         # HHL、LCU、QSVT、QSP
 |   +-- cryptography/           # Shor、离散对数、Simon
 |   +-- hamiltonian-simulation/ # Trotter、QDrift、Taylor、QSP
-|   +-- schrodingerization/     # PDE 求解器（20+ 问题类型）
+|   +-- schrodingerization/     # PDE 求解器
 |   +-- eigensolvers/           # NumPyEigensolver、VQD
 |   +-- gradients/              # 参数位移、有限差分、SPSA、反向模式、QFI
 |   +-- quantum-error-correction/ # qLDPC、CSS 码
@@ -253,7 +253,7 @@ git clone https://github.com/unitarylab/quantum-skills `
 
 ### &#128161; 使用方法
 
-在 VS Code 中向 Copilot 提问量子计算相关问题时，该技能会自动被调用。Agent 会逐级读取对应的 `SKILL.md` 文件，找到最匹配的叶级指南后再生成代码。
+在 VS Code 中向 Copilot 提问量子计算相关问题时，Agent 会逐级读取对应的 `SKILL.md` 文件，找到最匹配的叶级指南后再生成代码。
 
 **prompt 示例：**
 
