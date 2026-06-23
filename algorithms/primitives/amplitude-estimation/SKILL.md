@@ -154,7 +154,7 @@ $$\hat{a} = \sin^2(\pi\phi)$$
 | Grover operator $Q$ | `_grover_operator_from_zero_oracle(U, good_zero_qubits)` → returns `G` as a `Circuit` |
 | Global phase correction $(-1)$ | X-kick on ancilla appended at end of `_grover_operator_from_zero_oracle` |
 | QPE phase register ($d$ bits) | `phase = list(range(d))` in `_qpe_circuit()`; Hadamard applied to all `d` bits |
-| Controlled $Q^{2^k}$ applications | `gs.append(U.repeat(2**k), target=target, control=phase[k], control_state='1')` in `_qpe_circuit()` |
+| Controlled $Q^{2^k}$ applications | `qc.append(U.repeat(2**k), target=target, control=phase[k], control_state='1')` in `_qpe_circuit()` |
 | Inverse QFT (iQFT) | `_iqft_circuit(d)` — appended to phase qubits in `_qpe_circuit()` |
 | Phase readout $\phi$ | `phi_raw = int(best_bits, 2) / 2^d`; folded to `[0, 0.5]` |
 | Amplitude formula $\hat{a} = \sin^2(\pi\phi)$ | `est_amp = float(np.sin(np.pi * phi) ** 2)` |

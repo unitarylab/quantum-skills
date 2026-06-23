@@ -83,7 +83,7 @@ print(result['plot'])             # List of saved output files: [{'format': 'svg
 | `factors` | `list` or `None` | Non-trivial factors found, e.g. `[3, 5]`; `None` on failure. |
 | `period` | `int` or `None` | Period $r$ found via quantum path; `None` for classical shortcut. |
 | `Selected base` | `int` or `None` | Random base $a$ chosen; `None` for even-$N$ shortcut. |
-| `Computation time (s)` | `float` | Wall-clock time for `gs.execute()` (quantum path only). |
+| `Computation time (s)` | `float` | Wall-clock time for `qc.execute()` (quantum path only). |
 | `Measurement` | `int` | Integer value of the counting-register measurement (quantum path only). |
 | `Total qubits` | `int` | Total qubits in the circuit (quantum path only). |
 
@@ -97,22 +97,22 @@ print(result['plot'])             # List of saved output files: [{'format': 'svg
 |---|---|---|
 | Pre-check | Handles `N % 2 == 0` and `gcd(a, N) > 1` cases without any quantum circuit | Classical short-circuit for trivial cases |
 | 1 — Parameter Setup | Picks random `a`; computes `n_work = N.bit_length()`, `n_count = 2 * n_work`, `n_work_actual` (method-dependent), `total_qubits` | Determines qubit counts for the chosen method |
-| 2 — Circuit Construction | Creates `Circuit(total_qubits, name=...)`; applies H to counting register via `gs.h(range(n_count))`; sets work register to $|1\rangle$ via `gs.x(n_count)`; calls `_build_modular_matrix_circuit` or `_build_modular_operator_circuit`; appends `IQFT(n_count)` via `gs.append(IQFT(n_count), range(n_count))` | Builds the QPE circuit for period finding |
-| 3 — Simulation | `result = gs.execute(backend=backend, device=device, dtype=dtype)`; `measure_bin = result.measure(range(n_count), endian='little')`; `measure_int = int(measure_bin, 2)` | Single-shot measurement of counting register |
+| 2 — Circuit Construction | Creates `Circuit(total_qubits, name=...)`; applies H to counting register via `qc.h(range(n_count))`; sets work register to $|1\rangle$ via `qc.x(n_count)`; calls `_build_modular_matrix_circuit` or `_build_modular_operator_circuit`; appends `IQFT(n_count)` via `qc.append(IQFT(n_count), range(n_count))` | Builds the QPE circuit for period finding |
+| 3 — Simulation | `result = qc.execute(backend=backend, device=device, dtype=dtype)`; `measure_bin = result.measure(range(n_count), endian='little')`; `measure_int = int(measure_bin, 2)` | Single-shot measurement of counting register |
 | 4 — Classical Post-Processing | `phase = measure_int / (2**n_count)`; `Fraction(phase).limit_denominator(N).denominator` gives `r`; checks `r % 2 == 0`; computes `gcd(a^(r/2)±1, N)` | Continued fractions + factor extraction |
-| 5 — Export | `self.save_circuit(gs)` and `self.save_txt()` (on success and failure) | Saves SVG circuit diagram and text results |
+| 5 — Export | `self.save_circuit(qc)` and `self.save_txt()` (on success and failure) | Saves SVG circuit diagram and text results |
 
 **Two Circuit Methods:**
 
 - **`_build_modular_matrix_circuit(qc, n_count, n_work, a, N)`** — For each counting qubit `q`, computes `power_factor = a^(2^q) mod N`, builds a permutation matrix via `_get_modular_matrix(power_factor, N, n_work)`, and calls `qc.unitary(matrix, work_qubits, control=q)`. Simple and direct, but requires explicit matrix construction.
 
-- **`_build_modular_operator_circuit(gs, n_count, n_work, n_work_actual, a, N)`** — Uses an algebraic operator decomposition. Core sub-components:
+- **`_build_modular_operator_circuit(qc, n_count, n_work, n_work_actual, a, N)`** — Uses an algebraic operator decomposition. Core sub-components:
   - `_multiple_mod(n_qubits, a, N)` — Controlled modular multiplier; built from `_Add_constant_mod_opt` sub-circuits.
   - `_Add_constant_mod_opt(n_qubits, a, N)` — Quantum modular adder using QFT-domain phase rotations (`_Ph`, `_Controlled_Ph`, `QFT`, `IQFT`).
 
 **Helper Methods:**
 - `_get_modular_matrix(a, N, n_qubits)` — Builds the permutation matrix for modular multiplication.
-- `_Ph(n, a, gs)` / `_Controlled_Ph(n, a, gs, control_qubit, data_qubits)` — Apply phase rotations in QFT domain.
+- `_Ph(n, a, qc)` / `_Controlled_Ph(n, a, qc, control_qubit, data_qubits)` — Apply phase rotations in QFT domain.
 - `self.update_output(output)` / `_build_return_dict(success, circuit_path, filepath, circuit)` — Store runtime fields and package result dict.
 
 **Data flow:** `N` → random `a` → circuit method dispatch → `Circuit` → `execute()` → `result.measure()` → continued fractions → `gcd()` → factors → `_build_return()`.
@@ -145,8 +145,8 @@ yields non-trivial factors of $N$.
 | Work register initialized to $|1\rangle$ | `qc.x(n_count)` in Stage 2 |
 | Controlled $a^{2^k} \bmod N$ (matrix method) | `_build_modular_matrix_circuit()` — `qc.unitary(matrix, work, control=q)` |
 | Controlled $a^{2^k} \bmod N$ (operator method) | `_build_modular_operator_circuit()` via `_multiple_mod()` using QFT-domain adders |
-| Inverse QFT (iQFT) | `gs.append(IQFT(n_count), range(n_count))` from `unitarylab.library` |
-| Measurement of counting register | `result = gs.execute(...)`; `result.measure(range(n_count), endian='little')` → binary string → integer |
+| Inverse QFT (iQFT) | `qc.append(IQFT(n_count), range(n_count))` from `unitarylab.library` |
+| Measurement of counting register | `result = qc.execute(...)`; `result.measure(range(n_count), endian='little')` → binary string → integer |
 | Phase $\phi \approx k/r$ | `phase = measure_int / 2^n_count` |
 | Continued fractions algorithm | `Fraction(phase).limit_denominator(N).denominator` → `r` |
 | Factor extraction $\gcd(a^{r/2}\pm1, N)$ | `math.gcd(guess - 1, N)` and `math.gcd(guess + 1, N)` |

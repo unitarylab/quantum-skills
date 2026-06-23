@@ -106,10 +106,10 @@ print(result['plot'])                          # List of saved file dicts [{"for
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Resolution | `n_data = U.get_num_qubits()`; `ancilla = n_data`; calls `_get_optimal_iterations(p)` if `reps is None` | Converts user-supplied probability into Grover iteration count $k$ |
-| 2 — Circuit Construction | Creates `Circuit(n_data+1, name='Amplitude_Amplification')`, appends `U` to `data_qubits`, then loops `reps` times calling `_build_oracle(gs, good_zero_qubits, ancilla)` and `_build_diffuser(gs, U, data_qubits, ancilla)` | Builds the full amplitude amplification circuit layer by layer |
-| 3 — Simulation Execution | `gs.execute(backend=backend, device=device, dtype=dtype)` → `result.calculate_state(data_qubits)` | Runs the statevector simulation; marginalizes ancilla to get data-register probabilities |
+| 2 — Circuit Construction | Creates `Circuit(n_data+1, name='Amplitude_Amplification')`, appends `U` to `data_qubits`, then loops `reps` times calling `_build_oracle(qc, good_zero_qubits, ancilla)` and `_build_diffuser(qc, U, data_qubits, ancilla)` | Builds the full amplitude amplification circuit layer by layer |
+| 3 — Simulation Execution | `qc.execute(backend=backend, device=device, dtype=dtype)` → `result.calculate_state(data_qubits)` | Runs the statevector simulation; marginalizes ancilla to get data-register probabilities |
 | 4 — Post-Processing | Iterates `state_basis_dict`; sums probability for states where all `good_zero_qubits == '0'`; sets `is_success = (target_prob > p)` | Classically extracts `target_prob` (`result['Amplified Target Probability']`) |
-| 5 — Export | `self.save_circuit(gs)` / `self.save_txt()` → `_build_return_dict(is_success, circuit_path, filename, gs)` | Saves SVG circuit + text results; packages return dict |
+| 5 — Export | `self.save_circuit(qc)` / `self.save_txt()` → `_build_return_dict(is_success, circuit_path, filename, qc)` | Saves SVG circuit + text results; packages return dict |
 
 **Helper Methods:**
 
@@ -118,7 +118,7 @@ print(result['plot'])                          # List of saved file dicts [{"for
 - **`_build_diffuser(qc, U, data_qubits, ancilla)`** — Implements the Grover diffuser as `U†` → `_build_oracle(all data_qubits)` → `U`. This reflects the state about $U|0\rangle^n$. It reuses `_build_oracle` on the full data register, which is the $2|0^n\rangle\langle 0^n|-I$ reflection.
 - **`_build_return_dict(success, circuit_path, filepath, circuit)`** — Packages the final return dict. Sets `status` to `'ok'` or `'failed'`, wraps file paths as `[{"format": ext, "filename": path}]`, and merges `self.output` fields (`Amplified Target Probability`, `Initial Success Probability`, `Repetitions`, `Computation Time (s)`, `Data register size`) into the result.
 
-**Data flow:** `U` → `Circuit(n_data+1)` → `gs.execute(backend=backend, device=device, dtype=dtype)` → `result.calculate_state(data_qubits)` → `target_prob` (`result['Amplified Target Probability']`) → `_build_return_dict(is_success, circuit_path, filename, gs)` → result dict.
+**Data flow:** `U` → `Circuit(n_data+1)` → `qc.execute(backend=backend, device=device, dtype=dtype)` → `result.calculate_state(data_qubits)` → `target_prob` (`result['Amplified Target Probability']`) → `_build_return_dict(is_success, circuit_path, filename, qc)` → result dict.
 
 ## Understanding the Key Quantum Components
 

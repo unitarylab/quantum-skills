@@ -92,10 +92,10 @@ print(result['plot'])            # List of saved file dicts [{"format": ..., "fi
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Validation | Extracts `n = len(s)`; checks for all-zero string | Guards against trivial inputs |
-| 2 — Circuit Construction | Creates `Circuit(rx, ry, cqr)` with two `n`-qubit registers + classical register; applies `gs.h(rx[:])`, calls `_build_simon_oracle(gs, s)`, measures `ry` to `cqr`, applies `gs.h(rx[:])` again | Full Simon protocol circuit in 4 lines |
-| 3 — Simulation | `gs.execute(backend=backend, device=device, dtype=dtype)` → `result.calculate_state(range(n))` | Runs mid-circuit-measurement simulation; extracts x-register basis dictionary |
+| 2 — Circuit Construction | Creates `Circuit(rx, ry, cqr)` with two `n`-qubit registers + classical register; applies `qc.h(rx[:])`, calls `_build_simon_oracle(qc, s)`, measures `ry` to `cqr`, applies `qc.h(rx[:])` again | Full Simon protocol circuit in 4 lines |
+| 3 — Simulation | `qc.execute(backend=backend, device=device, dtype=dtype)` → `result.calculate_state(range(n))` | Runs mid-circuit-measurement simulation; extracts x-register basis dictionary |
 | 4 — Classical Post-Processing | `_get_basis_simple(state_basis_dict.keys(), n)` extracts $n-1$ linearly independent vectors; `_solve_simon_general(basis, n)` back-substitutes to recover `s` | $\mathbb{F}_2$ linear algebra |
-| 5 — Export | `self.save_circuit(gs)` / `self.save_txt()` → `_build_return_dict(is_success, circuit_path, filename, gs)` | Saves SVG circuit + text results; packages return dict |
+| 5 — Export | `self.save_circuit(qc)` / `self.save_txt()` → `_build_return_dict(is_success, circuit_path, filename, qc)` | Saves SVG circuit + text results; packages return dict |
 
 **Helper Methods:**
 
@@ -106,7 +106,7 @@ print(result['plot'])            # List of saved file dicts [{"format": ..., "fi
 
 **Key design detail:** The circuit uses `Register`, `ClassicalRegister`, and `Circuit` with mixed quantum/classical registers. The mid-circuit measurement (`qc.measure(ry[:], cqr[:])`) collapses the output register during simulation, which is why only the `'torch'` backend is supported.
 
-**Data flow:** `s` → `_build_simon_oracle(gs, s)` → `gs.execute()` → `result.calculate_state(range(n))` → `_get_basis_simple()` → `_solve_simon_general()` → `found_s` (`result['Computed s']`) → `_build_return_dict()`.
+**Data flow:** `s` → `_build_simon_oracle(qc, s)` → `qc.execute()` → `result.calculate_state(range(n))` → `_get_basis_simple()` → `_solve_simon_general()` → `found_s` (`result['Computed s']`) → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
 The $n$-qubit input register $|x\rangle$ starts in $|0\rangle^n$. After Hadamard:
@@ -134,9 +134,9 @@ The measured bit-strings form a system of linear equations over $\mathbb{F}_2$. 
 | Input register $|x\rangle$ | `rx = Register('x', n)`; `qc = Circuit(rx, ry, cqr)` |
 | Output register $|y\rangle$ | `ry = Register('y', n)` |
 | Initial superposition $H^{\otimes n}|0\rangle^n$ | `qc.h(rx[:])` before oracle |
-| Oracle $U_f|x\rangle|0\rangle \to |x\rangle|f(x)\rangle$ | `_build_simon_oracle(gs, s)` — CNOT pattern |
-| Mid-circuit collapse of output register | `gs.measure(ry[:], cqr[:])` between oracle and final Hadamard |
-| Final Hadamard layer (interference) | `gs.h(rx[:])` after measurement |
+| Oracle $U_f|x\rangle|0\rangle \to |x\rangle|f(x)\rangle$ | `_build_simon_oracle(qc, s)` — CNOT pattern |
+| Mid-circuit collapse of output register | `qc.measure(ry[:], cqr[:])` between oracle and final Hadamard |
+| Final Hadamard layer (interference) | `qc.h(rx[:])` after measurement |
 | Linear equations $y \cdot s \equiv 0$ | Bitstrings from `result.calculate_state(range(n))` |
 | Basis extraction (Gaussian elimination) | `_get_basis_simple(state_basis_dict.keys(), n)` — pivot selection |
 | Back-substitution recovery of $s$ | `_solve_simon_general(basis, n)` — $\mathbb{F}_2$ algebra |

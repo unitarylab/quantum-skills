@@ -104,14 +104,14 @@ print(result['circuit_path'])                    # SVG circuit diagram
 **Stage 2 — Four Sub-Circuit Steps:**
 
 - **Step A: State Preparation** — `qc.initialize(b_state, system_qubits)` loads normalized $b/\|b\|$ into the system register.
-- **Step B: QPE** — `_expi_hermitian(A, t)` computes $U = e^{iAt}$ numerically; `_unitary_circuit_from_matrix(U_mat)` wraps it in a `Circuit` via `gs.unitary()`; `QPE(U_circ, d, return_circuit=True)` builds the full QPE sub-circuit; it is appended to `phase_qubits + system_qubits`.
+- **Step B: QPE** — `_expi_hermitian(A, t)` computes $U = e^{iAt}$ numerically; `_unitary_circuit_from_matrix(U_mat)` wraps it in a `Circuit` via `qc.unitary()`; `QPE(U_circ, d, return_circuit=True)` builds the full QPE sub-circuit; it is appended to `phase_qubits + system_qubits`.
 - **Step C: Controlled Reciprocal Rotation** — `_controlled_reciprocal_rotation(d, t, k_start, signed_phase)` builds the ancilla rotation circuit. For each phase integer $k$, it applies X-flips to phase bits to select the $k$-th computational basis state, computes rotation angle $2\arcsin(C/k)$, and applies `mcry(theta, controls, ancilla=0)`. Then unflips X gates. This creates a distinct controlled-Ry for each eigenvalue bin.
 - **Step D: Inverse QPE** — `qc.append(qpe_circ.dagger(), ...)` uncomputes the phase register, removing entanglement.
 
 **Helper Methods:**
 
 - **`_expi_hermitian(A, t)`** — Eigendecomposition: `np.linalg.eigh(A)` → `V @ diag(exp(i*2π*λ*t)) @ V†`.
-- **`_unitary_circuit_from_matrix(U)`** — Wraps an $N\times N$ matrix as a `Circuit` via `gs.unitary(U, list(range(n)))`.
+- **`_unitary_circuit_from_matrix(U)`** — Wraps an $N\times N$ matrix as a `Circuit` via `qc.unitary(U, list(range(n)))`.
 - **`_controlled_reciprocal_rotation(d, t, k_start, signed_phase)`** — Builds the ancilla rotation sub-circuit; handles both signed (negative eigenvalues) and unsigned phase modes.
 - **`_decode_signed_phase_index(k, d)`** — Converts raw QPE bin index to signed integer (negative for bins above `grid//2`).
 - **`_postselect_solution_state(state, scale, d, n)`** — Extracts the ancilla=1, phase=0 subspace: `state[1::2]` gives ancilla=1 slice; `[0::stride]` (with `stride = 2^d`) selects phase=0; scales by `scale_factor` to recover $A^{-1}b$.

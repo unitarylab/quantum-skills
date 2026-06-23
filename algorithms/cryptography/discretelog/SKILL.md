@@ -97,10 +97,10 @@ print(result.get('Computation time (s)')) # Simulation time in seconds
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Setup | Validates `gcd(g,P)==1` and `gcd(y,P)==1`; sets `n_count = 2*P.bit_length()`, `n_work = P.bit_length()` | Determines register sizes sufficient for continued-fraction accuracy |
-| 2 — Circuit Construction | Creates three registers `reg_a`, `reg_b`, `reg_work`; H on reg_a/reg_b; X on work[0] to set $|1\rangle$; controlled $g^{2^i} \bmod P$ via `gs.unitary()` for each reg_a bit; controlled $(y^{-1})^{2^j} \bmod P$ for each reg_b bit; appends `IQFT(n_count)` to both registers | Full DLP QPE circuit |
-| 3 — Simulation | `gs.execute(backend=backend, device=device, dtype=dtype)` → `res_vec.calculate_state(range(2*n_count))` | Extracts probability distribution over reg_a ⊗ reg_b (marginalizing over work register) |
+| 2 — Circuit Construction | Creates three registers `reg_a`, `reg_b`, `reg_work`; H on reg_a/reg_b; X on work[0] to set $|1\rangle$; controlled $g^{2^i} \bmod P$ via `qc.unitary()` for each reg_a bit; controlled $(y^{-1})^{2^j} \bmod P$ for each reg_b bit; appends `IQFT(n_count)` to both registers | Full DLP QPE circuit |
+| 3 — Simulation | `qc.execute(backend=backend, device=device, dtype=dtype)` → `res_vec.calculate_state(range(2*n_count))` | Extracts probability distribution over reg_a ⊗ reg_b (marginalizing over work register) |
 | 4 — Classical Post-Processing | Calls `_classical_post_processing(probs_dict, g, y, P, n_count, N_size)` | Full continued-fractions + congruence solver |
-| 5 — Export | `self.save_circuit(gs)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
+| 5 — Export | `self.save_circuit(qc)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
 
 **Helper Methods:**
 
@@ -111,11 +111,11 @@ print(result.get('Computation time (s)')) # Simulation time in seconds
   3. Applies `Fraction(u, N_size).limit_denominator(P)` to get candidate `(s_base, r_base)`.
   4. Searches multiples of `r_base` to find the true group order `r` where `g^r ≡ 1 (mod P)`.
   5. Computes `target = round(v * r / N_size)` and solves $sx \equiv -\text{target} \pmod{r}$ via modular inverse, checking all solutions in the coset.
-- **`_build_return_dict(is_success, circuit_path, filename, gs)`** — Packages the result dictionary returned by `run()`, including `status` (`'ok'`/`'failed'`), `circuit_path`, `plot` (list of file dicts), `circuit`, and the output fields `Found x`, `Detected period r`, and `Computation time (s)` merged from `self.output`.
+- **`_build_return_dict(is_success, circuit_path, filename, qc)`** — Packages the result dictionary returned by `run()`, including `status` (`'ok'`/`'failed'`), `circuit_path`, `plot` (list of file dicts), `circuit`, and the output fields `Found x`, `Detected period r`, and `Computation time (s)` merged from `self.output`.
 
 **Register address translation:** The `get_p(reg_slice)` inline function inside `run()` translates named register slices into flat qubit indices by adding the appropriate offset (`0` for reg_a, `n_count` for reg_b, `2*n_count` for reg_work).
 
-**Data flow:** `(g, y, P)` → register + oracle construction → `gs.execute()` → `res_vec.calculate_state()` → `_classical_post_processing()` → `found_x` → `_build_return_dict()`.
+**Data flow:** `(g, y, P)` → register + oracle construction → `qc.execute()` → `res_vec.calculate_state()` → `_classical_post_processing()` → `found_x` → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
 Both reg_A and reg_B are placed in uniform superposition:

@@ -80,10 +80,10 @@ print(result2['status'])         # 'ok' if H^2 recovers original state
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Validation | Checks `n >= 1`, validates `mode` string | Guards against invalid inputs |
-| 2 — Circuit Construction | Creates `Circuit(n, name=...)`; dispatches on mode: `'superposition'` calls `_apply_hadamard_layer` once; `'reflexive_test'` generates random state via `numpy` and calls `gs.initialize(psi, target)`, then calls `_apply_hadamard_layer` **twice** | Builds the transform circuit appropriate to each mode |
-| 3 — Simulation | `gs.execute(backend=backend, device=device, dtype=dtype)` → `_as_statevector(raw_result.state)` | Runs statevector simulation; wraps result as `numpy` array |
+| 2 — Circuit Construction | Creates `Circuit(n, name=...)`; dispatches on mode: `'superposition'` calls `_apply_hadamard_layer` once; `'reflexive_test'` generates random state via `numpy` and calls `qc.initialize(psi, target)`, then calls `_apply_hadamard_layer` **twice** | Builds the transform circuit appropriate to each mode |
+| 3 — Simulation | `qc.execute(backend=backend, device=device, dtype=dtype)` → `_as_statevector(raw_result.state)` | Runs statevector simulation; wraps result as `numpy` array |
 | 4 — Post-Processing | `'superposition'`: uses `raw_result.probabilities` and checks uniformity; `'reflexive_test'`: computes `np.allclose(raw_result.state, original_state)` | Verifies algorithm correctness based on mode |
-| 5 — Export | `self.save_circuit(gs)` and `self.save_txt()` | Saves SVG circuit diagram and text results; returns `_build_return_dict()` |
+| 5 — Export | `self.save_circuit(qc)` and `self.save_txt()` | Saves SVG circuit diagram and text results; returns `_build_return_dict()` |
 
 **Helper Methods:**
 
@@ -92,10 +92,10 @@ print(result2['status'])         # 'ok' if H^2 recovers original state
 - **`_probabilities(statevec, threshold)`** — Computes `|amp|²` for each basis state; returns a sorted dict of binary-string → float, filtering values below `threshold`.
 - **`_build_return_dict(success, circuit_path, filepath, circuit)`** — Converts `success` bool to `'ok'`/`'failed'`, packages saved file paths as `plot` list, and merges `self.output` fields (`State vector`, `Probability distribution`, `Computation time (s)`) into the returned dict.
 
-**Key design note:** In `'reflexive_test'` mode, the random initial state is generated with `numpy` and loaded into the circuit via `gs.initialize(original_state, target=target_qubits)`. The state is stored in a local variable `original_state` for comparison after two H-layer applications.
+**Key design note:** In `'reflexive_test'` mode, the random initial state is generated with `numpy` and loaded into the circuit via `qc.initialize(original_state, target=target_qubits)`. The state is stored in a local variable `original_state` for comparison after two H-layer applications.
 
 **Data flow (superposition):** `n` → `Circuit` → `_apply_hadamard_layer` → `execute()` → `raw_result.probabilities` → uniformity check → `_build_return_dict()`.  
-**Data flow (reflexive_test):** random `psi` → `gs.initialize(psi)` → two `_apply_hadamard_layer()` calls → `execute()` → `np.allclose(raw_result.state, psi)` → `_build_return_dict()`.
+**Data flow (reflexive_test):** random `psi` → `qc.initialize(psi)` → two `_apply_hadamard_layer()` calls → `execute()` → `np.allclose(raw_result.state, psi)` → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
 $$H = \frac{1}{\sqrt{2}}\begin{pmatrix}1&1\\1&-1\end{pmatrix}, \quad H|0\rangle = |+\rangle = \frac{|0\rangle+|1\rangle}{\sqrt{2}}, \quad H|1\rangle = |-\rangle = \frac{|0\rangle-|1\rangle}{\sqrt{2}}$$

@@ -106,9 +106,9 @@ result = algo.run(n=3, state=state, inverse=True, backend="torch")
 |---|---|---|
 | 1 — QFT Circuit Construction | Creates `qft = Circuit(n, name="QFT")`; loops `i` from `n-1` down to `0`; applies `qft.h(i)` and `qft.mcp(np.pi/2**(i-j), j, i)` for lower-index controls; applies final swaps | Builds the QFT gate decomposition |
 | 1b — Optional Inversion | If `inverse=True`, calls `qft = qft.dagger()`, then renames circuit and gate sequence to `IQFT` | Converts QFT into inverse QFT |
-| 2 — Simulation | Creates `gs = Circuit(n, name="QFT Example")`; optionally initializes the normalized state; appends the QFT/IQFT circuit; calls `gs.execute(...)` | Runs statevector simulation |
+| 2 — Simulation | Creates `qc = Circuit(n, name="QFT Example")`; optionally initializes the normalized state; appends the QFT/IQFT circuit; calls `qc.execute(...)` | Runs statevector simulation |
 | 3 — Classical Verification | Uses NumPy `ifft` for QFT and `fft` for IQFT with matching normalization; computes L2 error | Confirms the circuit implements the intended transform |
-| 4 — Export | Calls `save_circuit(gs.decompose())` and `save_txt()` | Saves circuit diagram and text report |
+| 4 — Export | Calls `save_circuit(qc.decompose())` and `save_txt()` | Saves circuit diagram and text report |
 
 **QFT construction loop:**
 
@@ -144,8 +144,8 @@ SWAP(0, 2)
 | Hadamard layer | `qft.h(i)` inside descending loop |
 | Controlled phase rotations | `qft.mcp(np.pi / 2**(i-j), j, i)` |
 | Bit reversal | `qft.swap(i, n - 1 - i)` |
-| Optional input state | `gs.initialize(state, range(n))` after normalization |
-| Simulator execution | `gs.execute(backend=backend, device=device, dtype=dtype).state` |
+| Optional input state | `qc.initialize(state, range(n))` after normalization |
+| Simulator execution | `qc.execute(backend=backend, device=device, dtype=dtype).state` |
 | Classical QFT reference | `ifft(state) * np.sqrt(2**n)` |
 | Classical IQFT reference | `fft(state) / np.sqrt(2**n)` |
 | Error metric | `np.linalg.norm(final_state - expected_state)` |

@@ -107,9 +107,9 @@ print(result['circuit_path'])            # SVG circuit diagram path
 |---|---|---|
 | 1 — Parameter Setup | Extracts `n_target`, computes `total_qubits = d + n_target` | Establishes qubit layout: phase (`d` qubits) + target (`n_target` qubits) |
 | 2 — Circuit Construction | Calls `self.build_qpe_circuit(U, d, prepare_target)` | Delegates all circuit building to the reusable helper |
-| 3 — Simulation | `gs.execute(backend=backend, device=device, dtype=dtype)` → `final_state` | Runs statevector simulation and returns the final state object directly |
+| 3 — Simulation | `qc.execute(backend=backend, device=device, dtype=dtype)` → `final_state` | Runs statevector simulation and returns the final state object directly |
 | 4 — Phase Extraction | `final_state._phase_probabilities_from_state(phase_qubits, endian='little', threshold=1e-8)` → picks best bit-string → `phi_est = int(best_bits_str, 2) / (2 ** d)` | Marginalizes target register; converts binary readout to decimal phase |
-| 5 — Export | `self.save_circuit(gs)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
+| 5 — Export | `self.save_circuit(qc)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
 
 **`build_qpe_circuit(U, d, prepare_target, backend)` — Reusable Circuit Builder:**
 
@@ -117,7 +117,7 @@ This method is the core algorithmic component, designed to be called by other al
 
 1. If `prepare_target` is provided, appends it to the target register (`target_qubits = list(range(d, d+n_target))`).
 2. Applies Hadamard to all `d` phase qubits (`phase_qubits = list(range(d))`).
-3. Loops `k = 0..d-1`: calls `gs.append(U.repeat(2**k), target=target_qubits, control=phase_qubits[k], control_state='1')` to apply controlled $U^{2^k}$.
+3. Loops `k = 0..d-1`: calls `qc.append(U.repeat(2**k), target=target_qubits, control=phase_qubits[k], control_state='1')` to apply controlled $U^{2^k}$.
 4. Appends `IQFT(d)` from `unitarylab.library` to `phase_qubits`.
 
 **Helper Methods:**
@@ -161,7 +161,7 @@ The iQFT transforms the phase-encoded register to: if $\phi = k_0/2^d$ exactly, 
 | Phase precision $\delta\phi = 1/2^d$ | Implicit: determined by number of bits `d` in phase register |
 | Subroutine for HHL / QAE | `build_qpe_circuit()` returns a standalone `Circuit` embeddable externally |
 
-**Notes on encapsulation:** The iQFT is sourced from `unitarylab.library.IQFT` rather than constructed inline, unlike the amplitude estimation implementation which builds it locally. The controlled-unitary power is realized via `U.repeat(2**k)` passed to `gs.append(..., control=phase_qubits[k], control_state='1')`, which is correct but exponentially expensive in `d`. The `endian='little'` argument in `_phase_probabilities_from_state()` ensures the least-significant bit is on the left, consistent with the register ordering.
+**Notes on encapsulation:** The iQFT is sourced from `unitarylab.library.IQFT` rather than constructed inline, unlike the amplitude estimation implementation which builds it locally. The controlled-unitary power is realized via `U.repeat(2**k)` passed to `qc.append(..., control=phase_qubits[k], control_state='1')`, which is correct but exponentially expensive in `d`. The `endian='little'` argument in `_phase_probabilities_from_state()` ensures the least-significant bit is on the left, consistent with the register ordering.
 
 ## Mathematical Deep Dive
 $$|0\rangle^d|\psi\rangle \rightarrow \frac{1}{\sqrt{2^d}}\sum_{j=0}^{2^d-1} e^{2\pi i\phi j}|j\rangle|\psi\rangle$$

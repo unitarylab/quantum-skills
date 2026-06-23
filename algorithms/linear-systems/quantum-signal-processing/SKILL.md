@@ -87,10 +87,10 @@ print(result['plot'])              # List of saved output file dicts
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Phase Optimization | `_find_phases(t, d)` — runs L-BFGS-B minimization | Computes the QSP phase sequence $\Phi$ numerically |
-| 2 — Circuit Construction | Creates `Circuit(Register('q', 1))`; applies `gs.rz(2*phases[0], 0)` as initial phase; loops `d` times applying `gs.rx(2*theta, 0)` (signal) then `gs.rz(2*phases[k], 0)` (phase rotation) | Builds the alternating signal/phase circuit |
-| 3 — Simulation | `gs.execute(backend=backend, device=device, dtype=dtype)` → `final_state[0]` | Runs statevector evolution of the single qubit |
+| 2 — Circuit Construction | Creates `Circuit(Register('q', 1))`; applies `qc.rz(2*phases[0], 0)` as initial phase; loops `d` times applying `qc.rx(2*theta, 0)` (signal) then `qc.rz(2*phases[k], 0)` (phase rotation) | Builds the alternating signal/phase circuit |
+| 3 — Simulation | `qc.execute(backend=backend, device=device, dtype=dtype)` → `final_state[0]` | Runs statevector evolution of the single qubit |
 | 4 — Post-Processing | Compares `qsp_val = complex(final_state[0])` to `ideal_val = np.cos(t * x)` | Computes absolute approximation error |
-| 5 — Export | `self.save_circuit(gs)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
+| 5 — Export | `self.save_circuit(qc)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
 
 **Helper Methods:**
 
@@ -129,13 +129,13 @@ over $2d+1$ Chebyshev sample points $x_j = \cos\left(\frac{(2j-1)\pi}{4\tilde{d}
 
 | README / Theory Concept | Code Object or Location |
 |---|---|
-| Signal operator $W(x)$ = $R_x(2\theta)$ | `gs.rx(2 * theta, 0)` where `theta = arccos(x)` |
-| Phase rotations $e^{i\phi_k Z}$ = $R_z(2\phi_k)$ | `gs.rz(2 * phases[k], 0)` in the main loop |
-| Initial phase $\phi_0$ | `gs.rz(2 * phases[0], 0)` before loop |
+| Signal operator $W(x)$ = $R_x(2\theta)$ | `qc.rx(2 * theta, 0)` where `theta = arccos(x)` |
+| Phase rotations $e^{i\phi_k Z}$ = $R_z(2\phi_k)$ | `qc.rz(2 * phases[k], 0)` in the main loop |
+| Initial phase $\phi_0$ | `qc.rz(2 * phases[0], 0)` before loop |
 | Phase sequence $\Phi = (\phi_0, \ldots, \phi_d)$ | `phases` returned by `_find_phases()` — `(d+1)` floats |
 | Target function $\cos(t \cdot x)$ | `ideal_val = np.cos(t * x)` in Stage 4 |
 | Loss function minimization | `minimize(loss, ...)` with `method='L-BFGS-B'` in `_find_phases()` |
-| $(0,0)$ matrix element $\langle 0|U_\Phi(x)|0\rangle$ | `qsp_val = complex(final_state[0])` after `gs.execute()` |
+| $(0,0)$ matrix element $\langle 0|U_\Phi(x)|0\rangle$ | `qsp_val = complex(final_state[0])` after `qc.execute()` |
 | Approximation error at test point | `abs_error = float(np.abs(qsp_val - ideal_val))` |
 | Sample points $x_j = \cos((2j-1)\pi/(4\tilde d))$ | `x_samples = np.linspace(-1, 1, 2*d+1)` (uniform, not Chebyshev nodes) |
 
