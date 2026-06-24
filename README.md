@@ -144,9 +144,7 @@ When you ask Copilot a question about quantum computing in VS Code, the agent re
 
 ## License
 
-This repository is licensed under the Apache License 2.0.  
-The `unitarylab` package itself contains proprietary binary components —
-see the `LICENSE` and `LICENSE-PROPRIETARY` files bundled inside the wheel.
+This project is licensed under the MIT license. For details, please refer to the `LICENSE` file in the repository root directory or the license description included in the distribution package.
 
 ---
 
@@ -269,6 +267,4 @@ git clone https://github.com/unitarylab/quantum-skills `
 
 ## License
 
-This repository is licensed under the Apache License 2.0.  
-The `unitarylab` package itself contains proprietary binary components —
-see the `LICENSE` and `LICENSE-PROPRIETARY` files bundled inside the wheel.
+本项目采用 MIT 许可证。详情请参阅仓库根目录中的 `LICENSE` 文件，或发布包中随附的许可证说明。
