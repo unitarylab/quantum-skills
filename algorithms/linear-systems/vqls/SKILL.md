@@ -1,6 +1,6 @@
 ---
 name: "vqls"
-description: "Variational Quantum Linear Solver for solving linear systems Ax = b using variational optimization. Works with A = c₀A₀ + c₁A₁ + c₂A₂."
+description: "Variational Quantum Linear Solver for a fixed-structure linear system. This implementation constructs A internally as A = c₀A₀ + c₁A₁ + c₂A₂ and does not accept arbitrary user-provided A and b."
 ---
 
 # VQLS
@@ -8,6 +8,8 @@ description: "Variational Quantum Linear Solver for solving linear systems Ax = 
 ## Purpose
 
 Use this skill for the `VQLS` algorithm implemented in `unitarylab_algorithms/linear_algebra/vqls`.
+
+> **Important:** This implementation is a fixed-structure VQLS demo, not a general-purpose arbitrary-matrix linear solver. It does not accept arbitrary `A` and `b` as `run()` parameters. Instead, it internally constructs the linear system using `n_qubits` and `coefficients = [c0, c1, c2]`, forming `A = c_0 A_0 + c_1 A_1 + c_2 A_2`, while the right-hand side state `|b\rangle` is prepared internally.
 
 ## Source Of Truth
 
@@ -28,12 +30,14 @@ print(result)
 
 Adjust the parameters according to the table below and the source `run()` signature.
 
+> **Do not** call `algo.run(A=A, b=b)`. This implementation does not expose arbitrary `A` or `b` inputs. The matrix `A` is always constructed internally as `A = c_0 A_0 + c_1 A_1 + c_2 A_2`, and `|b\rangle` is prepared by applying Hadamard gates to all system qubits.
+
 ## Core Parameters
 
 | Parameter | Default | Description | Input Info |
 |---|---|---|---|
 | `n_qubits` | `3` | Number of system qubits. Must be greater than 0. | Use `2` or `3` for small verification runs. |
-| `coefficients` | `[1.0, 0.2, 0.2]` | Linear combination coefficients | 请输入列表（如 [1.0, 0.2, 0.2]） |
+| `coefficients` | `[1.0, 0.2, 0.2]` | Coefficients `[c0, c1, c2]` used to construct the internal matrix `A = c0*A0 + c1*A1 + c2*A2`. This is **not** an arbitrary matrix input — `A0, A1, A2` are fixed Pauli-structured operators generated from `n_qubits`. | 请输入列表（如 [1.0, 0.2, 0.2]） |
 | `max_iterations` | `200` | Max iterations | 请输入正整数，如 200 |
 | `tolerance` | `1e-6` | Convergence tolerance | 请输入浮点数，如 1e-6 |
 | `initial_spread` | `0.5` | Random initialization range for variational parameters. | Use a positive float. |
@@ -103,11 +107,13 @@ VQLS 的核心思想是用一个参数化量子线路去表示候选解态 `|x(t
 
 ## 数学原理
 
-VQLS 使用变分量子算法求解线性方程组 `Ax = b`。在当前实现里，问题矩阵被固定构造成
+VQLS 使用变分量子算法求解线性方程组 `Ax = b`。
+
+> **关键约束：** 当前实现中的 VQLS **不是通用矩阵接口**。用户**不能直接传入任意矩阵 `A` 或向量 `b`**。代码会根据 `n_qubits` 生成固定结构的算子项 `A_0, A_1, A_2`，再通过 `coefficients = [c0, c1, c2]` 组合得到问题矩阵：
 $$
 A = c_0 A_0 + c_1 A_1 + c_2 A_2,
 $$
-其中 `A_0` 是单位矩阵，而 `A_1`、`A_2` 由代码根据 `n_qubits` 生成对应的 Pauli 结构；右端态 `|b>` 则通过对每个系统量子位施加 Hadamard 门得到。
+其中 `A_0` 是单位矩阵，而 `A_1`、`A_2` 由代码根据 `n_qubits` 生成对应的 Pauli 结构；右端态 `|b\rangle` 则通过对每个系统量子位施加 Hadamard 门得到，同样不接受外部输入。
 
 VQLS 的关键是定义局部代价函数。代码通过局部 Hadamard 测试估计复数系数
 $$
@@ -163,3 +169,4 @@ When updating this skill after algorithm changes:
 2. Update parameter defaults, constraints, return fields, and examples.
 3. Run or dry-run the updater skill script from the workspace root.
 4. Keep this leaf skill focused on usage and implementation guidance; keep category routing in the parent `SKILL.md`.
+5. Confirm whether the implementation still uses the fixed structure `A = c_0 A_0 + c_1 A_1 + c_2 A_2` or has been upgraded to accept arbitrary `A` and `b`. If upgraded, update the frontmatter description, Purpose notice, and all fixed-structure warnings accordingly.

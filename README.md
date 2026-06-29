@@ -49,8 +49,8 @@
 
 | Category | Algorithms |
 |----------|-----------|
-| **Primitives** | QPE, Hadamard Test, Hadamard Transform, Amplitude Amplification, Amplitude Estimation |
-| **Linear Systems** | HHL, LCU, QSVT, Quantum Signal Processing (QSP) |
+| **Primitives** | Grover, QPE, Hadamard Test, Hadamard Transform, Amplitude Amplification, Amplitude Estimation |
+| **Linear Systems** | HHL, LCU, QSVT-QLSA, Quantum Signal Processing (QSP) |
 | **Cryptography** | Shor's Algorithm, Discrete Logarithm, Simon's Algorithm |
 | **Hamiltonian Simulation** | Trotter, QDrift, Taylor Series, QSP |
 | **Schrodingerization** | Advection, Heat (1D/2D) |
@@ -79,8 +79,8 @@ quantum-skills/
 +-- README.md
 |
 +-- algorithms/                 # Quantum algorithm skills
-|   +-- primitives/             # QPE, Hadamard test/transform, AA, AE
-|   +-- linear-systems/         # HHL, LCU, QSVT, QSP
+|   +-- primitives/             # Grover, QPE, Hadamard test/transform, AA, AE
+|   +-- linear-systems/         # HHL, LCU, QSVT-QLSA, QSP
 |   +-- cryptography/           # Shor, discrete logarithm, Simon
 |   +-- hamiltonian-simulation/ # Trotter, QDrift, Taylor, QSP
 |   +-- schrodingerization/     # PDE solvers 
@@ -134,7 +134,7 @@ When you ask Copilot a question about quantum computing in VS Code, the agent re
 
 | Prompt | What happens |
 |--------|-------------|
-| `Implement Grover's algorithm using UnitaryLab` | Loads primitives guide — amplitude amplification |
+| `Implement Grover's algorithm using UnitaryLab` | Loads primitives/grover guide |
 | `Explain the HHL algorithm with a 2×2 example` | Loads linear-systems/hhl guide with matrix demo |
 | `Simulate 1D heat equation with Schrodingerization` | Loads schrodingerization/heat-1d guide |
 | `Compare Trotter and QDrift for Hamiltonian simulation` | Loads hamiltonian-simulation guide |
@@ -172,8 +172,8 @@ This project is licensed under the MIT license. For details, please refer to the
 
 | 分类 | 算法 |
 |------|------|
-| **基础量子算法** | QPE、Hadamard 测试、Hadamard 变换、振幅放大、振幅估计 |
-| **线性系统** | HHL、LCU、QSVT、量子信号处理（QSP） |
+| **基础量子算法** | Grover、QPE、Hadamard 测试、Hadamard 变换、振幅放大、振幅估计 |
+| **线性系统** | HHL、LCU、QSVT-QLSA、量子信号处理（QSP） |
 | **密码学** | Shor 算法、离散对数、Simon 算法 |
 | **哈密顿量模拟** | Trotter、QDrift、Taylor 级数、QSP |
 | **Schrodingerization** | 对流、热方程（一维/二维）|
@@ -202,8 +202,8 @@ quantum-skills/
 +-- README.md
 |
 +-- algorithms/                 # 量子算法技能
-|   +-- primitives/             # QPE、Hadamard 测试/变换、振幅放大与估计
-|   +-- linear-systems/         # HHL、LCU、QSVT、QSP
+|   +-- primitives/             # Grover、QPE、Hadamard 测试/变换、振幅放大与估计
+|   +-- linear-systems/         # HHL、LCU、QSVT-QLSA、QSP
 |   +-- cryptography/           # Shor、离散对数、Simon
 |   +-- hamiltonian-simulation/ # Trotter、QDrift、Taylor、QSP
 |   +-- schrodingerization/     # PDE 求解器
@@ -257,7 +257,7 @@ git clone https://github.com/unitarylab/quantum-skills `
 
 | Prompt | 触发行为 |
 |--------|---------|
-| `用 UnitaryLab 实现 Grover 算法` | 加载基元指南 — 振幅放大 |
+| `用 UnitaryLab 实现 Grover 算法` | 加载基元/grover 指南 |
 | `解释 HHL 算法，并给出 2×2 的示例` | 加载线性系统/hhl 指南，含矩阵示例 |
 | `用 Schrodingerization 模拟一维热方程` | 加载 schrodingerization/heat-1d 指南 |
 | `比较 Trotter 和 QDrift 在哈密顿量模拟中的异同` | 加载哈密顿量模拟指南 |

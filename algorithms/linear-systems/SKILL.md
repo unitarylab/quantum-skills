@@ -1,13 +1,13 @@
 ---
 name: linear-systems
-description: A set of quantum algorithms for solving linear systems of equations and related Fourier/signal-processing subroutines. This skill includes UnitaryLab implementations and educational resources for HHL, LCU, QFT, QSP, QSVT-QLSA, and VQLS.
+description: A set of quantum algorithms for solving linear systems of equations and related Fourier/signal-processing subroutines. This skill includes UnitaryLab implementations and educational resources for HHL, LCU, QFT, the basic single-qubit QSP demo, QSVT-QLSA, and VQLS.
 ---
 # Quantum Linear Systems Algorithms
 
 ## Purpose
 This file routes requests for quantum linear algebra algorithms and related Fourier or signal-processing subroutines.
 
-Use this category when the user asks to solve linear systems, compare quantum linear-system solvers, build QFT/QSP components, or use QSVT-style linear algebra workflows.
+Use this category when the user asks to solve linear systems, compare quantum linear-system solvers, build QFT/basic QSP components, or use QSVT-style linear algebra workflows.
 
 ## Routing Rules
 
@@ -17,8 +17,10 @@ Use this category when the user asks to solve linear systems, compare quantum li
   - Read `./lcu/SKILL.md`
 - If the user asks about the Quantum Fourier Transform, inverse QFT, Fourier basis changes, or QFT as a subroutine:
   - Read `./quantum-fourier-transform/SKILL.md`
-- If the user asks about Quantum Signal Processing, polynomial transformations, phase factors, or QSP circuits:
+- If the user asks about basic Quantum Signal Processing, single-qubit QSP demos, scalar polynomial transformations, phase-factor optimization, or QSP circuits for approximating functions such as cos(t*x):
   - Read `./quantum-signal-processing/SKILL.md`
+- If the user asks for QSP-based Hamiltonian simulation, QSP-HS, block-encoding a Hamiltonian, or approximating time evolution e^{-iHt}:
+  - Route to `../hamiltonian-simulation/qsp/SKILL.md` instead of this linear-systems QSP demo.
 - If the user asks about QSVT-based quantum linear-system solving or singular-value transformation:
   - Read `./qsvt-qlsa/SKILL.md`
 - If the user asks for a variational linear-system solver or NISQ-style Ax=b workflow:
@@ -29,7 +31,7 @@ Use this category when the user asks to solve linear systems, compare quantum li
 1. HHL Algorithm: `./hhl/SKILL.md`
 2. LCU: `./lcu/SKILL.md`
 3. Quantum Fourier Transform: `./quantum-fourier-transform/SKILL.md`
-4. Quantum Signal Processing: `./quantum-signal-processing/SKILL.md`
+4. Basic Quantum Signal Processing demo: `./quantum-signal-processing/SKILL.md`
 5. QSVT QLSA: `./qsvt-qlsa/SKILL.md`
 6. VQLS: `./vqls/SKILL.md`
 

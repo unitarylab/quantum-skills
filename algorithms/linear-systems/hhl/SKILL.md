@@ -17,7 +17,7 @@ Use this skill when you need to:
 
 HHL proceeds in five steps:
 1. **State preparation**: Encode $b$ as quantum state $|b\rangle$ in the system register.
-2. **QPE**: Apply Quantum Phase Estimation using $U = e^{iAt}$ to extract eigenvalue phases of $A$ into a phase register.
+2. **QPE**: Apply Quantum Phase Estimation using $U = e^{i 2\pi A t}$ to extract eigenvalue phases of $A$ into a phase register. QPE reads eigenphases $\phi_j = \lambda_j t$ (in cycles), encoding them as phase register bins $k_j \approx \phi_j \cdot 2^d = \lambda_j \cdot t \cdot 2^d$.
 3. **Controlled rotation**: Apply an ancilla rotation $R_y(2\arcsin(C/\lambda_j))$ controlled by the estimated eigenvalue, mapping amplitude proportional to $1/\lambda_j$.
 4. **Inverse QPE**: Uncompute the phase register.
 5. **Post-selection**: Measure the ancilla in $|1\rangle$; the system register collapses to $A^{-1}|b\rangle$.
@@ -70,7 +70,7 @@ print(result['circuit_path'])                    # SVG circuit diagram
 **Common misunderstandings:**
 - `A` must be **Hermitian** (`A == A†`). Non-Hermitian matrices will raise `ValueError`.
 - `A` must be square with dimension a **power of 2**. Pad with zeros if needed.
-- Evolution time `t` is auto-computed inside `run()` from eigenvalues (`t = target_phi_max / lam_max`). It is not a user-facing parameter.
+- Evolution time `t` is auto-computed inside `run()` from eigenvalues (`t = target_phi_max / lam_max`), ensuring $\phi_{\max} = \lambda_{\max} t$ stays within $[0,1)$ to avoid phase wraparound. It is not a user-facing parameter.
 - The output key `'Estimated solution (quantum)'` contains the reconstructed classical vector, not the raw quantum state coefficients directly.
 
 ## Return Fields
@@ -104,7 +104,7 @@ print(result['circuit_path'])                    # SVG circuit diagram
 **Stage 2 — Four Sub-Circuit Steps:**
 
 - **Step A: State Preparation** — `qc.initialize(b_state, system_qubits)` loads normalized $b/\|b\|$ into the system register.
-- **Step B: QPE** — `_expi_hermitian(A, t)` computes $U = e^{iAt}$ numerically; `_unitary_circuit_from_matrix(U_mat)` wraps it in a `Circuit` via `qc.unitary()`; `QPE(U_circ, d, return_circuit=True)` builds the full QPE sub-circuit; it is appended to `phase_qubits + system_qubits`.
+- **Step B: QPE** — `_expi_hermitian(A, t)` computes $U = e^{i 2\pi A t}$ numerically; `_unitary_circuit_from_matrix(U_mat)` wraps it in a `Circuit` via `qc.unitary()`; `QPE(U_circ, d, return_circuit=True)` builds the full QPE sub-circuit; it is appended to `phase_qubits + system_qubits`.
 - **Step C: Controlled Reciprocal Rotation** — `_controlled_reciprocal_rotation(d, t, k_start, signed_phase)` builds the ancilla rotation circuit. For each phase integer $k$, it applies X-flips to phase bits to select the $k$-th computational basis state, computes rotation angle $2\arcsin(C/k)$, and applies `mcry(theta, controls, ancilla=0)`. Then unflips X gates. This creates a distinct controlled-Ry for each eigenvalue bin.
 - **Step D: Inverse QPE** — `qc.append(qpe_circ.dagger(), ...)` uncomputes the phase register, removing entanglement.
 
@@ -121,14 +121,18 @@ print(result['circuit_path'])                    # SVG circuit diagram
 ## Understanding the Key Quantum Components
 The normalized vector $b/\|b\|$ is loaded into the system register using `Circuit.initialize()`.
 
-### 2. Unitary Exponentiation ($U = e^{iAt}$)
-The Hermitian matrix $A$ is exponentiated to produce a unitary $U = e^{iAt}$. QPE is applied to $U$; eigenphases of $U$ encode eigenvalues of $A$ as $\phi_j = \lambda_j t / (2\pi)$.
+### 2. Unitary Exponentiation ($U = e^{i 2\pi A t}$)
+The Hermitian matrix $A$ is exponentiated to produce a unitary $U = e^{i 2\pi A t}$. QPE is applied to $U$; eigenphases of $U$ encode eigenvalues of $A$ as $\phi_j = \lambda_j t$ (in cycles, i.e. fraction of $2\pi$). The phase bin index is $k_j \approx \phi_j \cdot 2^d = \lambda_j \cdot t \cdot 2^d$.
+
+**Evolution time $t$:** The code auto-computes $t = \text{target\_phi\_max} / \lambda_{\max}$ so that the largest eigenphase $\phi_{\max} = \lambda_{\max} t = \text{target\_phi\_max}$ stays within QPE's resolvable range $[0, 1)$, preventing phase wraparound. For unsigned mode $\text{target\_phi\_max} = 1 - 1/2^d$; for signed mode $\text{target\_phi\_max} = 0.5 - 1/2^d$.
+
+**Signed phase mode:** When $A$ has negative eigenvalues, $\lambda_j t$ can be negative. Since QPE measures phases in $[0, 1)$, negative phases wrap to the upper half of the interval. By constraining $|\lambda_{\max}| t < 0.5$, positive eigenvalues map to $\phi_j \in [0, 0.5)$ and negative eigenvalues map to $\phi_j \in (0.5, 1)$. The decoder `_decode_signed_phase_index(k, d)` converts raw bin indices back to signed integers (bins above $\text{grid}/2$ are interpreted as negative).
 
 ### 3. Quantum Phase Estimation
-`QPE(U_circ, d, return_circuit=True)` is called internally with $U = e^{iAt}$ and $d$ phase bits. The phase register encodes the binary approximation of $\phi_j$.
+`QPE(U_circ, d, return_circuit=True)` is called internally with $U = e^{i 2\pi A t}$ and $d$ phase bits. The phase register encodes the binary approximation of $\phi_j = \lambda_j t$.
 
 ### 4. Controlled Reciprocal Rotation (Ancilla Rotation)
-An ancilla qubit is rotated by angle $2\arcsin(C/\lambda_j)$ where $C$ is a normalization constant. After rotation, the ancilla amplitude $\sin(2\arcsin(C/\lambda_j)) \propto 1/\lambda_j$ encodes the inverse eigenvalue.
+An ancilla qubit is rotated by angle $\theta = 2\arcsin(C/\lambda_j)$ where $C$ is a normalization constant. After $R_y(\theta)|0\rangle$, the $|1\rangle$ amplitude is $\sin(\theta/2) = \sin(\arcsin(C/\lambda_j)) = C/\lambda_j$, which is proportional to $1/\lambda_j$, encoding the inverse eigenvalue.
 
 ### 5. Inverse QPE
 The phase register is uncomputed (disentangled) by running the QPE circuit backwards (`qpe_circ.dagger()`).
@@ -142,22 +146,22 @@ $$|x\rangle \propto \sum_j \frac{b_j}{\lambda_j}|u_j\rangle = A^{-1}|b\rangle$$
 | README / Theory Concept | Code Object or Location |
 |---|---|
 | State preparation $|b\rangle = b/\|b\|$ | `qc.initialize(b_state, system_qubits)` — Step A |
-| Evolution time $t$ (avoids wraparound) | Auto-computed: `t = target_phi_max / lam_max` in Stage 1 |
-| Unitary $U = e^{iAt}$ | `_expi_hermitian(A, t)` → explicit matrix via NumPy eigendecomposition |
-| QPE to encode eigenphases | `QPE(U_circ, d, return_circuit=True)` — Step B |
-| Ancilla rotation angle $2\arcsin(C/\lambda_j)$ | `_controlled_reciprocal_rotation()` — one `mcry` per phase bin $k$ |
-| Normalization constant $C = k_\text{start}$ | `C = k_start` inside `_controlled_reciprocal_rotation()` |
+| Evolution time $t = \text{target\_phi\_max} / \lambda_{\max}$ (ensures $\phi_{\max} < 1$, no wraparound) | Auto-computed in Stage 1; $\phi_j = \lambda_j t$ maps eigenvalues to QPE phase bins $k_j \approx \lambda_j t \cdot 2^d$ |
+| Unitary $U = e^{i 2\pi A t}$ | `_expi_hermitian(A, t)` → explicit matrix via NumPy eigendecomposition |
+| QPE to encode eigenphases $\phi_j = \lambda_j t$ | `QPE(U_circ, d, return_circuit=True)` — Step B |
+| Ancilla rotation angle $\theta_k = 2\arcsin(C/k)$ per phase bin $k$ | `_controlled_reciprocal_rotation()` — one `mcry` per phase bin; $|1\rangle$ amplitude $= \sin(\theta_k/2) = C/k \propto 1/\lambda_j$ |
+| Normalization constant $C = k_\text{start}$ | $C = k_\text{start}$ inside `_controlled_reciprocal_rotation()`; $k_\text{start} = \lfloor \phi_{\min} \cdot 2^d \rfloor - 10$ |
 | Inverse QPE (uncompute phase) | `qpe_circ.dagger()` appended to same qubit indices — Step D |
 | Post-selection on ancilla $= |1\rangle$ | `_postselect_solution_state()` — `state[1::2]` slice |
 | Phase=0 post-selection | `vec_anc1[0::stride]` where `stride = 2^d` |
-| Scale factor for classical solution | `scale_factor = norm_b * t * grid / k_start` |
-| Signed phase mode (negative eigenvalues) | `signed_phase_mode` flag; `_decode_signed_phase_index()` maps bins > `grid//2` to negative |
+| Scale factor for classical solution | `scale_factor = \|b\| \cdot t \cdot 2^d / k_\text{start}` — compensates for the $C/k$ scaling and $b$ normalization |
+| Signed phase mode (negative eigenvalues) | `signed_phase_mode` flag; constrains $\|\lambda_{\max}\|t < 0.5$ so positive $\phi_j \in [0, 0.5)$, negative $\phi_j \in (0.5, 1)$; `_decode_signed_phase_index()` maps bins $> 2^d/2$ to negative |
 
 **Notes on encapsulation:** The QPE sub-circuit is sourced from `QPE(U_circ, d, return_circuit=True)` (imported from `unitarylab.library`) rather than rebuilt inline — this is the primary example of algorithm reuse in this codebase. The controlled reciprocal rotation is built without any classical oracle: it exhaustively creates one `mcry` gate per eigenvalue bin (total $2^d$ gates), which is the dominant circuit cost. The post-selection extraction is done via array slicing rather than symbolic measurement.
 
 ## Mathematical Deep Dive, $|b\rangle = \sum_j b_j |u_j\rangle$.
 
-**QPE encoding:** $U|u_j\rangle = e^{i\lambda_j t}|u_j\rangle$. QPE reads off $\phi_j = \lambda_j t /(2\pi)$ into the phase register.
+**QPE encoding:** $U|u_j\rangle = e^{i 2\pi \lambda_j t}|u_j\rangle$. QPE reads off $\phi_j = \lambda_j t$ (in cycles) into the phase register, producing phase bin $k_j \approx \phi_j \cdot 2^d = \lambda_j t \cdot 2^d$.
 
 **Controlled rotation:** Ancilla becomes $\sqrt{1-(C/\lambda_j)^2}|0\rangle + (C/\lambda_j)|1\rangle$ for each eigencomponent.
 
@@ -201,9 +205,9 @@ import numpy as np
 from unitarylab.core import Circuit
 
 def expi_hermitian(A: np.ndarray, t: float) -> np.ndarray:
-    """Compute U = exp(i*A*t) numerically via eigendecomposition."""
+    """Compute U = exp(i * 2π * A * t) numerically via eigendecomposition."""
     eigenvalues, V = np.linalg.eigh(A)
-    exp_diag = np.exp(1j * eigenvalues * t)
+    exp_diag = np.exp(1j * 2 * np.pi * eigenvalues * t)
     return (V * exp_diag) @ V.conj().T    # V @ diag(exp) @ V†
 
 def unitary_circuit(U_mat: np.ndarray, backend: str = 'torch') -> Circuit:
@@ -284,7 +288,7 @@ def hhl_minimal(A, b, d, backend='torch'):
     lam_max = np.max(np.abs(lam))
     t = 0.45 / lam_max   # approximate; real code uses target_phi_max / lam_max
 
-    # Stage A: exp(iAt) as unitary circuit
+    # Stage A: exp(i * 2π * A * t) as unitary circuit
     U_mat = expi_hermitian(A, t)
     U_circ = unitary_circuit(U_mat)
 
@@ -296,6 +300,8 @@ def hhl_minimal(A, b, d, backend='torch'):
     # and qpe_circ.dagger() are assembled sequentially
     pass  # full assembly in HHLAlgorithm.run()
 ```
+
+## Troubleshooting
 
 1. **`A` not Hermitian**: Add `A = (A + A.conj().T) / 2` to symmetrize before calling.
 2. **`N` not a power of 2**: Pad `A` and `b` to the next power of 2 with zeros.

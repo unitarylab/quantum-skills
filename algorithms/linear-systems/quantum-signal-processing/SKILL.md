@@ -1,16 +1,19 @@
 ---
 name: quantum-signal-processing
-description: A quantum algorithm for signal processing tasks, leveraging quantum phase estimation and amplitude amplification techniques to achieve efficient signal analysis and transformation. This skill includes implementations and educational resources for understanding and utilizing quantum signal processing algorithms in various applications.
+description: Basic Quantum Signal Processing (QSP) demo for single-qubit signal operators, phase-factor optimization, and scalar polynomial approximation such as cos(t*x). Use the Hamiltonian-simulation QSP-HS skill instead for block-encoded Hamiltonians and e^{-iHt}.
 ---
 # Quantum Signal Processing (QSP)
 
 ## Purpose
 
-Quantum Signal Processing implements a polynomial transformation $P(x)$ of a signal $x$ using a sequence of signal-processing rotations and signal operators. This implementation demonstrates QSP applied to function approximation: approximating $\cos(t \cdot x)$ for a signal variable $x$.
+Quantum Signal Processing implements a polynomial transformation $P(x)$ of a scalar signal $x$ using a sequence of single-qubit signal-processing rotations and phase operators. This implementation demonstrates basic QSP applied to function approximation: approximating $\cos(t \cdot x)$ at a test point.
 
 Use this skill when you need to:
-- Apply a polynomial function to the eigenvalues of a quantum operator.
-- Implement Hamiltonian simulation via a phase sequence (QSVT predecessor).
+- Demonstrate the core QSP signal/phase sequence on one qubit.
+- Approximate a scalar function such as $\cos(t x)$ at a point $x \in [-1,1]$.
+- Inspect phase-factor optimization and QSP circuit structure.
+
+Do not use this skill for QSP Hamiltonian simulation. If the request mentions a Hamiltonian matrix `H`, time evolution $e^{-iHt}$, block encoding, Chebyshev expansions of $\cos(tH)$ and $\sin(tH)$, or the `QSPHSAlgorithm` class, use `../../hamiltonian-simulation/qsp/SKILL.md`.
 
 ## Overview
 

@@ -1,6 +1,6 @@
 ---
 name: discretelog
-description: "Use when users ask about solving the discrete logarithm problem g^x ≡ y (mod P) with Shor's quantum algorithm, building/explaining DLP circuits, running simulator demos, or debugging post-processing (continued fractions, order recovery, congruence solving). Triggers: discrete log, DLP, Shor discrete logarithm, g^x mod P, modular exponentiation, continued fractions, quantum cryptography demo."
+description: "Use when users ask about solving the discrete logarithm problem g^x ≡ y (mod P) with Shor-style two-register Fourier sampling, building/explaining DLP circuits, running simulator demos, or debugging post-processing (continued fractions plus two-dimensional Fourier-sample congruence solving). Triggers: discrete log, DLP, Shor discrete logarithm, g^x mod P, modular exponentiation, two-dimensional Fourier sampling, continued fractions, congruence solving, quantum cryptography demo."
 ---
 
 # Discrete Logarithm Algorithm (DLG)
@@ -11,7 +11,7 @@ Solves the discrete logarithm problem (DLP): given $g$, $y$, and prime $P$ with 
 
 Use this skill when you need to:
 - Demonstrate a quantum attack on DLP-based cryptography (Diffie-Hellman, ECC).
-- Understand the 2D quantum period-finding extension of Shor's algorithm.
+- Understand the two-register Fourier-sampling version of Shor's discrete logarithm algorithm.
 
 ## Overview
 
@@ -21,11 +21,11 @@ Use this skill when you need to:
 4. Apply controlled $(y^{-1})^b \bmod P$ (reg_B controls $\times (y^{-1})^{2^j}$) to work.
 5. Apply IQFT to both A and B.
 6. Measure A and B to get integers $(u, v)$.
-7. Classical post-processing: continued fractions on $u/N$ to extract period $r$ and random $s$, then solve $sx \equiv \text{round}(v \cdot r/N) \pmod{r}$ for $x$.
+7. Classical post-processing: split the joint measurement into two Fourier samples `u` and `v`, use continued fractions on $u/N$ to estimate $s/r$, then combine `v` with the estimated period and solve the two-dimensional Fourier-sample congruence. The theoretical relation is $u x \equiv -v \pmod r$; in the source variables this is implemented as `real_s * x ≡ -target mod real_r`.
 
 ## Prerequisites
 
-- Quantum Fourier Transform and QPE.
+- Quantum Fourier Transform and two-register Fourier sampling.
 - Modular arithmetic, multiplicative order, modular inverse.
 - Continued fractions algorithm.
 - Python: `numpy`, `Circuit`, `Register`, `unitarylab.library.IQFT`.
@@ -74,7 +74,7 @@ print(result.get('Computation time (s)')) # Simulation time in seconds
 **Common misunderstandings:**
 - Both `g` and `y` must be coprime to `P`. This is validated; a `ValueError` is raised otherwise.
 - The circuit uses $2 \cdot n_{\text{count}} + n_{\text{work}} = 2 \cdot 2\lfloor\log_2 P\rfloor + \lfloor\log_2 P\rfloor$ total qubits.
-- Success is probabilistic; the algorithm relies on the measurement giving a valid continued fraction.
+- Success is probabilistic; the algorithm relies on a useful two-dimensional Fourier sample. Continued fractions are used to estimate the period component from `u/N`, but the discrete log is recovered only after combining the second sample coordinate `v` through a modular congruence.
 
 ## Return Fields
 
@@ -97,20 +97,21 @@ print(result.get('Computation time (s)')) # Simulation time in seconds
 | Stage | Code Action | Algorithmic Role |
 |---|---|---|
 | 1 — Parameter Setup | Validates `gcd(g,P)==1` and `gcd(y,P)==1`; sets `n_count = 2*P.bit_length()`, `n_work = P.bit_length()` | Determines register sizes sufficient for continued-fraction accuracy |
-| 2 — Circuit Construction | Creates three registers `reg_a`, `reg_b`, `reg_work`; H on reg_a/reg_b; X on work[0] to set $|1\rangle$; controlled $g^{2^i} \bmod P$ via `qc.unitary()` for each reg_a bit; controlled $(y^{-1})^{2^j} \bmod P$ for each reg_b bit; appends `IQFT(n_count)` to both registers | Full DLP QPE circuit |
+| 2 — Circuit Construction | Creates three registers `reg_a`, `reg_b`, `reg_work`; H on reg_a/reg_b; X on work[0] to set $|1\rangle$; controlled $g^{2^i} \bmod P$ via `qc.unitary()` for each reg_a bit; controlled $(y^{-1})^{2^j} \bmod P$ for each reg_b bit; appends `IQFT(n_count)` to both registers | Two-register DLP Fourier-sampling circuit |
 | 3 — Simulation | `qc.execute(backend=backend, device=device, dtype=dtype)` → `res_vec.calculate_state(range(2*n_count))` | Extracts probability distribution over reg_a ⊗ reg_b (marginalizing over work register) |
-| 4 — Classical Post-Processing | Calls `_classical_post_processing(probs_dict, g, y, P, n_count, N_size)` | Full continued-fractions + congruence solver |
+| 4 — Classical Post-Processing | Calls `_classical_post_processing(probs_dict, g, y, P, n_count, N_size)` | Continued fractions plus two-dimensional Fourier-sample congruence solver |
 | 5 — Export | `self.save_circuit(qc)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
 
 **Helper Methods:**
 
 - **`_get_modular_matrix(a, N, n_qubits)`** — Builds a $2^{n\_work} \times 2^{n\_work}$ permutation matrix for the map $z \mapsto (a \cdot z) \bmod P$ (identity for $z \geq P$). Used for both $g^{2^i}$ and $(y^{-1})^{2^j}$ controlled applications.
-- **`_classical_post_processing(probs, g, y, P, n, N_size)`** — Multi-step classical routine:
+- **`_classical_post_processing(probs, g, y, P, n, N_size)`** — Multi-step classical routine. This is not a one-dimensional period-finding post-process; it uses the joint sample from both counting registers:
   1. Sorts bitstrings by probability; skips entries below 0.02.
-  2. Splits each bitstring into `v_bin` (first `n` bits, reg_a) and `u_bin` (last `n` bits, reg_b).
-  3. Applies `Fraction(u, N_size).limit_denominator(P)` to get candidate `(s_base, r_base)`.
+  2. Splits each bitstring into `v_bin = bitstring[:n]` and `u_bin = bitstring[n:]`, then converts them to integers `u, v`.
+  3. Applies `Fraction(u, N_size).limit_denominator(P)` to estimate the rational sample component `s/r`, producing candidate `(s_base, r_base)`.
   4. Searches multiples of `r_base` to find the true group order `r` where `g^r ≡ 1 (mod P)`.
-  5. Computes `target = round(v * r / N_size)` and solves $sx \equiv -\text{target} \pmod{r}$ via modular inverse, checking all solutions in the coset.
+  5. Computes `target = round(v * real_r / N_size)` from the second sample coordinate.
+  6. Solves the source-level congruence `real_s * x ≡ -target mod real_r` via modular inverse and coset search. This corresponds to the RAG/theory relation $u x \equiv -v \pmod r$ for two-dimensional Fourier samples.
 - **`_build_return_dict(is_success, circuit_path, filename, qc)`** — Packages the result dictionary returned by `run()`, including `status` (`'ok'`/`'failed'`), `circuit_path`, `plot` (list of file dicts), `circuit`, and the output fields `Found x`, `Detected period r`, and `Computation time (s)` merged from `self.output`.
 
 **Register address translation:** The `get_p(reg_slice)` inline function inside `run()` translates named register slices into flat qubit indices by adding the appropriate offset (`0` for reg_a, `n_count` for reg_b, `2*n_count` for reg_work).
@@ -140,8 +141,21 @@ $$P(m) \approx \frac{\sin^2(\pi N \delta)}{N^2 \sin^2(\pi \delta)}, \quad \delta
 
 ### 5. Classical Post-Processing
 From the measurement $(u, v)$:
-1. Continued fractions on $u/N$ gives denominator $r$ (the group order) and numerator $s$.
-2. Solve: $x \equiv -\text{round}(v \cdot r / N) \cdot s^{-1} \pmod{r}$ via modular inverse.
+1. Split the measured bitstring exactly as the implementation does: `v_bin = bitstring[:n]`, `u_bin = bitstring[n:]`, then compute `u = int(u_bin, 2)` and `v = int(v_bin, 2)`.
+2. Continued fractions on $u/N$ estimate a rational component $s/r$, giving `s_base` and `r_base`.
+3. Search multiples of `r_base` until `pow(g, real_r, P) == 1`; scale the numerator at the same time to obtain `real_s`.
+4. Use the second Fourier coordinate by computing `target = round(v * real_r / N)`.
+5. Solve `real_s * x ≡ -target mod real_r`, including the gcd/coset case, and verify candidates with `pow(g, x, P) == y`.
+
+The conceptual two-dimensional Fourier-sampling equation is
+$$
+u x \equiv -v \pmod r.
+$$
+The source expresses the same recovery step with estimated variables as
+$$
+\texttt{real\_s}\,x \equiv -\texttt{target} \pmod{\texttt{real\_r}}.
+$$
+Do not describe this as a purely one-dimensional continued-fraction period extraction. Continued fractions estimate the first coordinate's rational structure; the second coordinate is essential for recovering $x$.
 
 ## Theory-to-Code Mapping
 
@@ -155,9 +169,11 @@ From the measurement $(u, v)$:
 | Inverse QFT on reg_a | `qc.append(IQFT(n_count), get_p(ra[:]))` |
 | Inverse QFT on reg_b | `qc.append(IQFT(n_count), get_p(rb[:]))` |
 | Probability distribution over (A, B) | `state_obj.calculate_state(range(2*n_count))` marginalizes work register |
+| Split joint two-register sample | `v_bin = bitstring[:n]`, `u_bin = bitstring[n:]`; then `u, v = int(u_bin, 2), int(v_bin, 2)` |
 | Continued fractions: $u/N \approx s/r$ | `Fraction(u, N_size).limit_denominator(P)` |
 | True group order $r$: $g^r \equiv 1$ | Search loop over multiples of `r_base` with `pow(g, r_base*k, P) == 1` |
-| Solve $sx \equiv -\text{target} \pmod{r}$ | `t_red * pow(s_red, -1, r_red) % r_red`; coset search over `d` solutions |
+| Second coordinate target | `target = int(round((v * real_r) / N_size))` |
+| Solve `real_s * x ≡ -target mod real_r` | `t_red * pow(s_red, -1, r_red) % r_red`; coset search over `d` solutions |
 | Verification: $g^x \equiv y \pmod{P}$ | `pow(g, x_test, P) == (y % P)` inside post-processing |
 
 **Notes on encapsulation:** The register address mapping (named registers → flat qubit indices) is handled by an inline `get_p()` closure inside `run()`, rather than a class-level method. This is because the three registers (reg_a, reg_b, reg_work) are passed as arguments to `Circuit` and the gate methods still require flat indices. The post-processing is entirely classical and self-contained in `_classical_post_processing()`.
@@ -168,7 +184,7 @@ From the measurement $(u, v)$:
 
 **Eigenstate structure:** The unitary $U_g|z\rangle = |gz \bmod P\rangle$ has eigenstates $|u_s\rangle = \frac{1}{\sqrt{r}}\sum_{k=0}^{r-1} e^{-2\pi i sk/r}|g^k\rangle$ with eigenvalues $e^{2\pi i s/r}$.
 
-**Two-dimensional QPE:** Simultaneously doing QPE on $U_g$ (reg_A) and $U_y = U_g^x$ (reg_B) gives phase pair $(s/r, -sx/r)$, from which $x = -v \cdot (u)^{-1}$ can be recovered via modular arithmetic.
+**Two-dimensional Fourier sampling:** The two counting registers sample a correlated pair. In ideal notation, the pair satisfies $u x \equiv -v \pmod r$. In the finite-$N$ implementation, `u/N` is processed with continued fractions to estimate `real_s/real_r`, while `v` is rounded into `target`; the final recovery solves `real_s * x ≡ -target mod real_r`.
 
 **Complexity:** $O(n^3)$ gates where $n = \lceil\log_2 P\rceil$. Classical best: sub-exponential $O(\exp(\sqrt{n\log n}))$ via index calculus.
 
@@ -211,11 +227,12 @@ def modular_matrix(mult: int, P: int, n_work: int) -> np.ndarray:
 
 def build_dlp_circuit(g: int, y: int, P: int, n_count: int, n_work: int) -> Circuit:
     """
-    Two-register QPE circuit for DLP g^x = y mod P.
+    Two-register Fourier-sampling circuit for DLP g^x = y mod P.
     Register a (counts a): controlled g^{2^i} mod P
     Register b (counts b): controlled (y^{-1})^{2^j} mod P
     Work register: |1>, then |g^a * y^{-b}>
-    Measurement: peak at (a, b) with a/r_g - b/r_y -> x via CRT
+    Measurement: joint Fourier sample whose coordinates are post-processed via
+    continued fractions plus the congruence s*x = -target (mod r).
     """
     ra = Register('a', n_count)
     rb = Register('b', n_count)
@@ -259,28 +276,44 @@ def solve_dlp(g: int, y: int, P: int, backend: str = 'torch', device: str = 'cpu
     res_vec = qc.execute(backend=backend, device=device, dtype=np.complex128)
     probs_dict = res_vec.calculate_state(range(2 * n_count))
 
-    # Sort by probability and post-process
+    # Sort by probability and post-process the two-dimensional Fourier sample.
     sorted_probs = sorted(probs_dict.items(), key=lambda item: item[1]['prob'], reverse=True)
     for bitstring, data in sorted_probs:
         if data['prob'] < 0.02:
             continue
-        u_bin, v_bin = bitstring[n_count:], bitstring[:n_count]
+        v_bin, u_bin = bitstring[:n_count], bitstring[n_count:]
         u, v = int(u_bin, 2), int(v_bin, 2)
         if u == 0:
             continue
         frac = Fraction(u, 2**n_count).limit_denominator(P)
-        r = frac.denominator
-        if r and pow(g, r, P) == 1:
-            for x in range(r):
-                if pow(g, x, P) == y:
-                    return x
+        r_base, s_base = frac.denominator, frac.numerator
+        real_r = real_s = None
+        for k in range(1, 10):
+            if pow(g, r_base * k, P) == 1:
+                real_r, real_s = r_base * k, s_base * k
+                break
+        if real_r is None:
+            continue
+        target = int(round((v * real_r) / (2**n_count)))
+        d = math.gcd(real_s, real_r)
+        if (-target) % d:
+            continue
+        s_red, r_red, t_red = real_s // d, real_r // d, (-target) // d
+        try:
+            x0 = (t_red * pow(s_red, -1, r_red)) % r_red
+        except ValueError:
+            continue
+        for i in range(d):
+            x_test = (x0 + i * r_red) % real_r
+            if pow(g, x_test, P) == y % P:
+                return x_test
     return None
 ```
 
 **Component roles**:
 - `modular_matrix` — same pattern as Shor: $2^n \times 2^n$ permutation for $|x\rangle \to |x \cdot \text{mult} \bmod P\rangle$.
-- `build_dlp_circuit` — two-register QPE: register $a$ accumulates powers of $g$, register $b$ accumulates powers of $y^{-1}$, both followed by IQFT.
-- `solve_dlp` — measures both registers, extracts phases, and uses continued fractions to recover the periods that encode $x$.
+- `build_dlp_circuit` — two-register Fourier sampling: register $a$ accumulates powers of $g$, register $b$ accumulates powers of $y^{-1}$, both followed by IQFT.
+- `solve_dlp` — measures both registers, uses continued fractions on `u/N` to estimate `s/r`, combines `v` through `target = round(v*r/N)`, and solves the congruence `s*x ≡ -target (mod r)`.
 
 
 
@@ -394,6 +427,6 @@ print(result)
 ## Debugging Tips
 
 1. **Simulation is slow**: Qubit count is $5\lfloor\log_2 P\rfloor$; exponential in bits. Keep $P$ small ($P=7$, $11$, $13$).
-2. **`Found x` is `None`**: The continued fractions step failed to extract a valid period. Re-run (the algorithm is probabilistic) or increase $n_{\text{count}}$.
+2. **`Found x` is `None`**: The joint sample may not yield a usable continued-fraction estimate or solvable congruence. Re-run (the algorithm is probabilistic) or increase $n_{\text{count}}$.
 3. **`g` and `y` not coprime to `P`**: Will raise `ValueError`. Ensure $\gcd(g, P) = \gcd(y, P) = 1$.
 4. **Wrong answer**: The quantum measurement gives the correct answer with high probability but not certainty. The classical post-processing verifies correctness; if wrong, retry.

@@ -9,6 +9,8 @@ description: A quantum algorithm that generalizes Grover's search algorithm, all
 
 Amplitude Amplification generalizes Grover's search algorithm. Given a unitary operator $U$ that prepares a state with a small initial success probability $p$, this algorithm iteratively applies a Grover-style operator to amplify the probability of the "good" (target) states, achieving probability close to 1 after $O(1/\sqrt{p})$ iterations.
 
+Grover search is the standard special case of amplitude amplification where $U=H^{\otimes n}$ prepares the uniform superposition, the good subspace is a marked computational-basis state, and $p=1/2^n$ for a single target. For the repository's standalone Grover implementation, use `../grover/SKILL.md`.
+
 Use this skill when you need to:
 - Boost the probability of sampling a desired outcome from a quantum circuit.
 - Apply the quantum quadratic speedup over classical random sampling.

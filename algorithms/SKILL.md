@@ -22,13 +22,13 @@ Use the following workflow when handling `unitarylab_algorithms`:
 
 ## 1. Quantum Primitives
 
-Core building blocks for quantum algorithms, including phase estimation, amplitude amplification/estimation, Hadamard-based routines, and related primitives.
+Core building blocks for quantum algorithms, including Grover search, phase estimation, amplitude amplification/estimation, Hadamard-based routines, and related primitives.
 
 See reference: `./primitives/SKILL.md`
 
 ## 2. Quantum Linear Systems
 
-Algorithms for solving linear systems on quantum hardware, including HHL, LCU, and quantum signal processing (QSP/QSVT).
+Algorithms for solving linear systems on quantum hardware, including HHL, LCU, the basic single-qubit QSP demo, and QSVT-QLSA. Route QSP-based Hamiltonian simulation requests to `./hamiltonian-simulation/SKILL.md`.
 
 See reference: `./linear-systems/SKILL.md`
 

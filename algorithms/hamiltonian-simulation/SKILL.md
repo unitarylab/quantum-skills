@@ -1,6 +1,6 @@
 ---
 name: hamiltonian-simulation
-description: Quantum Hamiltonian simulation methods for approximating time evolution e^{-iHt}. Includes Trotter-Suzuki decomposition, QDrift randomized sampling, Cartan decomposition, QSP polynomial spectral transformation, and Taylor series LCU expansion.
+description: Quantum Hamiltonian simulation methods for approximating time evolution e^{-iHt}. Includes Trotter-Suzuki decomposition, QDrift randomized sampling, Cartan decomposition, QSP-HS polynomial spectral transformation, and Taylor series LCU expansion.
 ---
 
 # Hamiltonian Simulation
@@ -27,11 +27,13 @@ See reference: `./cartan/SKILL.md`
 Structural decomposition via Lie algebra splitting $\mathfrak{g} = \mathfrak{k} \oplus \mathfrak{m}$. Iterates a Lax flow to build a circuit of the form $K \cdot e^{-i\eta} \cdot K^\dagger$.
 - Key parameters: `lr` (learning rate), `max_steps` (hard cap on Lax update steps), `reps` (number of repetitions).
 
-### 4. QSP (Quantum Signal Processing)
+### 4. QSP-HS (Quantum Signal Processing for Hamiltonian Simulation)
 See reference: `./qsp/SKILL.md`
 
-Block-encodes the Hamiltonian and applies polynomial spectral transformations via interleaved signal-processing rotations. Approximates $\cos(tH)$ and $\sin(tH)$ as Chebyshev series and merges them via LCU.
+Use this route only when the user asks for Hamiltonian simulation or time evolution with QSP. This method block-encodes the Hamiltonian and applies polynomial spectral transformations via interleaved signal-processing rotations. It approximates $\cos(tH)$ and $\sin(tH)$ as Chebyshev series and merges them via LCU.
 - Key parameters: `degree` (upper bound on polynomial degree per time slice), `beta` (block-encoding scaling factor).
+
+For a basic single-qubit QSP demo, scalar signal variable `x`, phase-factor optimization, or approximating `cos(t*x)` at a point, route to `../linear-systems/quantum-signal-processing/SKILL.md` instead.
 
 ### 5. Taylor Series (LCU)
 See reference: `./taylor/SKILL.md`
@@ -52,7 +54,7 @@ elif method == "qdrift":
     use ./qdrift/SKILL.md
 elif method == "cartan-lax":
     use ./cartan/SKILL.md
-elif method == "qsp":
+elif method == "qsp" or method == "qsp-hs":
     use ./qsp/SKILL.md
 elif method == "taylor":
     use ./taylor/SKILL.md
@@ -63,7 +65,7 @@ elif method == "taylor":
 | Trotter | `'trotter'` | `order`, `steps` |
 | QDrift | `'qdrift'` | `steps` |
 | Cartan | `'cartan-lax'` | `lr`, `max_steps`, `reps` |
-| QSP | `'qsp'` | `degree`, `beta` |
+| QSP-HS | `'qsp'` / `'qsp-hs'` | `degree`, `beta` |
 | Taylor | `'taylor'` | `degree` |
 
 The returned object exposes lazy properties: `circuit`, `evolution_result`, `total_error`.

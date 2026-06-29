@@ -1,6 +1,6 @@
 ---
 name: cryptography
-description: Quantum algorithms that attack classical cryptographic protocols, including Shor's integer factorization, discrete logarithm solving, and Simon's hidden subgroup problem.
+description: Quantum algorithms that attack classical cryptographic protocols, including Shor's integer factorization, Shor-style discrete logarithm solving with two-register Fourier sampling, and Simon's hidden subgroup problem.
 ---
 
 # Quantum Cryptography Algorithms
@@ -14,7 +14,7 @@ Use this category when the user asks about factoring, discrete logarithms, hidde
 
 - If the user asks about integer factoring, RSA-style examples, period finding for modular exponentiation, or Shor's algorithm:
   - Read `./shor/SKILL.md`
-- If the user asks about solving a discrete logarithm problem or attacking DLP-based systems:
+- If the user asks about solving a discrete logarithm problem, attacking DLP-based systems, or the Shor-style two-dimensional Fourier-sampling DLP workflow:
   - Read `./discretelog/SKILL.md`
 - If the user asks about Simon's hidden XOR mask problem, oracle promise problems, or exponential separation examples:
   - Read `./simon/SKILL.md`

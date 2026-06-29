@@ -1,20 +1,22 @@
 ---
 name: qsp
-description: QSP-based Hamiltonian simulation approximates e^{-iHt} by block-encoding the Hamiltonian and applying polynomial spectral transformations via interleaved signal-processing rotations, achieving high precision with efficiently bounded circuit depth.
+description: QSP-HS: QSP-based Hamiltonian simulation for approximating e^{-iHt} by block-encoding a Hamiltonian and applying polynomial spectral transformations. Use the basic QSP demo skill instead for single-qubit scalar QSP examples such as cos(t*x).
 ---
 
 
-# QSP Hamiltonian Simulation Skill Guide
+# QSP-HS Hamiltonian Simulation Skill Guide
 
 ## Overview
 
-QSP-based Hamiltonian simulation approximates the time-evolution operator
+QSP-HS uses Quantum Signal Processing as a Hamiltonian simulation method. It approximates the time-evolution operator
 
 $$
 U(t) = e^{-iHt}
 $$
 
 by converting it into a polynomial approximation problem on the eigenvalues of the block-encoded Hamiltonian.
+
+Use this skill when the request is specifically about QSP for Hamiltonian simulation, time evolution, block-encoding a Hamiltonian, or the `QSPHSAlgorithm` implementation. For the basic single-qubit QSP demo with scalar input `x` and target `cos(t*x)`, use `../../linear-systems/quantum-signal-processing/SKILL.md`.
 
 ### Key Insight
 
