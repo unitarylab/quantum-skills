@@ -45,6 +45,15 @@ Adjust the parameters according to the table below and the source `run()` signat
 - Run signature observed from source: `run(A, b, epsilon, backend='torch', device='cpu', dtype=np.complex128)`
 - If result keys or generated output files change, update the usage example and return-field notes in this file.
 
+## Critical Theoretical Constraints
+
+The QSVT linear-system solver is valid only when the matrix access model and polynomial transform satisfy the theoretical requirements below. Violating these assumptions can produce results that look numerically plausible but are not guaranteed to correspond to a realizable QSVT linear solver.
+
+- **Block encoding:** `A` must admit an $(\alpha, a, 0)$-block encoding with subnormalization factor $\alpha \ge \|A\|$. The effective QSVT condition parameter is $K = \alpha / \sigma_{\min}(A)$, not simply the ordinary matrix condition number $\kappa(A)$.
+- **Bounded polynomial:** The inverse polynomial approximation $P(x) \approx 1/(2Kx)$ must obey $|P(x)| \le 1$ for every $x \in [-1, 1]$, not only on the spectral interval $[1/K, 1]$. A polynomial that fits the singular values well but exceeds 1 in the spectral gap is not physically realizable by QSVT.
+- **Post-selection probability:** The linear-solver success probability scales as $\Omega(1/\kappa_A^2)$ for the relevant scaled system. Ill-conditioned inputs may require amplitude amplification, adding an $O(\kappa_A)$ factor.
+- **End-to-end complexity:** The polynomial degree $d = O(K \log(K/\epsilon))$ is the cost per block-encoding query. Full solution-state preparation with amplitude amplification costs $O(K \cdot \kappa_A \cdot \log(K/\epsilon))$ block-encoding queries. Do not report the polynomial degree alone as total query complexity.
+
 ## Return Fields
 
 | Key | Type | Description |
@@ -139,7 +148,9 @@ $$
 
 ## 复杂度分析
 
-从当前文件可直接确认的成本主要包括一次底层 `QSVTSolver` 调用以及电路导出开销。更细的复杂度则取决于底层 QSVT 实现中的块编码方法、多项式次数、目标精度 `epsilon` 以及矩阵条件性质。也就是说，本文件是一个轻量包装层，而真正的线路深度和资源复杂度由库内求解器决定。
+从当前文件可直接确认的成本主要包括一次底层 `QSVTSolver` 调用以及电路导出开销。更细的复杂度则取决于底层 QSVT 实现中的块编码方法、多项式次数、目标精度 `epsilon`、缩放因子以及矩阵条件性质。也就是说，本文件是一个轻量包装层，而真正的线路深度和资源复杂度由库内求解器决定。
+
+理论上，逆函数近似多项式的次数 $d = O(K \log(K/\epsilon))$ 只对应每次块编码查询的多项式变换成本，其中 $K = \alpha / \sigma_{\min}(A)$。完整制备线性系统解态还需要考虑后选择成功概率；若使用幅度放大，总查询复杂度应按 $O(K \cdot \kappa_A \cdot \log(K/\epsilon))$ 级别说明，而不能只引用多项式次数作为端到端复杂度。
 
 ---
 

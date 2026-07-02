@@ -1,17 +1,27 @@
 ---
 name: hhl
-description: A quantum algorithm for solving linear systems of equations, providing exponential speedup over classical methods for certain types of problems. This skill includes efficient implementations and educational resources for understanding and utilizing quantum linear systems algorithms in various applications.
+description: A statevector-simulated implementation of the HHL quantum linear systems algorithm. HHL can offer exponential dimension advantages only under restrictive assumptions such as efficient state preparation, sparse/block-encoded matrix access, bounded condition number, efficient Hamiltonian simulation, and partial readout of observables rather than full classical-vector recovery.
 ---
 
 # HHL Algorithm (Harrow-Hassidim-Lloyd)
 
 ## Purpose
 
-HHL solves a linear system $Ax = b$ where $A$ is Hermitian, producing a quantum state $|x\rangle \propto A^{-1}|b\rangle$. The quantum speedup is exponential in the problem size ($O(\log N)$ qubits vs. classical $O(N)$) under specific conditions.
+HHL solves a linear system $Ax = b$ where $A$ is Hermitian, producing a quantum state $|x\rangle \propto A^{-1}|b\rangle$. The implementation here runs a statevector simulation and reconstructs a classical vector for inspection; on real quantum hardware, HHL naturally outputs a quantum state, not all $N$ entries of $x$.
+
+The often-cited exponential advantage is meaningful only when all of these hold:
+- $A$ is sparse or can be efficiently block-encoded / queried.
+- $|b\rangle$ can be prepared efficiently, ideally in $\operatorname{poly}(\log N)$ time.
+- The task needs only a few observables or global properties of $|x\rangle$, not the full classical vector.
+- The condition number $\kappa$ and precision cost do not grow quickly with $N$.
+- Hamiltonian simulation, QPE precision, post-selection, and error control remain efficient.
+
+If the goal is to recover every coordinate of $x$ on real hardware, the required measurements are generally large enough to remove the exponential readout advantage. The full vector returned by this code is a simulator convenience obtained from the final statevector.
 
 Use this skill when you need to:
-- Solve $Ax = b$ for a Hermitian matrix $A$ of size $N = 2^n$.
-- Use HHL as a subroutine in quantum simulation or optimization.
+- Demonstrate or inspect HHL on a small Hermitian matrix $A$ of size $N = 2^n$.
+- Use HHL as a subroutine prototype in quantum simulation or optimization.
+- Compare the statevector-reconstructed HHL result with `np.linalg.solve` for validation.
 
 ## Overview
 
@@ -71,14 +81,16 @@ print(result['circuit_path'])                    # SVG circuit diagram
 - `A` must be **Hermitian** (`A == A†`). Non-Hermitian matrices will raise `ValueError`.
 - `A` must be square with dimension a **power of 2**. Pad with zeros if needed.
 - Evolution time `t` is auto-computed inside `run()` from eigenvalues (`t = target_phi_max / lam_max`), ensuring $\phi_{\max} = \lambda_{\max} t$ stays within $[0,1)$ to avoid phase wraparound. It is not a user-facing parameter.
-- The output key `'Estimated solution (quantum)'` contains the reconstructed classical vector, not the raw quantum state coefficients directly.
+- The output key `'Estimated solution (quantum)'` contains a simulator-reconstructed classical vector, not what a real quantum device would directly return in one run.
+- The implementation explicitly builds dense matrix exponentials and wraps them with `qc.unitary()`, so it is a correctness/education simulator rather than a scalable sparse-oracle HHL implementation.
+- Reading the full solution vector from hardware would require many measurements; HHL's speedup applies to estimating selected observables of the solution state.
 
 ## Return Fields
 
 | Key | Type | Description |
 |---|---|---|
 | `status` | `str` | `'ok'` on success, `'failed'` on failure. |
-| `Estimated solution (quantum)` | `np.ndarray` | Reconstructed solution vector $x_q$ from quantum post-selection. |
+| `Estimated solution (quantum)` | `np.ndarray` | Simulator-reconstructed solution vector $x_q$ from the statevector after post-selection. |
 | `Exact solution (classical)` | `np.ndarray` | Exact classical solution $A^{-1}b$ via `np.linalg.solve`. |
 | `L2 error` | `float` | L2 norm \|\|x_q - x_classical\|\| between quantum and classical solutions. |
 | `Post-selection probability` | `float` | Probability of post-selecting ancilla $= |1\rangle$ and phase $= |0\rangle$. |
@@ -98,7 +110,7 @@ print(result['circuit_path'])                    # SVG circuit diagram
 | 1 — Matrix Pre-processing | Validates $A$ (Hermitian, power-of-2 dims); normalizes $b$; extracts eigenvalues; computes `t` to avoid phase wraparound; computes `k_start` and `scale_factor`; sets `signed_phase_mode` for matrices with negative eigenvalues | Adaptive parameter tuning |
 | 2 — Circuit Construction | Builds `Circuit(1 + d + n_sys)` with ancilla at 0, phase at 1..d, system at d+1...; calls four sub-circuit builders (A–D) | Full HHL circuit assembly |
 | 3 — Simulation | `qc.execute()` → `np.asarray(final_state)` | Runs statevector simulation |
-| 4 — Post-Processing | `_postselect_solution_state(state_arr, scale_factor, d, n_sys)` extracts the ancilla=1 sub-state; computes `diff_norm` vs. `np.linalg.solve(A, b)` | Solution extraction and comparison |
+| 4 — Post-Processing | `_postselect_solution_state(state_arr, scale_factor, d, n_sys)` extracts the ancilla=1 sub-state from the full statevector; computes `diff_norm` vs. `np.linalg.solve(A, b)` | Simulator-only full-vector extraction and comparison |
 | 5 — Export | `qc.draw(filename=..., title=...)` | Saves SVG circuit diagram |
 
 **Stage 2 — Four Sub-Circuit Steps:**
@@ -117,6 +129,8 @@ print(result['circuit_path'])                    # SVG circuit diagram
 - **`_postselect_solution_state(state, scale, d, n)`** — Extracts the ancilla=1, phase=0 subspace: `state[1::2]` gives ancilla=1 slice; `[0::stride]` (with `stride = 2^d`) selects phase=0; scales by `scale_factor` to recover $A^{-1}b$.
 
 **Data flow:** `(A, b)` → eigenvalue analysis → circuit assembly (A→B→C→D) → `execute()` → `_postselect_solution_state()` → `'Estimated solution (quantum)'` → `_build_return_dict()`.
+
+**Hardware readout warning:** `_postselect_solution_state()` works by slicing the simulated statevector. A physical quantum computer would only provide samples from measurement outcomes. Estimating the entire vector $x$ coordinate-by-coordinate generally needs many measurements, so the scalable use case is estimating selected observables of $|x\rangle$ rather than printing all amplitudes.
 
 ## Understanding the Key Quantum Components
 The normalized vector $b/\|b\|$ is loaded into the system register using `Circuit.initialize()`.
@@ -157,7 +171,7 @@ $$|x\rangle \propto \sum_j \frac{b_j}{\lambda_j}|u_j\rangle = A^{-1}|b\rangle$$
 | Scale factor for classical solution | `scale_factor = \|b\| \cdot t \cdot 2^d / k_\text{start}` — compensates for the $C/k$ scaling and $b$ normalization |
 | Signed phase mode (negative eigenvalues) | `signed_phase_mode` flag; constrains $\|\lambda_{\max}\|t < 0.5$ so positive $\phi_j \in [0, 0.5)$, negative $\phi_j \in (0.5, 1)$; `_decode_signed_phase_index()` maps bins $> 2^d/2$ to negative |
 
-**Notes on encapsulation:** The QPE sub-circuit is sourced from `QPE(U_circ, d, return_circuit=True)` (imported from `unitarylab.library`) rather than rebuilt inline — this is the primary example of algorithm reuse in this codebase. The controlled reciprocal rotation is built without any classical oracle: it exhaustively creates one `mcry` gate per eigenvalue bin (total $2^d$ gates), which is the dominant circuit cost. The post-selection extraction is done via array slicing rather than symbolic measurement.
+**Notes on encapsulation:** The QPE sub-circuit is sourced from `QPE(U_circ, d, return_circuit=True)` (imported from `unitarylab.library`) rather than rebuilt inline — this is the primary example of algorithm reuse in this codebase. The controlled reciprocal rotation is built without any classical oracle: it exhaustively creates one `mcry` gate per eigenvalue bin (total $2^d$ gates), which is the dominant circuit cost. The post-selection extraction is done via statevector array slicing rather than hardware-style sampling and measurement.
 
 ## Mathematical Deep Dive, $|b\rangle = \sum_j b_j |u_j\rangle$.
 
@@ -234,14 +248,16 @@ def encode_eigenphases(U_circ: Circuit, d: int) -> Circuit:
 ```python
 # Simplified reconstruction — mirrors HHLAlgorithm._controlled_reciprocal_rotation()
 
-def controlled_reciprocal_rotation(d: int, k_start: int, backend: str = 'torch') -> Circuit:
-    """For each eigenvalue bin k, rotate ancilla by 2*arcsin(k_start/k)."""
+def controlled_reciprocal_rotation(d: int, k_start: int, signed_phase: bool = False, backend: str = 'torch') -> Circuit:
+    """For each valid eigenvalue bin k, rotate ancilla by 2*arcsin(k_start/k)."""
     qc = Circuit(d + 1)   # d phase qubits + 1 ancilla
     ancilla = 0
     phase_qubits = list(range(1, d + 1))
     grid = 2 ** d
-    for k in range(1, grid):
-        angle = 2 * np.arcsin(k_start / k)
+    k_iter = range(1, grid) if signed_phase else range(k_start, grid)
+    for k in k_iter:
+        val = float(np.clip(k_start / k, -1.0, 1.0))
+        angle = 2 * np.arcsin(val)
         # Select phase bin |k> by X-flipping bits where k_bit = 0
         k_bits = format(k, f'0{d}b')
         controls = []

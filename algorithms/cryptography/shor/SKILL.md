@@ -6,7 +6,7 @@ description: Use this skill when the user asks for Shor integer factorization, q
 
 ## Purpose
 
-Shor's algorithm factors an integer $N$ in polynomial time $O((\log N)^3)$, compared to the best known classical sub-exponential algorithms. It achieves this by reducing integer factorization to quantum period-finding via the Quantum Fourier Transform.
+Shor's algorithm factors an integer $N$ in polynomial time, e.g. $O((\log N)^3)$ with textbook arithmetic; the exact exponent depends on the modular multiplication/arithmetic implementation and the chosen cost model. This improves over the best known classical sub-exponential factoring algorithms by reducing integer factorization to quantum period-finding via the Quantum Fourier Transform.
 
 Use this skill when you need to:
 - Factor a composite integer using a quantum simulator.
@@ -160,7 +160,7 @@ yields non-trivial factors of $N$.
 
 **Success probability:** At least $50\%$ of bases $a$ produce a useful period. Multiple attempts are needed with probability exponentially small to fail.
 
-**Complexity:** $O((\log N)^3)$ quantum gates — polynomial in $\log N$. Classical best: sub-exponential $e^{O((\log N)^{1/3}(\log\log N)^{2/3})}$.
+**Complexity:** Polynomial in $\log N$; a common textbook estimate is $O((\log N)^3)$ quantum gates, but the exact exponent depends on the modular multiplication/arithmetic implementation and cost model. Classical best: sub-exponential $e^{O((\log N)^{1/3}(\log\log N)^{2/3})}$.
 
 ## Hands-On Example
 

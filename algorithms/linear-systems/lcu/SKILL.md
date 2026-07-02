@@ -1,6 +1,6 @@
 ---
 name: lcu
-description: A quantum algorithm for solving linear systems of equations using the Linear Combination of Unitaries (LCU) method, providing exponential speedup over classical methods for certain types of problems. This skill includes efficient implementations and educational resources for understanding and utilizing the LCU algorithm in various applications.
+description: A subroutine for probabilistically applying a non-unitary operator M = Σⱼ αⱼUⱼ to a quantum state via PREPARE-SELECT-UNPREPARE. A key building block for block encoding, Hamiltonian simulation, and quantum linear solvers — not a standalone linear system solver.
 ---
 # Linear Combination of Unitaries (LCU)
 
