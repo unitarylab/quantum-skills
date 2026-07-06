@@ -1,14 +1,13 @@
 ---
 name: spsa
-description: Concise guide to the local SPSA estimator and sampler gradient implementations for parameterized quantum circuits.
+description: Concise guide to the SPSA estimator and sampler gradient examples for parameterized quantum circuits.
 ---
 
 # SPSA Gradient Estimation
 
 ## Purpose
-Use this skill for the SPSA gradient implementations in this folder:
-- `scripts/spsa_estimator_gradient.py`
-- `scripts/spsa_sampler_gradient.py`
+Use this skill for the SPSA gradient examples in this folder:
+- `scripts/algorithm.py`
 
 They estimate gradients of:
 - expectation values via `SPSAEstimatorGradient`
