@@ -1,7 +1,7 @@
 ---
 name: taylor
 
-description: "Simulate the time evolution of a quantum system using Taylor series expansion."
+description: Simulate the time evolution of a quantum system using Taylor series expansion.
 ---
 
 # Taylor Hamiltonian Simulation Skill Guide

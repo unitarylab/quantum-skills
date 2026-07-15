@@ -1,6 +1,6 @@
 ---
 name: qsp
-description: QSP-HS: QSP-based Hamiltonian simulation for approximating e^{-iHt} by block-encoding a Hamiltonian and applying polynomial spectral transformations. Use the basic QSP demo skill instead for single-qubit scalar QSP examples such as cos(t*x).
+description: QSP-HS provides QSP-based Hamiltonian simulation for approximating e^{-iHt} by block-encoding a Hamiltonian and applying polynomial spectral transformations. Use the basic QSP demo skill instead for single-qubit scalar QSP examples such as cos(t*x).
 ---
 
 

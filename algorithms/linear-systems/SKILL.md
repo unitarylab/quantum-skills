@@ -1,6 +1,6 @@
 ---
 name: linear-systems
-description: A set of quantum algorithms for solving linear systems of equations and related Fourier/signal-processing subroutines. This skill includes UnitaryLab implementations and educational resources for HHL, LCU, QFT, the basic single-qubit QSP demo, QSVT-QLSA, and VQLS.
+description: A set of quantum algorithms for solving linear systems of equations and related Fourier/signal-processing subroutines. This skill includes UnitaryLab implementations and educational resources for AQC, HHL, LCU, QFT, the basic single-qubit QSP demo, QSVT-QLSA, and VQLS.
 ---
 # Quantum Linear Systems Algorithms
 
@@ -11,6 +11,8 @@ Use this category when the user asks to solve linear systems, compare quantum li
 
 ## Routing Rules
 
+- If the user asks about adiabatic quantum computation for linear systems, a discrete adiabatic QLSP, five-ancilla block-encoding evolution, or AQC post-selection:
+  - Read `./aqc/SKILL.md`
 - If the user asks for the HHL algorithm, phase-estimation-based linear solving, or textbook quantum linear systems:
   - Read `./hhl/SKILL.md`
 - If the user asks about Linear Combination of Unitaries, block construction from weighted unitaries, or LCU-based solving:
@@ -28,12 +30,13 @@ Use this category when the user asks to solve linear systems, compare quantum li
 
 ## Available Leaf Skills
 
-1. HHL Algorithm: `./hhl/SKILL.md`
-2. LCU: `./lcu/SKILL.md`
-3. Quantum Fourier Transform: `./quantum-fourier-transform/SKILL.md`
-4. Basic Quantum Signal Processing demo: `./quantum-signal-processing/SKILL.md`
-5. QSVT QLSA: `./qsvt-qlsa/SKILL.md`
-6. VQLS: `./vqls/SKILL.md`
+1. AQC discrete adiabatic linear solver: `./aqc/SKILL.md`
+2. HHL Algorithm: `./hhl/SKILL.md`
+3. LCU: `./lcu/SKILL.md`
+4. Quantum Fourier Transform: `./quantum-fourier-transform/SKILL.md`
+5. Basic Quantum Signal Processing demo: `./quantum-signal-processing/SKILL.md`
+6. QSVT QLSA: `./qsvt-qlsa/SKILL.md`
+7. VQLS: `./vqls/SKILL.md`
 
 ## Response Contract
 

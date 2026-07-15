@@ -1,6 +1,6 @@
 ---
 name: quantum-machine-learning
-description: Variational quantum algorithms for optimization and machine learning, including QAOA for combinatorial optimization, VQE for ground-state energy estimation, VQC for supervised learning, QCBM for generative modeling, and CVQNN for continuous-variable workflows.
+description: Variational quantum algorithms for optimization and machine learning, including QAOA for combinatorial optimization, VQE for ground-state energy estimation, Fermi-Hubbard VQE for interacting-fermion ground-state simulation, VQC for supervised learning, QCBM for generative modeling, and CVQNN for continuous-variable workflows.
 ---
 # Quantum Machine Learning Algorithms
 
@@ -19,6 +19,8 @@ Use this category when the user asks about optimization with parameterized circu
   - Read `./vqc/SKILL.md`
 - If the user asks about ground-state energy, Hamiltonian expectation minimization, or chemistry-style variational solving:
   - Read `./vqe/SKILL.md`
+- If the user asks about the Fermi-Hubbard model, interacting fermions on an open chain, Jordan-Wigner mapping, Hubbard ground-state VQE, or magnetic-moment measurement:
+  - Read `./fermi-hubbard-vqe/SKILL.md`
 - If the user asks about continuous-variable neural networks, photonic modes, or CV quantum layers:
   - Read `./cvqnn/SKILL.md`
 
@@ -29,9 +31,10 @@ Use this category when the user asks about optimization with parameterized circu
 3. Variational Quantum Classifier: `./vqc/SKILL.md`
 4. Variational Quantum Eigensolver: `./vqe/SKILL.md`
 5. Continuous-Variable Quantum Neural Network: `./cvqnn/SKILL.md`
+6. Fermi-Hubbard VQE: `./fermi-hubbard-vqe/SKILL.md`
 
 ## Response Contract
 
-1. Identify the learning objective: optimization, classification, generative modeling, energy minimization, or continuous-variable modeling.
+1. Identify the learning objective: optimization, classification, generative modeling, generic energy minimization, Fermi-Hubbard simulation, or continuous-variable modeling.
 2. Read the matching leaf skill before writing code or commands.
 3. Keep model-specific APIs, training loops, and examples in the leaf skill.

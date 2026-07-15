@@ -1,6 +1,6 @@
 ---
 name: "vqls"
-description: "Variational Quantum Linear Solver for a fixed-structure linear system. This implementation constructs A internally as A = c₀A₀ + c₁A₁ + c₂A₂ and does not accept arbitrary user-provided A and b."
+description: Variational Quantum Linear Solver for a fixed-structure linear system. This implementation constructs A internally as A = c₀A₀ + c₁A₁ + c₂A₂ and does not accept arbitrary user-provided A and b.
 ---
 
 # VQLS

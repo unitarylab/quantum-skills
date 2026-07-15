@@ -1,6 +1,6 @@
 ---
 name: shor
-description: Use this skill when the user asks for Shor integer factorization, quantum order-finding, period estimation, or implementing/running/debugging ShorAlgorithm in this repository (especially matrix/operator methods, IQFT-based phase post-processing, and continued-fraction period recovery). Keywords: shor, factor N, order finding, period finding, modular exponentiation, continued fraction, quantum factoring, ShorAlgorithm.
+description: Use this skill when the user asks for Shor integer factorization, quantum order-finding, period estimation, or implementing/running/debugging ShorAlgorithm in this repository (especially matrix/operator methods, IQFT-based phase post-processing, and continued-fraction period recovery). Relevant keywords include shor, factor N, order finding, period finding, modular exponentiation, continued fraction, quantum factoring, and ShorAlgorithm.
 ---
 # Shor's Algorithm
 

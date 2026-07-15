@@ -1,6 +1,6 @@
 ---
 name: cartan
-description: "Simulate the time evolution of a quantum system using Cartan decomposition."
+description: Simulate the time evolution of a quantum system using Cartan decomposition.
 ---
 
 # Cartan Decomposition Hamiltonian Simulation Skill Guide
