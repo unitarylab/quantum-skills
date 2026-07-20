@@ -23,25 +23,39 @@ from unitarylab_algorithms.linear_algebra.vqls.algorithm import VQLSAlgorithm
 
 def example_two_qubit_vqls() -> dict:
     """Run a compact VQLS instance using parameters described in the skill."""
+    A = np.array(
+        [
+            [1.8, 0.2, 0.0, 0.0],
+            [0.2, 1.6, 0.1, 0.0],
+            [0.0, 0.1, 1.4, 0.2],
+            [0.0, 0.0, 0.2, 1.2],
+        ],
+        dtype=complex,
+    )
+    b = np.array([1.0, 0.5, -0.25, 0.75], dtype=complex)
+
     algo = VQLSAlgorithm(text_mode="plain")
     result = algo.run(
-        n_qubits=2,
-        coefficients=[1.0, 0.2, 0.2],
-        max_iterations=50,
-        tolerance=1e-6,
-        initial_spread=0.5,
-        backend="torch",
-        device="cpu",
-        dtype=np.complex128,
+        A=A,
+        b=b,
+        cost_function="local_classical",
+        n_layers=4,
+        maxiter=50,
+        tol=1e-6,
+        seed=42,
     )
 
     print("=" * 60)
     print("VQLS Example: 2-qubit variational linear solver")
     print("=" * 60)
     print(f"  Status              : {result.get('status')}")
-    print(f"  Fidelity            : {result.get('Fidelity'):.6f}")
-    print(f"  Relative Error      : {result.get('Relative Error'):.6e}")
-    print(f"  Residual Norm       : {result.get('Residual Norm'):.6e}")
+    fidelity = result.get("Fidelity")
+    fidelity_text = "None" if fidelity is None else f"{fidelity:.6f}"
+    print(f"  Fidelity            : {fidelity_text}")
+    print(f"  Ax fidelity         : {result.get('Ax Fidelity'):.6f}")
+    print(f"  Cost function       : {result.get('Cost Function')}")
+    print(f"  Condition number    : {result.get('Condition Number'):.6f}")
+    print(f"  Early stopped flag  : {result.get('Early Stopped')}")
     print(f"  Computation time    : {result.get('Computation Time (s)'):.4f} s")
     print(f"  Quantum solution    : {np.asarray(result.get('Solution State (Quantum)'))}")
     print(f"  Classical solution  : {np.asarray(result.get('Solution State (Classical)'))}")

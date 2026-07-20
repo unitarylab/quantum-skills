@@ -1,172 +1,364 @@
 ---
 name: "vqls"
-description: Variational Quantum Linear Solver for a fixed-structure linear system. This implementation constructs A internally as A = c₀A₀ + c₁A₁ + c₂A₂ and does not accept arbitrary user-provided A and b.
+description: Solve user-provided linear systems Ax = b with the UnitaryLab Variational Quantum Linear Solver, using a hardware-efficient ansatz and selectable local Hadamard-test, local classical, or global cost functions.
 ---
 
 # VQLS
 
 ## Purpose
 
-Use this skill for the `VQLS` algorithm implemented in `unitarylab_algorithms/linear_algebra/vqls`.
+Use this skill for the `VQLSAlgorithm` implementation in
+`unitarylab_algorithms/linear_algebra/vqls`.
 
-> **Important:** This implementation is a fixed-structure VQLS demo, not a general-purpose arbitrary-matrix linear solver. It does not accept arbitrary `A` and `b` as `run()` parameters. Instead, it internally constructs the linear system using `n_qubits` and `coefficients = [c0, c1, c2]`, forming `A = c_0 A_0 + c_1 A_1 + c_2 A_2`, while the right-hand side state `|b\rangle` is prepared internally.
+The current implementation accepts a caller-provided square matrix `A` and
+right-hand-side vector `b`. For dimensions that reach the main execution path,
+an `N × N` system uses `n_qubits = int(log2(N))`, and the power-of-two check
+requires `2**n_qubits == N`. Although `N=1` passes that check, the resulting
+zero-qubit circuits fail later, so the implementation does not successfully
+handle `1 × 1` systems.
+
+`A` is converted to complex dtype but is not normalized. `b` is flattened,
+converted to complex dtype, and normalized to `b_state = b / ||b||`. The
+returned quantum solution is the normalized state produced by the optimized
+Ansatz. The source does not guarantee that optimization converges or that this
+state approximates the exact solution.
 
 ## Source Of Truth
 
-- Algorithm source: `unitarylab_algorithms/linear_algebra/vqls/algorithm.py`
-- Parameter metadata: `unitarylab_algorithms/linear_algebra/vqls/parameters.json` or `setup.json`
-- Readme notes: `unitarylab_algorithms/linear_algebra/vqls/README_zh.md`, `README_en.md`, or `README.md`
+- Runtime behavior and public signature:
+  `unitarylab_algorithms/linear_algebra/vqls/algorithm.py`
+- Public exports:
+  `unitarylab_algorithms/linear_algebra/vqls/__init__.py`
+- UI metadata:
+  `unitarylab_algorithms/linear_algebra/vqls/parameters.json`
 
-## Using The Provided Implementation
+When these files disagree, follow the `VQLSAlgorithm.run()` implementation in
+`algorithm.py`.
+
+## Quick Start
 
 ```python
 import numpy as np
+
 from unitarylab_algorithms.linear_algebra.vqls.algorithm import VQLSAlgorithm
 
+A = np.array(
+    [
+        [1.5, 0.2],
+        [0.2, 1.8],
+    ],
+    dtype=complex,
+)
+b = np.array([1.0, 0.5], dtype=complex)
+
 algo = VQLSAlgorithm(text_mode="plain")
-result = algo.run(n_qubits=3, coefficients=None, max_iterations=200, tolerance=1e-06, initial_spread=0.5, backend='torch', device='cpu', dtype=np.complex128)
-print(result)
+result = algo.run(
+    A=A,
+    b=b,
+    cost_function="local_classical",
+    n_layers=4,
+    maxiter=500,
+    tol=1e-6,
+    seed=42,
+)
+
+print(result["status"])
+print(result["Fidelity"])
+print(result["Ax Fidelity"])
+print(result["Solution State (Quantum)"])
 ```
 
-Adjust the parameters according to the table below and the source `run()` signature.
+The example uses `"local_classical"` to avoid the explicit Hadamard-test
+execution path. The default `"local_ht"` mode constructs and executes
+statevector circuits for every required real and imaginary expectation value.
 
-> **Do not** call `algo.run(A=A, b=b)`. This implementation does not expose arbitrary `A` or `b` inputs. The matrix `A` is always constructed internally as `A = c_0 A_0 + c_1 A_1 + c_2 A_2`, and `|b\rangle` is prepared by applying Hadamard gates to all system qubits.
+## Run Signature
 
-## Core Parameters
+```python
+run(
+    A,
+    b,
+    cost_function="local_ht",
+    n_layers=4,
+    maxiter=500,
+    tol=1e-6,
+    seed=42,
+    epsilon=None,
+    backend="torch",
+    device="cpu",
+    dtype=np.complex128,
+)
+```
 
-| Parameter | Default | Description | Input Info |
-|---|---|---|---|
-| `n_qubits` | `3` | Number of system qubits. Must be greater than 0. | Use `2` or `3` for small verification runs. |
-| `coefficients` | `[1.0, 0.2, 0.2]` | Coefficients `[c0, c1, c2]` used to construct the internal matrix `A = c0*A0 + c1*A1 + c2*A2`. This is **not** an arbitrary matrix input — `A0, A1, A2` are fixed Pauli-structured operators generated from `n_qubits`. | 请输入列表（如 [1.0, 0.2, 0.2]） |
-| `max_iterations` | `200` | Max iterations | 请输入正整数，如 200 |
-| `tolerance` | `1e-6` | Convergence tolerance | 请输入浮点数，如 1e-6 |
-| `initial_spread` | `0.5` | Random initialization range for variational parameters. | Use a positive float. |
+## Parameters
 
-## Implementation Notes
+| Parameter | Default | Description |
+|---|---:|---|
+| `A` | required | Object with a usable `.shape` before validation. It is later converted to a complex NumPy array and must be square with power-of-two dimension. It is not normalized. |
+| `b` | required | Nonzero right-hand-side vector with length equal to `A.shape[0]`. It is flattened, converted to complex dtype, and normalized internally. |
+| `cost_function` | `"local_ht"` | Cost evaluation mode: `"local_ht"`, `"local_classical"`, or `"global"`. |
+| `n_layers` | `4` | Used by Python loops and by the parameter-count expression `2 * n_qubits * n_layers`. `run()` does not validate its type or range. |
+| `maxiter` | `500` | Forwarded to SciPy as COBYLA option `maxiter`. `run()` does not validate it. |
+| `tol` | `1e-6` | Forwarded to SciPy as COBYLA option `tol`. `run()` does not validate it. |
+| `seed` | `42` | Seed used to initialize Ansatz parameters uniformly in `[-0.5, 0.5]`. |
+| `epsilon` | `None` | For a local cost, converted with `float(epsilon)` and used in `gamma_stop = (1 / n_qubits) * (epsilon / kappa)**2`. It is not range-checked. No threshold is built for `"global"`. |
+| `backend` | `"torch"` | Passed to the explicit circuit executions inside `"local_ht"`. |
+| `device` | `"cpu"` | Passed to the explicit circuit executions inside `"local_ht"`. |
+| `dtype` | `np.complex128` | Passed to the explicit circuit executions inside `"local_ht"`. Ansatz and `U_b` matrix construction call `get_matrix()` without forwarding these three arguments. |
 
-- Main class: `VQLSAlgorithm`
-- Run signature observed from source: `run(n_qubits=3, coefficients=None, max_iterations=200, tolerance=1e-06, initial_spread=0.5, backend='torch', device='cpu', dtype=np.complex128)`
-- If result keys or generated output files change, update the usage example and return-field notes in this file.
+Use the source parameter names `maxiter` and `tol`. Do not use the obsolete
+names `max_iterations` or `tolerance` when calling `run()`.
+
+## Input Validation
+
+The implementation enforces the following:
+
+- `A` must be a two-dimensional square matrix.
+- `A.shape[0]` must be a power of two.
+- `len(b)` must equal `A.shape[0]`.
+- `b` must have nonzero norm.
+- `cost_function` must be one of `"local_ht"`, `"local_classical"`, and
+  `"global"`.
+
+Before converting `A` with `np.asarray`, `run()` records `A.shape`; a plain
+Python nested list therefore fails with `AttributeError` before the documented
+matrix validation.
+
+The implementation does not validate that:
+
+- `A` or `b` contains only finite values;
+- `A` is Hermitian, invertible, or well-conditioned;
+- `n_layers`, `maxiter`, `tol`, or `epsilon` has a valid type or range.
+
+An empty `0 × 0` matrix fails while converting `log2(0)` to `int`. A `1 × 1`
+matrix passes the power-of-two test with `n_qubits=0`, but the global and local
+classical paths later call `Circuit.get_matrix()` with zero qubits, while the
+local Hadamard-test cost has a zero-qubit divisor. No cost mode successfully
+supports this case.
+
+A singular matrix is not rejected before cost construction or optimization.
+If execution reaches `np.linalg.solve(A, b_state)` and that call raises
+`np.linalg.LinAlgError`, only that exception is caught:
+`Solution State (Classical)` and `Fidelity` are then set to `None`. Failures
+earlier in the cost path, condition-number calculation, or export are not
+converted into a result dictionary.
+
+## Pauli Decomposition And Endianness
+
+`run()` computes:
+
+```python
+is_real_sym = np.allclose(A, A.T) and np.allclose(A.imag, 0)
+terms = pauli_string_decomposition(
+    A,
+    partition_commuting=True,
+    real_symmetric_hint=is_real_sym,
+)
+```
+
+The called project function does not check Hermiticity. It computes Pauli
+coefficients, discards terms whose coefficient magnitude is not greater than
+`1e-10`, and greedily reorders retained terms into commuting groups before
+flattening them back into one list.
+
+Its labels are little-endian by character position: the leftmost character is
+qubit 0, the least-significant qubit. `_apply_controlled_pauli_string()`
+therefore maps `label[pos]` directly to system qubit `pos`.
+`_pauli_string_to_matrix()` reverses the label before applying Kronecker
+products, preserving the same qubit convention in the classical local-cost
+path.
+
+## Cost-Function Modes
+
+### `local_ht`
+
+For every retained Pauli-term pair `(l, lp)`, this path executes two circuits
+for `psi_norm` and two circuits for every system-qubit index `j`: one real
+circuit and one imaginary circuit. Each circuit is rebuilt at the current
+`theta`; the two zero-parameter `psi_norm` circuits created during setup are
+stored in local variables but are not used by the execution closures.
+
+Each circuit applies, in source order:
+
+1. `H` to the ancilla and, for the imaginary part, `S_dagger`;
+2. the Ansatz on the system qubits;
+3. controlled `P_l`;
+4. for a `mu_j` circuit only, `U_b_dagger`, `CZ(ancilla, j)`, then `U_b`;
+5. controlled `P_lp`;
+6. a final ancilla `H`.
+
+The code represents the active `j` with `z_angles[j] = pi`; that exact value
+takes the `qc.cz(...)` branch. For `psi_norm`, all angles are zero, so both
+`U_b` segments and controlled `Z` are skipped.
+
+Ancilla `Z` expectation values form complex values
+`re + 1j * im`. With `cp = coeffs[l] * conj(coeffs[lp])`, the implementation
+accumulates `psi_norm` over `(l, lp)` and `mu_sum` over `(l, lp, j)`, then
+returns:
+
+```text
+1.0,                                             if abs(psi_norm) < 1e-12
+real(0.5 - 0.5*abs(mu_sum)/(n_qubits*abs(psi_norm))), otherwise
+```
+
+### `local_classical`
+
+This path builds dense matrices `P_l`, `U_b`, `U_b_dagger`, and one `Z_j` per
+system qubit. For `x = x(theta)` and
+`cp = coeffs[l] * conj(coeffs[lp])`, its exact accumulations are:
+
+```text
+psi_norm += cp * <x| P_lp U_b U_b_dagger P_l |x>
+mu_sum   += cp * <x| P_lp U_b Z_j U_b_dagger P_l |x>
+```
+
+The second expression is summed over every `j`. It then uses the same
+piecewise return expression shown for `"local_ht"`. No code checks that the
+two local implementations produce equal numerical values.
+
+### `global`
+
+Uses
+
+```text
+C_G = 1 - |<b_state| (A|x> / ||A|x>||) |^2
+```
+
+If `||A|x>|| < 1e-12`, the function returns `1.0`. The `epsilon` threshold is
+not constructed for this mode. This path does not use the Pauli terms after
+they have been computed.
+
+## Ansatz And State Preparation
+
+The Ansatz starts with Hadamard gates on all system qubits. Each of its
+`n_layers` layers then applies:
+
+1. one `RY` rotation to every qubit;
+2. one `RZ` rotation to every qubit;
+3. a ring of CNOT gates when at least two qubits are present.
+
+The number of variational parameters is:
+
+```text
+2 * n_qubits * n_layers
+```
+
+`_build_Ub()` receives the normalized `b_state`. It uses only Hadamard gates
+when this exact source condition is true:
+
+```python
+uniform = np.ones(1 << n_qubits, complex) / np.sqrt(1 << n_qubits)
+np.allclose(b_state, uniform, atol=1e-10)
+```
+
+The call does not override `np.allclose`'s other defaults. Consequently, the
+fast path is specifically determined by this comparison to the positive,
+real-valued `uniform` array; the source does not separately recognize vectors
+that differ from it by a global phase.
+
+Otherwise, the code normalizes the received vector again, places it in the
+first column of a matrix, and performs Gram–Schmidt completion using
+computational-basis vectors in index order. Failure to complete all columns
+raises `RuntimeError`. It inserts `U` for `U_b` or `U.conj().T` for
+`U_b_dagger` as a `unitary` gate and calls the project `Unroll`. Only
+`NotImplementedError` from unrolling is caught; in that case the original
+unitary block is returned. Other construction or unrolling exceptions
+propagate.
+
+## Algorithm Flow
+
+1. Record input metadata, convert `A` and `b` to complex arrays, validate their
+   shapes, and normalize only `b`.
+2. Infer `n_qubits = log2(A.shape[0])` and compute `kappa = cond(A)`.
+3. Decompose `A` into Pauli strings and complex coefficients.
+4. Build the hardware-efficient Ansatz and selected cost function.
+5. Initialize `2 * n_qubits * n_layers` parameters from the seeded RNG.
+6. Evaluate the initial cost once as `c0`, then call:
+   `minimize(..., method="COBYLA", options={"maxiter": maxiter, "tol": tol,
+   "rhobeg": 0.5})`.
+7. Construct the normalized variational solution state.
+8. Compare it with `np.linalg.solve(A, b_state)` when the classical solve
+   succeeds, then normalize that classical result.
+9. Calculate `Ax Fidelity`, export a representative circuit, save text output,
+   and return the standard algorithm result dictionary.
+
+The first `c0` evaluation is logged but is not appended to `Cost History`.
+During SciPy objective calls, each cost is appended. For a local cost with
+non-`None` `epsilon`, `Early Stopped` becomes `True` when a tracked cost is at
+most `gamma_stop`. The branch that is intended to stop contains only `pass`;
+there is no callback, exception, or other interruption, so COBYLA continues.
 
 ## Return Fields
 
+The VQLS-specific output fields are:
+
 | Key | Type | Description |
 |---|---|---|
-| `status` | `str` | Execution status from the base return dict. |
-| `Fidelity` | `float` | Fidelity between the normalized variational solution and classical reference solution. |
-| `Relative Error` | `float` | Residual norm divided by `||b||`. |
-| `Residual Norm` | `float` | Norm of `A @ x_quantum - b`. |
-| `Solution State (Quantum)` | array-like | Normalized solution state produced by the optimized ansatz. |
-| `Solution State (Classical)` | array-like | Normalized classical reference solution. |
-| `Computation Time (s)` | `float` | Time spent in COBYLA optimization. |
-| `circuit_path` | `str` | Saved SVG circuit path for the visualization circuit. |
-| `plot` | `list` | Saved output file metadata from `save_txt()`. |
-| `circuit` | `Circuit` | Example circuit built for visualization. |
+| `Fidelity` | Python `float` or `None` | `_fidelity(x_cl, x_quantum)` after normalizing both arguments again. The helper has no zero-norm or finite-value guard, so the float can be `NaN`. It is `None` only when the caught classical solve raises `LinAlgError`. |
+| `Ax Fidelity` | Python `float` | `_fidelity(b_state, Ax_norm)`. If `||A @ x_quantum|| <= 1e-12`, `Ax_norm` is left unnormalized; a zero vector causes `_fidelity` to divide by zero and can produce `NaN`. |
+| `Cost Function` | `str` | Selected cost-function mode. |
+| `Condition Number` | Python `float` | `float(np.linalg.cond(A))`; it is not required to be finite. |
+| `Solution State (Quantum)` | `np.ndarray` | `_ansatz_state()` divides the simulated state by its norm without a zero/finite guard. |
+| `Solution State (Classical)` | `np.ndarray` or `None` | `np.linalg.solve(A, b_state)`, divided by its norm without a zero/finite guard; `None` on the caught `LinAlgError`. |
+| `Computation Time (s)` | Python `float` | Time from immediately after input logging to immediately after `minimize`; post-processing and file export are excluded. |
+| `Cost History` | `list` of Python `float` | Cost from every optimizer objective call; the separate initial `c0` evaluation is excluded. |
+| `Early Stopped` | `bool` | Whether a tracked local-cost call reached `gamma_stop`; it does not mean optimization was stopped. |
 
-## README-Derived Notes
+The actual base return fields are:
 
-# 变分量子线性求解器 (VQLS)
+| Key | Actual type and value |
+|---|---|
+| `status` | `str`; `"ok"` on every normal return because VQLS calls `_build_return_dict(True, ...)`, regardless of `result.success`. |
+| `circuit_path` | `str`; the path returned by `save_circuit()`. |
+| `plot` | `list[dict[str, str]]`; for the current text export it is `[{"format": "txt", "filename": "vqls_algorithm_result.txt"}]`. |
+| `circuit` | project `Circuit`; the decomposed circuit passed to `save_circuit()`. |
 
-## 参数设置
+There is no `file_path` key in the actual return dictionary.
 
-- `coefficients`: 线性组合系数 `[c_0, c_1, c_2]`，默认值为 `None`。当不显式提供时，代码使用默认系数 `[1.0, 0.2, 0.2]` 来构造矩阵 `A = c_0 A_0 + c_1 A_1 + c_2 A_2`。
-- `max_iterations`: 最大优化迭代次数，默认值为 `200`。
-- `tolerance`: COBYLA 优化的收敛容差，默认值为 `1e-6`。
+For `"local_ht"`, the code builds several representative circuits after
+optimization but exports only `hadamard_test_re`. It chooses representative
+indices from retained Pauli labels as follows: the first two non-identity
+terms when at least two exist; a mixed `rep_l=0`/single-non-identity selection
+when exactly one exists; otherwise indices zero. It chooses the first `Z` in
+the selected `rep_l` label, otherwise the first non-identity character,
+otherwise qubit zero. Empty Pauli decompositions can fail while indexing this
+selection.
 
-> **总结**：该算法使用变分量子线路求解特定结构的线性系统，先构造问题矩阵和右端态，再通过局部 Hadamard 测试定义损失函数，并用 COBYLA 优化参数化 Ansatz。最终计算得到的结果包括量子解与经典解的保真度、相对误差、残差范数、两种解态以及生成的量子电路文件。
+For `"local_classical"` and `"global"`, the exported circuit is the optimized
+Ansatz. In every mode the selected circuit is transformed with
+`decompose(n=2)` before saving. With the default output directory, the files
+are `results/vqls/vqls_algorithm_circuit.svg` and
+`results/vqls/vqls_algorithm_result.txt`. Saving or drawing failures
+propagate.
 
----
+## Important Implementation Notes
 
-## 目录
-
-- [运行流程](#运行流程)
-- [核心思想](#核心思想)
-- [数学原理](#数学原理)
-- [算法步骤](#算法步骤)
-- [量子优势](#量子优势)
-- [复杂度分析](#复杂度分析)
-- [应用与影响](#应用与影响)
-
----
-
-## 运行流程
-
-1. **参数准备与问题初始化**：检查 `n_qubits` 是否有效，设置系统量子位、辅助位和线性组合系数，并根据量子位数构造问题矩阵 `A_num`。
-2. **变分线路构造**：生成 `|b>` 的制备线路 `U_b`、参数化 Ansatz 线路，以及用于展示的局部 Hadamard 测试示例线路。
-3. **变分优化执行**：以随机初始化参数为起点，使用 COBYLA 最小化局部损失函数 `_cost_loc`，得到最优参数与最终损失。
-4. **经典后处理与精度分析**：根据最优参数提取量子解态，同时计算经典精确解，并评估保真度、相对误差和残差范数。
-5. **结果导出**：保存示例量子电路图、文本结果文件，并返回统一结果字典。
-
----
-
-## 核心思想
-
-VQLS 的核心思想是用一个参数化量子线路去表示候选解态 `|x(theta)>`，再通过专门设计的代价函数衡量 `A|x(theta)>` 与目标态 `|b>` 的接近程度。只要这个代价函数被压低到足够小，就说明当前参数对应的量子态已经接近线性方程组的解。与直接构造矩阵逆不同，VQLS 用“量子线路表示 + 经典优化器调参”的方式，把求解问题转化成混合量子经典优化任务。
-
----
-
-## 数学原理
-
-VQLS 使用变分量子算法求解线性方程组 `Ax = b`。
-
-> **关键约束：** 当前实现中的 VQLS **不是通用矩阵接口**。用户**不能直接传入任意矩阵 `A` 或向量 `b`**。代码会根据 `n_qubits` 生成固定结构的算子项 `A_0, A_1, A_2`，再通过 `coefficients = [c0, c1, c2]` 组合得到问题矩阵：
-$$
-A = c_0 A_0 + c_1 A_1 + c_2 A_2,
-$$
-其中 `A_0` 是单位矩阵，而 `A_1`、`A_2` 由代码根据 `n_qubits` 生成对应的 Pauli 结构；右端态 `|b\rangle` 则通过对每个系统量子位施加 Hadamard 门得到，同样不接受外部输入。
-
-VQLS 的关键是定义局部代价函数。代码通过局部 Hadamard 测试估计复数系数
-$$
-\mu_{l,l',j},
-$$
-并进一步计算
-$$
-\langle \psi | \psi \rangle
-$$
-与局部损失
-$$
-C_L = \frac{1}{2} - \frac{1}{2} \cdot \frac{|\sum_{l,l',j} c_l c_{l'}^* \mu_{l,l',j}|}{n\, \langle \psi | \psi \rangle}.
-$$
-当该损失趋近于零时，说明参数化解态已经较好满足 `A|x> ≈ |b>`。代码使用 COBYLA 迭代优化参数，并在优化结束后，将量子解态与经典解 `np.linalg.solve(A_num, b_state)` 进行对比。
-
----
-
-## 算法步骤
-
-1. 根据 `n_qubits` 和 `coefficients` 构造问题矩阵与目标态 `|b>`。
-2. 搭建 Ansatz、受控 `A_l` 操作和局部 Hadamard 测试线路。
-3. 用 COBYLA 优化变分参数，最小化局部损失函数。
-4. 提取量子解态，并计算经典参考解。
-5. 输出保真度、相对误差、残差范数和电路文件。
-
----
-
-## 量子优势
-
-| 任务 | 经典方法 | VQLS 优势 |
-|---|---|---|
-| 线性方程组求解 | 直接求逆或分解矩阵往往需要完整经典表示 | 可把求解过程转化为适合近似量子态制备和混合优化的问题，适合 NISQ 风格的变分框架 |
-
----
-
-## 复杂度分析
-
-该实现的成本主要由三部分决定：局部 Hadamard 测试线路的调用次数、每次量子态仿真的开销，以及 COBYLA 优化的迭代次数 `max_iterations`。由于损失函数在每次迭代中都要对多个 `l, l', j` 组合求值，量子线路评估次数会随系统量子位数和算子项数增长。因此，VQLS 的优势在于可变分近似求解，但代价是需要较多重复测量和经典优化回合。
-
----
-
-## 应用与影响
-
-- 适用于研究 NISQ 条件下的混合量子经典线性求解方法。
-- 可作为变分量子算法、局部 Hadamard 测试和量子线性代数教学示例。
-- 为进一步扩展到更一般的问题哈密顿量和参数化 Ansatz 提供基础框架。
+- `run()` accepts caller-provided `A` and `b`; it has no `n_qubits` or
+  `coefficients` parameters.
+- `A` is Pauli-decomposed internally with
+  `pauli_string_decomposition(..., partition_commuting=True,
+  real_symmetric_hint=is_real_sym)`.
+- `A` is not normalized. `b`, the Ansatz state, and a successfully computed
+  classical state are divided by their respective norms, but the latter two
+  divisions do not guard against zero or non-finite norms.
+- `epsilon` can set `Early Stopped=True` but does not interrupt COBYLA.
+- SciPy's `result.success` controls `self.status` (`"success"` or `"failed"`)
+  and the text file content, but the returned `status` remains `"ok"` on every
+  normal return.
+- The `parameters.json` defaults and names may lag behind the Python API.
+  Follow the `run()` signature in `algorithm.py`.
 
 ## Maintenance Checklist
 
-When updating this skill after algorithm changes:
+When the VQLS source changes:
 
-1. Re-read `algorithm.py` and parameter metadata.
-2. Update parameter defaults, constraints, return fields, and examples.
-3. Run or dry-run the updater skill script from the workspace root.
-4. Keep this leaf skill focused on usage and implementation guidance; keep category routing in the parent `SKILL.md`.
-5. Confirm whether the implementation still uses the fixed structure `A = c_0 A_0 + c_1 A_1 + c_2 A_2` or has been upgraded to accept arbitrary `A` and `b`. If upgraded, update the frontmatter description, Purpose notice, and all fixed-structure warnings accordingly.
+1. Re-read `algorithm.py`, especially `run()`, validation, cost construction,
+   output assembly, and the convenience `test()` function.
+2. Update examples, parameter names/defaults, supported cost modes, and return
+   fields from executable source behavior.
+3. Use `parameters.json` only to discover mismatches; do not let it override
+   executable behavior in `algorithm.py`.
+4. Verify whether `epsilon` now truly stops optimization before describing it
+   as functional early stopping.
+5. Keep this leaf skill focused on using and understanding the current VQLS
+   implementation.
