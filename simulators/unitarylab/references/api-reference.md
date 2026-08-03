@@ -1,6 +1,6 @@
 # UnitaryLab API Reference
 
-> This document lists all public interfaces exported by `__init__.py` files under `unitarylab`, `unitarylab/core`, `unitarylab/library`, and `unitarylab/algorithms`.
+> This document lists the primary circuit, simulator, and `unitarylab.library` interfaces in the current `unitarylab` package. It does not document the separate `unitarylab_algorithms` package.
 
 ---
 
@@ -8,28 +8,27 @@
 
 - [unitarylab (top-level)](#unitarylab-top-level)
 - [unitarylab.core](#unitarylabcore)
-  - [Circuit](#Circuit)
+  - [Circuit](#circuit)
   - [Register](#register)
   - [ClassicalRegister](#classicalregister)
+- [Execution backends and TensorNet](#execution-backends-and-tensornet)
+- [Transpilation](#transpilation)
+- [Serialization and OpenQASM](#serialization-and-openqasm)
 - [unitarylab.library](#unitarylablibrary)
-  - [Quantum Fourier Transform (QFT / IQFT)](#quantum-fourier-transform-qft)
-  - [Quantum Phase Estimation (QPE)](#quantum-phase-estimation-qpe)
-  - [Linear Combination of Unitaries (LCU)](#linear-combination-of-unitaries-lcu)
-  - [Quantum Signal Processing (QSP)](#quantum-signal-processing-qsp)
-  - [Quantum Singular Value Transformation (QSVT)](#quantum-singular-value-transformation-qsvt)
-  - [Block Encoding (block\_encode)](#block-encoding-block_encoding)
-  - [Hamiltonian Simulation (hamiltonian\_simulation)](#hamiltonian-simulation-hamiltonian_simulation)
-  - [Linear System Solver (solve)](#linear-system-solver-solve)
-  - [Differential Operators (differential\_operator)](#differential-operators-differential_operator)
-  - [Schrödingerization Solvers (schrodingerization)](#schrödingerization-solvers-schrodingerization)
-  - [Equation Parser (equation\_parser)](#equation-parser-equation_parser)
-- [unitarylab_algorithms](#unitarylabalgorithms)
-  - [PDE Solvers (schrodingerization)](#pde-solvers-schrodingerization)
-  - [Quantum Cryptology (cryptology)](#quantum-cryptology-cryptology)
-  - [Hamiltonian Simulation (hamiltonian\_simulation)](#hamiltonian-simulation-hamiltonian_simulation)
-  - [Fundamental Algorithms (fundamental\_algorithm)](#fundamental-algorithms-fundamental_algorithm)
-  - [Linear Algebra (linear\_algebra)](#linear-algebra-linear_algebra)
-  - [Quantum Machine Learning (quantum\_machine\_learning)](#quantum-machine-learning-quantum_machine_learning)
+  - [Differential Operators](#differential-operators-differential_operator)
+  - [QFT / IQFT](#quantum-fourier-transform-qft)
+  - [QPE](#quantum-phase-estimation-qpe)
+  - [LCU](#linear-combination-of-unitaries-lcu)
+  - [QSP](#quantum-signal-processing-qsp)
+  - [QSVT](#quantum-singular-value-transformation-qsvt)
+  - [Hamiltonian Simulation](#hamiltonian-simulation-hamiltonian_simulation)
+  - [Linear System Solver](#linear-system-solver-solve)
+  - [Schrödingerization](#schrödingerization-solvers-schrodingerization)
+  - [Equation Parser](#equation-parser-equation_parser)
+  - [Block Encoding](#block-encoding-block_encoding)
+  - [Pauli Operators](#pauli-operators)
+  - [PDE Algorithm Classes](#pde-algorithm-classes)
+- [Package boundary](#package-boundary)
 
 ---
 
@@ -43,7 +42,7 @@ The top-level `unitarylab` package re-exports the most commonly used symbols for
 
 | Symbol | Source | Description |
 |--------|--------|-------------|
-| `Circuit` | `unitarylab.core` | Quantum circuit container (see [Circuit](#Circuit)) |
+| `Circuit` | `unitarylab.core` | Quantum circuit container (see [Circuit](#circuit)) |
 | `Register` | `unitarylab.core` | Quantum register (see [Register](#register)) |
 | `ClassicalRegister` | `unitarylab.core` | Classical register (see [ClassicalRegister](#classicalregister)) |
 
@@ -83,11 +82,14 @@ Quantum circuit container. Wraps the backend gate-sequence implementation and ad
 | `Circuit(state_vector)` | Create a circuit initialized from a normalized state vector |
 | `Circuit(reg1, reg2, ...)` | Create a circuit from explicit `Register` / `ClassicalRegister` objects |
 
+For `Circuit(state_vector)`, pass a normalized one-dimensional `np.ndarray` whose length is a power of two. The constructor does not accept a Python list as a state vector.
+
 **Circuit management**
 
 | Method | Return | Description |
 |--------|--------|-------------|
 | `get_num_qubits()` | int | Total qubit count |
+| `get_num_clbits()` | int | Total classical-bit count |
 | `update_name(name)` | — | Rename the circuit |
 | `data()` | `GateSequence` | Return the underlying gate sequence object |
 | `copy()` | `Circuit` | Create an independent circuit copy with copied registers, mappings, and gate sequence |
@@ -111,7 +113,7 @@ Quantum circuit container. Wraps the backend gate-sequence implementation and ad
 | `sqrty(target)` | √Y gate |
 | `sqrtydag(target)` | √Y† gate |
 | `i(target)` | Identity |
-| `gp(target)` | Global phase |
+| `gp(angle)` | Global phase |
 
 **Parameterized single-qubit gates**
 
@@ -157,7 +159,7 @@ Quantum circuit container. Wraps the backend gate-sequence implementation and ad
 **Custom unitary**
 
 ```python
-qc.unitary(self, matrix, target, control=None, control_state=None)
+qc.unitary(matrix, target, control=None, control_state=None)
 ```
 
 Apply an arbitrary unitary matrix to `target` qubits. `matrix` must be a unitary ndarray of shape `(2^len(target), 2^len(target))`.
@@ -186,21 +188,26 @@ Map `target` qubit(s) to `clbit` classical bit(s). Measurement results are avail
 | `inverse()` | `Circuit` | Inverse circuit |
 | `reverse()` | `Circuit` | Return a new circuit with qubit indices mirrored |
 | `decompose(n=1, name=None)` | `Circuit` | Decompose composite gates |
-| `repeat(times=1)` | `Circuit` | Repeat circuit `times` times |
-| `control(num_control_qubits, control_state=None)` | `Circuit` | Add `num_ctrl_qubits` control qubits |
+| `repeat(times)` | `Circuit` | Repeat circuit `times` times |
+| `control(num_control_qubits, control_state=None)` | `Circuit` | Add `num_control_qubits` control qubits |
+| `transpile(gates_to_unroll=None, basis="default")` | `Circuit` | Return a transpiled circuit |
+
+Gate methods mutate the circuit and return `None`; call them on separate lines rather than chaining calls.
 
 **Execution**
 
 | Method | Return | Description |
 |--------|--------|-------------|
-| `execute(initial_state=None, backend="torch", device="cpu", dtype=np.complex64)` | `ExecutionResult` | Execute the circuit and return an object containing `.state` and `.classical_results_map` |
+| `execute(initial_state=None, backend="torch", device="cpu", dtype=np.complex128, shots=1, seed=42, backend_options=None)` | `ExecutionResult` | Execute the circuit; TensorNet returns a compatible `TensorNetExecutionResult` |
 | `get_matrix(m=None, backend="torch", dtype=np.complex128, device="cpu")` | `ndarray` | Compute the circuit matrix. If `m=None`, use all qubits. |
+
+Supported execution backends are `torch`, `numpy`, `cpp`, and `tensornet`. Use `device="gpu"` only with a compatible Torch installation. `backend_options` is TensorNet-only and accepts `max_bond`, `cutoff`, and `routing` (`"auto"`, `"swap"`, or `"mpo"`). `shots` must be a positive integer; `seed` must be a non-negative integer or `None`.
 
 **Visualization**
 
 | Method | Return | Description |
 |--------|--------|-------------|
-| `draw(filename=None, title=None, compact=True)` | Figure | Render circuit diagram. Saves to file when `filename` is provided. |
+| `draw(filename=None, title=None, compact=True, output="mpl", **kwargs)` | backend-specific | Draw with Matplotlib (`mpl`), text (`text`), or LaTeX (`latex`); save when supported and `filename` is provided. |
 | `analyze(sections=None, show=True, qubit=None)` | `CircuitInfo` | Print/return circuit analysis (gate count, depth, qubit history, etc.). |
 
 ---
@@ -263,30 +270,175 @@ Classical register for storing measurement results.
 | `state` | `np.ndarray` | Final statevector, converted lazily from the backend state. |
 | `backend_state` | backend object | Raw backend state, for example a torch tensor. |
 | `classical_results_map` | `dict[int, int]` | Final-shot measured classical-bit values. |
+| `shots` | int | Number of executions represented by the result. |
 | `counts` | `dict[str, int]` | Aggregated measured bitstrings when circuit measurements are present. |
 | `classical_registers` | `dict[str, list[int]]` | Classical values grouped by register name. |
-| `num_qubits` | int | Number of qubits inferred from `state`. |
+| `num_qubits` | int | Number of qubits represented by the backend state. |
 | `probabilities` | dict | Full computational-basis probability distribution. |
 
 **ExecutionResult methods**
 
 | Method | Return | Description |
 |--------|--------|-------------|
-| `numpy()` | tuple | `(statevector, classical_results_map)` as plain Python objects. |
-| `measure(target_indices, endian='little')` | str | Projective measurement on selected qubits; collapses `state`. |
-| `calculate_state(target_indices, endian='little', threshold=1e-5)` | dict | Marginal probability dict `{bitstring: {prob: float, int: int}}`. |
+| `probability(bitstring, qubits=None)` | float | Probability of one outcome. |
+| `marginal_probabilities(qubits=None, threshold=1e-12)` | dict | Probability distribution on selected qubits. |
+| `sample(shots=1, qubits=None, seed=None)` | list[str] | Sample without collapsing the stored state. |
+| `measure(target_indices, seed=None)` | str | Projectively measure selected qubits and collapse the stored state. |
+| `expectation(observable, qubits=None)` | complex | Return normalized observable expectation value. |
+
+The returned `.state` is a read-only one-dimensional NumPy view converted from `backend_state` on each access. For TensorNet, accessing `.state` contracts the MPS to a dense vector; prefer targeted probability, sampling, or expectation queries for larger systems.
+
+**Probability, sampling, and expectation example**
+
+```python
+from unitarylab import Circuit
+
+qc = Circuit(2)
+qc.h(0)
+qc.cx(0, 1)
+result = qc.execute(backend="numpy")
+
+print(result.probabilities)
+print(result.probability("00"))
+print(result.marginal_probabilities(qubits=[0]))
+print(result.sample(shots=10, qubits=[0, 1], seed=7))
+print(result.expectation("ZZ"))
+
+hamiltonian = [
+    (0.5, "ZZ", (0, 1)),
+    {"coeff": -0.25, "pauli": "X", "qubits": (0,)},
+]
+print(result.expectation(hamiltonian))
+```
+
+Supported observables are full Pauli strings, Pauli strings with explicit qubits, a finite Hermitian 2×2 matrix on one qubit, and lists of weighted tuple/mapping terms. Pauli labels are limited to `I`, `X`, `Y`, and `Z`.
+
+**Measurement and counts example**
+
+```python
+from unitarylab import Circuit, Register, ClassicalRegister
+
+q = Register("q", 2)
+c = ClassicalRegister("c", 2)
+qc = Circuit(q, c)
+qc.h(q[0])
+qc.cx(q[0], q[1])
+qc.measure(q[0:2], c[0:2])
+
+result = qc.execute(shots=1000, seed=42)
+print(result.counts)
+print(result.classical_results_map)
+print(result.classical_registers)
+```
+
+`counts` aggregates all shots. `classical_results_map` and `classical_registers` describe the final shot. Unmeasured classical bits use `#` in count keys and `-1` in register snapshots.
 
 ---
 
-## unitarylab.library
+## Execution backends and TensorNet
+
+| Backend | Device | Native state | Notes |
+|---------|--------|--------------|-------|
+| `torch` | `cpu`, `gpu` | PyTorch tensor | Default backend; GPU requires a compatible PyTorch installation. |
+| `numpy` | `cpu` | NumPy array | Dense statevector execution. |
+| `cpp` | `cpu` | NumPy-compatible result | Requires the packaged native `cppgates` extension. |
+| `tensornet` | `cpu` | `TensorNetState` | MPS execution with truncation and routing options. |
+
+Use `TensorNetState` for an MPS input or native MPS result:
 
 ```python
-from unitarylab.library import <symbol>
+import numpy as np
+from unitarylab import Circuit
+from unitarylab.backend.tensornet import TensorNetState
+
+dense_state = np.array([1, 0, 0, 0], dtype=np.complex128)
+mps_state = TensorNetState.from_statevector(dense_state, max_bond=64)
+
+qc = Circuit(2)
+qc.h(0)
+qc.cx(0, 1)
+result = qc.execute(
+    initial_state=mps_state,
+    backend="tensornet",
+    backend_options={"max_bond": 64, "cutoff": 1e-10, "routing": "auto"},
+)
+
+print(result.backend_state)
+print(result.backend_state.to_statevector())
+```
+
+MPS site tensors use `(left_bond, 2, right_bond)` order, with the first tensor representing qubit 0. Explicit `max_bond` and `cutoff` execution options override values stored in the input state. Statevector backends do not implicitly contract MPS inputs; call `to_statevector()` first.
+
+## Transpilation
+
+Prefer the circuit method for ordinary use:
+
+```python
+from unitarylab import Circuit
+
+qc = Circuit(3)
+qc.h(0)
+qc.mcx([0, 1], 2)
+transpiled = qc.transpile(basis="default")
+print(transpiled.draw(output="text"))
+```
+
+Advanced basis configuration is available through `GateBasis`, `DEFAULT_BASIS`, `GUODUN_BASIS`, and `Unroll`.
+
+## Serialization and OpenQASM
+
+```python
+from unitarylab import Circuit
+
+qc = Circuit(2)
+qc.rx(0.5, 0)
+qc.cx(0, 1)
+
+qasm3 = qc.to_qasm()
+qasm2 = qc.to_qasm2()
+restored = Circuit.from_qasm(qasm3)
+
+qc.to_qasm_file("circuit.qasm")
+from_file = Circuit.from_qasm_file("circuit.qasm")
+
+python_source = qc.to_python(variable_name="generated")
+qc.to_python_file("generated.py", variable_name="generated")
+```
+
+`from_qasm()` detects OpenQASM 2.0 or 3.0 from the header. `to_qasm()` and `to_qasm_file()` emit OpenQASM 3.0; `to_qasm2()` emits OpenQASM 2.0. OpenQASM 2 parsing currently ignores measurement statements, so use OpenQASM 3 when measurement-to-classical-bit mappings must survive a serialization round trip. For supported composite gates, retry export with `to_qasm(decompose=True, transpile=True)`. Python source generation currently supports native `rx`, `ry`, `rz`, `p`, and `cx`; unsupported or nested gates raise `RuntimeError`.
+
+
+## unitarylab.library
+
+Use the import path shown in each API section. Only the primary algorithm entry points are exported directly from `unitarylab.library`.
+
+```python
+from unitarylab.library import (
+    QFT,
+    IQFT,
+    QPE,
+    LCU,
+    QSP,
+    QSP_hamiltonian_simulation,
+    QSVT,
+    block_encode,
+    hamiltonian_simulation,
+    solve,
+)
 ```
 
 ---
 
 ### Differential Operators (differential_operator)
+
+```python
+from unitarylab.library.equation import (
+    CDiff,
+    TDiff,
+    ClassicalOperator,
+    TrotterOperator,
+)
+```
 
 #### `CDiff(N, dx, order=1, scheme='central', boundary='dirichlet')`
 
@@ -343,7 +495,7 @@ Base class for classical sparse-matrix operators. Supports addition, subtraction
 
 ---
 
-#### `TrotterOperator(H1_list, H2_list, theta_list, target_list)`
+#### `TrotterOperator(H1_list=[], H2_list=[], theta_list=[], target_list=[])`
 
 Base class for quantum Trotter operators. Manages multiple Trotter terms.
 
@@ -374,7 +526,7 @@ Construct an n-qubit Inverse Quantum Fourier Transform circuit (dagger of QFT).
 from unitarylab.library import QPE
 ```
 
-#### `QPE(U, d, prepare_target=None, return_circuit=False)`
+#### `QPE(U, d, prepare_target=None, return_circuit=False, backend='torch', device='cpu', dtype=np.complex128)`
 
 Estimates the eigenphase φ of unitary `U` such that `U|ψ⟩ = e^{2πiφ}|ψ⟩`, using a `d`-qubit phase register (precision 1/2^d).
 
@@ -384,6 +536,9 @@ Estimates the eigenphase φ of unitary `U` such that `U|ψ⟩ = e^{2πiφ}|ψ⟩
 | `d` | int | Number of phase-register qubits; precision = `1/2^d` |
 | `prepare_target` | `Circuit` \| None | Circuit preparing the eigenstate `|ψ⟩`; defaults to `|0⟩` |
 | `return_circuit` | bool | If `True`, return only the constructed `Circuit` without executing |
+| `backend` | str | Execution backend when `return_circuit=False`; default `"torch"` |
+| `device` | str | Execution device; default `"cpu"` |
+| `dtype` | dtype | Complex dtype; default `np.complex128` |
 
 **Returns** `(circuit, phi_est, probability)` — the QPE circuit, the estimated phase in `[0, 1)`, and its measurement probability.  
 If `return_circuit=True`, returns only the `Circuit`.
@@ -402,9 +557,11 @@ Builds a quantum circuit implementing `A = Σⱼ αⱼ Uⱼ` using the LCU techn
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `decompositions` | list[tuple[Circuit, float]] | List of `(unitary_circuit, coefficient)` pairs; all circuits must have the same qubit count; coefficients must be finite and positive |
+| `decompositions` | list[tuple[Circuit, float]] | `(unitary_circuit, coefficient)` pairs with matching circuit widths; coefficients must be finite and non-negative |
 
 **Returns** a `Circuit` acting on ancilla + system qubits that block-encodes `A / ‖α‖₁`.
+
+Zero-coefficient terms are skipped. At least one positive coefficient is required.
 
 ---
 
@@ -458,7 +615,7 @@ Simulates `exp(−iHt)` or `exp(iHt)` via QSP, given a `(alpha, m, 0)`-block-enc
 from unitarylab.library import QSVT
 ```
 
-#### `QSVT(H, function, target_error=1e-6, block_encoding_method='nagy')` → `QSVTResult`
+#### `QSVT(H, function, target_error=1e-6, block_encoding_method='nagy', backend='torch', device='cpu', dtype=np.complex128)` → `QSVTResult`
 
 Applies a scalar function `f(H)` to a Hermitian matrix `H` using the QSVT framework. Complex-valued functions are handled by splitting into real and imaginary parts.
 
@@ -468,8 +625,11 @@ Applies a scalar function `f(H)` to a Hermitian matrix `H` using the QSVT framew
 | `function` | `Callable` | Scalar function `f(x)`; applied element-wise to singular values |
 | `target_error` | float | Desired approximation error for polynomial fitting |
 | `block_encoding_method` | str | Block-encoding backend: `'nagy'` (default) or `'fable'` |
+| `backend` | str | Backend used for generated-circuit evaluation; default `"torch"` |
+| `device` | str | Execution device; default `"cpu"` |
+| `dtype` | dtype | Complex dtype; default `np.complex128` |
 
-**Returns** a `QSVTResult` object with `.circuit`, `.result_matrix`, and error metrics.
+**Returns** a `QSVTResult` with `.circuit`, `.evolution_result`, `.total_error`, and `.degree`.
 
 ---
 
@@ -479,7 +639,7 @@ Applies a scalar function `f(H)` to a Hermitian matrix `H` using the QSVT framew
 from unitarylab.library import hamiltonian_simulation
 ```
 
-#### `hamiltonian_simulation(H, t, method='trotter', target_error=1e-6, **kwargs)` → `HamiltonianSimulationResult`
+#### `hamiltonian_simulation(H, t, method='trotter', target_error=1e-6, backend='torch', device='cpu', dtype=np.complex128, **kwargs)` → `HamiltonianSimulationResult`
 
 Unified interface for Hamiltonian time-evolution. Constructs a circuit approximating `exp(−iHt)` using the selected method.
 
@@ -488,21 +648,26 @@ Unified interface for Hamiltonian time-evolution. Constructs a circuit approxima
 | `H` | `np.ndarray` | Square Hermitian matrix (dimension must be a power of 2, or padded automatically) |
 | `t` | float | Evolution time |
 | `method` | str | Simulation algorithm (see table below) |
-| `target_error` | float | Target precision (stored in result; some methods use it for step selection) |
+| `target_error` | float | Target precision |
+| `backend` | str | Execution backend; default `"torch"` |
+| `device` | str | Execution device; default `"cpu"` |
+| `dtype` | dtype | Complex dtype; default `np.complex128` |
 | `**kwargs` | — | Method-specific arguments |
 
 **Available methods:**
 
-| `method` | Algorithm |
-|----------|-----------|
-| `'trotter'` (default) | First/second-order Trotter–Suzuki product formula |
-| `'qdrift'` | Randomized qDRIFT channel |
-| `'taylor'` | Taylor-series truncation |
-| `'qsp'` or `'qsvt'` | QSP / QSVT block-encoding approach |
-| `'cartan-lax'` | Cartan decomposition via Lax-pair |
-| `'cartan-optimization'` | Cartan decomposition via optimization |
+| `method` | Algorithm | Method-specific `**kwargs` and defaults |
+|----------|-----------|-----------------------------------------|
+| `'trotter'` (default) | Trotter–Suzuki product formula | `order=1`, `steps=1000` |
+| `'qdrift'` | Randomized qDRIFT channel | `steps=5000` |
+| `'taylor'` | Taylor-series truncation | `degree=5` |
+| `'qsp'` or `'qsvt'` | QSP / QSVT block-encoding approach | `degree=15`, `beta=0.7`, `block_encoding_method='nagy'` |
+| `'cartan-lax'` | Cartan decomposition via Lax-pair | `evol_time=t`, `lr=1e-3`, `max_steps=100000`, `reps=5000` |
+| `'cartan-optimization'` | Cartan decomposition via optimization | `evol_time=t`, `lr=1e-3`, `max_steps=100000`, `optimizer='SD'` |
 
-**Returns** a `HamiltonianSimulationResult` with `.circuit`, `.exact_matrix`, `.approx_matrix`, and `.error`.
+Unsupported method-specific keywords raise `ValueError`.
+
+**Returns** a `HamiltonianSimulationResult` with `.circuit`, `.evolution_result`, `.total_error`, `.method`, and `.target_qubits`.
 
 ---
 
@@ -512,7 +677,7 @@ Unified interface for Hamiltonian time-evolution. Constructs a circuit approxima
 from unitarylab.library import solve
 ```
 
-#### `solve(A, b, method='hhl', **kwargs)` → `LinearSolverResult`
+#### `solve(A, b, method='hhl', backend='torch', device='cpu', dtype=np.complex128, precondition=None, **kwargs)` → `LinearSolverResult`
 
 Quantum linear-system solver for `Ax = b`.
 
@@ -521,25 +686,46 @@ Quantum linear-system solver for `Ax = b`.
 | `A` | `np.ndarray` | Coefficient matrix |
 | `b` | `np.ndarray` | Right-hand-side vector |
 | `method` | str | Solver algorithm (see table below) |
+| `backend` | str | Execution backend; default `"torch"` |
+| `device` | str | Execution device; default `"cpu"` |
+| `dtype` | dtype | Complex dtype; default `np.complex128` |
+| `precondition` | str \| None | `diagonal`/`jacobi`, `symmetric`/`ic`, `ilu`, or `None` |
 | `**kwargs` | — | Method-specific arguments |
 
 **Available methods:**
 
 | `method` | Algorithm | Extra kwargs |
 |----------|-----------|-------------|
-| `'hhl'` (default) | Harrow–Hassidim–Lloyd; requires Hermitian `A` | `d` (phase qubits, default 8), `t` (evolution time, auto if `None`) |
-| `'qsvt'` or `'qsvt_qlsa'` | QSVT-based quantum linear algebra | `epsilon` (polynomial accuracy, default 0.01) |
-| `'schro'` | Schrödingerization (auto select) | — |
-| `'schro_trotter'` | Schrödingerization via Trotter circuit | — |
-| `'schro_classical'` | Schrödingerization via matrix exponentiation | — |
+| `'hhl'` (default) | Harrow–Hassidim–Lloyd; requires Hermitian `A` | `d` (phase qubits, default 6), `t` (evolution time, auto if `None`) |
+| `'qsvt'` or `'qsvt_qlsa'` | QSVT-based quantum linear algebra | `epsilon` (target approximation accuracy, default `1e-3`) |
+| `'schro'` | Schrödingerization; defaults to the classical implementation | `type='classical'` by default |
+| `'schro_trotter'` | Schrödingerization; explicitly select the Trotter implementation | Pass `type='trotter'` |
+| `'schro_classical'` | Schrödingerization via matrix exponentiation | `type='classical'` by default |
+| `'aqc'` / `'discrete_adiabatic'` | Adiabatic solver | method-specific kwargs |
+| `'vqls'` | Variational quantum linear solver | method-specific kwargs |
+| `'cks'` | Chebyshev Krylov solver | `epsilon` and method-specific kwargs |
 
-**Returns** a `LinearSolverResult` with `.solution`, `.matrix`, `.rhs`, `.circuit`, `.scaling_factor`.
+**Returns** a `LinearSolverResult` with `.solution`, `.matrix`, `.rhs`, `.circuit`, `.scaling_factor`, and optional preconditioning metadata.
+
+The current dispatcher sends `schro`, `schro_trotter`, and `schro_classical` to `SCHROSolver` without deriving its `type` argument from the method name. Select the Trotter implementation explicitly:
+
+```python
+result = solve(A, b, method="schro_trotter", type="trotter")
+```
 
 ---
 
 ### Schrödingerization Solvers (schrodingerization)
 
-#### `schro_classical(A, u0, T=1, na=5, R=4, order=1, point=1, b=None, scale_b=1)` → `ndarray`
+```python
+from unitarylab.library.equation import (
+    schro_classical,
+    schro_trotter,
+    initial_schro_fp,
+)
+```
+
+#### `schro_classical(A, u0, T=1, na=5, R=4, order=2, point=1, b=None, scale_b=0.1)` → `ndarray`
 
 Solve the Schrödingerization-lifted Schrödinger equation via matrix exponentiation. Returns `u(T)`.
 
@@ -552,14 +738,14 @@ Applicable to ODE/PDE: `du/dt = A u + b`
 | `T` | float | Final time |
 | `na` | int | Auxiliary p-direction qubits (Nₐ = 2ⁿᵃ) |
 | `R` | float | p-domain range [-πR, πR] |
-| `order` | int | Smoothness order of the lifting function g(p) |
+| `order` | int | Smoothness order of the lifting function g(p); default `2` |
 | `point` | int | Recovery point index (default 1) |
 | `b` | ndarray \| None | Source term vector |
-| `scale_b` | float | Source term scaling factor |
+| `scale_b` | float | Source term scaling factor; default `0.1` |
 
 ---
 
-#### `schro_trotter(u0, H1=None, H2=None, Nt=1, na=3, R=4, order=1, point=0, b=None, theta=None)` → `(ndarray, Circuit)`
+#### `schro_trotter(u0, H1=None, H2=None, Nt=1, na=5, R=4, order=2, point=1, b=None, theta=None, device='cpu', backend='torch', dtype=np.complex128)` → `(ndarray, Circuit)`
 
 Solve the Schrödingerization-lifted Schrödinger equation via a Trotter quantum circuit. Returns `(u(T), quantum circuit)`.
 
@@ -575,6 +761,9 @@ Solve the Schrödingerization-lifted Schrödinger equation via a Trotter quantum
 | `point` | int | Recovery point index (≥0); `-1` sums over p≥0 |
 | `b` | ndarray \| None | Source term vector |
 | `theta` | float \| None | Source term strength scale (per-step time step × scale factor) |
+| `device` | str | Execution device; default `'cpu'` |
+| `backend` | str | Execution backend; default `'torch'` |
+| `dtype` | dtype | Complex dtype; default `np.complex128` |
 
 ---
 
@@ -591,6 +780,18 @@ Construct the initial lifting function g(p) for the auxiliary p-direction in Sch
 
 ### Equation Parser (equation_parser)
 
+```python
+from unitarylab.library.equation import parse_equation, Equation
+
+from unitarylab.library.equation.equation_parser import (
+    BoundaryCondition,
+    DiscreteFormat,
+    InitialCondition,
+    Preprocessing,
+    SolutionMethod,
+)
+```
+
 #### `parse_equation(json_data)` → `Equation`
 
 Parse a JSON configuration dictionary and construct a complete `Equation` object, including boundary conditions, initial values, discrete format, and solver settings.
@@ -599,7 +800,7 @@ Parse a JSON configuration dictionary and construct a complete `Equation` object
 
 | Attribute / Method | Description |
 |--------------------|-------------|
-| `eq.get_common_coefficients()` | Returns `(L, T, nx, na, R, order, point, f0)` and other common parameters |
+| `eq.get_common_coefficients()` | Returns `(L, T, source, nx, na, R, point, porder, f0)` |
 | `eq.boundary.type` | Boundary condition type string |
 | `eq.initial` | Initial condition object |
 | `eq.solver` | Solution method object |
@@ -619,14 +820,19 @@ Parse a JSON configuration dictionary and construct a complete `Equation` object
 
 ### Block Encoding (block_encoding)
 
-#### `block_encode(matrix, method='fable', eps=1e-3, verbose=False)` → `BlockEncodingResult`
+```python
+from unitarylab.library import block_encode
+from unitarylab.library.block_encoding import BlockEncodingResult, FABLE, Nagy
+```
+
+#### `block_encode(matrix, method='nagy', eps=1e-3, verbose=False)` → `BlockEncodingResult`
 
 Block-encode a given matrix and return a result object containing the quantum circuit.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `matrix` | ndarray \| list | Input matrix |
-| `method` | str | Encoding method: `'fable'` (default) or `'nagy'` |
+| `method` | str | Encoding method: `'nagy'` (default) or `'fable'` |
 | `eps` | float | Compression threshold for the FABLE method |
 | `verbose` | bool | Whether to print details |
 
@@ -640,9 +846,10 @@ Block-encode a given matrix and return a result object containing the quantum ci
 | `.target_qubits` | Number of target (system) qubits |
 | `.method` | Encoding method used |
 | `.eps` | FABLE compression threshold |
-| `.get_encoded_matrix()` | Return the encoded matrix |
-| `.get_unitary_matrix()` | Return the full unitary matrix |
-| `.get_max_error()` | Return the maximum error norm of the encoding |
+| `.matrix` | Original input matrix |
+| `.get_encoded_matrix(device='cpu')` | Return the extracted block multiplied by `alpha`, approximating the original input matrix |
+| `.get_unitary_matrix(device='cpu')` | Return the full unitary matrix |
+| `.get_max_error()` | Return `(get_encoded_matrix() - matrix).max()` as currently implemented; raises `ValueError` when the original matrix is unavailable |
 
 **Other exported classes:**
 
@@ -653,77 +860,49 @@ Block-encode a given matrix and return a result object containing the quantum ci
 
 ---
 
-## unitarylab_algorithms
+### Pauli Operators
 
 ```python
-from unitarylab_algorithms import <symbol>
+from unitarylab.library.pauli_operator import (
+    pauli_string_decomposition,
+    pauli_string_to_matrix,
+    pauli_string_circuit,
+    pauli_string_evolution,
+)
 ```
 
----
+#### `pauli_string_decomposition(H, sets=None, partition_commuting=True, real_symmetric_hint=False)`
 
-### PDE Solvers (schrodingerization)
+Decompose a matrix into Pauli-string terms. Use `sets` to restrict the candidate Pauli words and `partition_commuting=True` to group commuting terms.
 
-All PDE algorithm classes inherit from `BaseAlgorithm` and are executed via `.run(eq)` or `.solve(eq)`.
+| API | Returns | Purpose |
+|---|---|---|
+| `pauli_string_to_matrix(decomposition)` | `ndarray` | Convert a Pauli string, term, mapping, or term list back to a matrix. |
+| `pauli_string_circuit(pauli_string)` | `Circuit` | Build a circuit implementing one Pauli word. |
+| `pauli_string_evolution(pauli_string, theta)` | `Circuit` | Build a parameterized Pauli-evolution circuit. |
 
-| Class | Equation |
-|-------|----------|
-| `HeatEquationAlgorithm` | 1D heat equation |
-| `Heat2dEquationAlgorithm` | 2D heat equation |
-| `AdvectionEquationAlgorithm` | 1D advection equation |
+The subpackage also exports `pauli_string_multiply`, `pauli_string_product`, and `pauli_string_power` for explicit Pauli-expression algebra.
 
----
+### PDE Algorithm Classes
 
-### Quantum Cryptology (cryptology)
+PDE implementations are exported from `unitarylab.library.equation.examples`:
 
-| Class | Algorithm |
-|-------|-----------|
-| `SimonAlgorithm` | Simon's algorithm (hidden subgroup problem) |
-| `ShorAlgorithm` | Shor's factoring algorithm |
-| `DiscreteLogAlgorithm` | Discrete logarithm algorithm |
+```python
+from unitarylab.library.equation.examples import HeatEquationAlgorithm
+```
 
----
+| Category | Classes |
+|---|---|
+| Heat | `HeatEquationAlgorithm`, `Heat2dEquationAlgorithm`, `HeatVariableCoefficientEquationAlgorithm` |
+| Advection and transport | `AdvectionEquationAlgorithm`, `MultiTransportEquationAlgorithm`, `TrafficFlowEquationAlgorithm` |
+| Backward heat | `backHeatEquationAlgorithm`, `backHeat2dEquationAlgorithm` |
+| Nonlinear | `BurgersEquationAlgorithm`, `Burgers2DEquationAlgorithm`, `HamiltonJacobiEquationAlgorithm` |
+| Wave and field | `ElasticWaveEquationAlgorithm`, `ElasticWave2DEquationAlgorithm`, `HelmholtzEquationAlgorithm`, `MaxwellEquationAlgorithm` |
+| Finance and stochastic | `BlackScholesEquationAlgorithm`, `OUProcessEquationAlgorithm` |
+| Other | `SchrABCEquationAlgorithm`, `MultiEllipticEquationAlgorithm`, `GeneralLinearEquationAlgorithm` |
 
-### Hamiltonian Simulation (hamiltonian_simulation)
+Inspect the selected class or use the relevant algorithm skill before constructing its task-specific parameter dictionary; PDE classes do not share one universal parameter schema.
 
-| Class | Algorithm |
-|-------|-----------|
-| `SuzukiTrotterAlgorithm` | Suzuki-Trotter product formula |
-| `CartanDecompositionAlgorithm` | Cartan decomposition exact simulation |
-| `CrankNicolsonAlgorithm` | Crank-Nicolson implicit time evolution |
-| `QDriftAlgorithm` | qDRIFT randomized Trotter method |
-| `TridiagonalSimulationAlgorithm` | Tridiagonal Hamiltonian simulation |
+## Package Boundary
 
----
-
-### Fundamental Algorithms (fundamental_algorithm)
-
-| Class | Algorithm |
-|-------|-----------|
-| `AmplitudeAmplificationAlgorithm` | Amplitude amplification (generalized Grover) |
-| `AmplitudeEstimationAlgorithm` | Amplitude estimation |
-| `HadamardTransformAlgorithm` | Hadamard transform |
-| `HadamardTestAlgorithm` | Hadamard test |
-| `QPEAlgorithm` | Quantum Phase Estimation (QPE) |
-
----
-
-### Linear Algebra (linear_algebra)
-
-| Class | Algorithm |
-|-------|-----------|
-| `HHLAlgorithm` | HHL linear systems algorithm |
-| `LCUAlgorithm` | Linear Combination of Unitaries (LCU) |
-| `QSVTLinearSolverAlgorithm` | Quantum Singular Value Transformation linear solver (QSVT-QLSA) |
-| `QSPAlgorithm` | Quantum Signal Processing (QSP) |
-
----
-
-### Quantum Machine Learning (quantum_machine_learning)
-
-| Class | Algorithm |
-|-------|-----------|
-| `QCBMAlgorithm` | Quantum Circuit Born Machine (QCBM) |
-| `CVQNNAlgorithm` | Continuous-Variable Quantum Neural Network (CV-QNN) |
-| `VQCAlgorithm` | Variational Quantum Classifier (VQC) |
-| `QAOAAlgorithm` | Quantum Approximate Optimization Algorithm (QAOA) |
-| `VQEAlgorithm` | Variational Quantum Eigensolver (VQE) |
+`unitarylab.library` and its equation, Pauli, block-encoding, Hamiltonian, and linear-solver subpackages belong to the current package. `unitarylab_algorithms` is separate and is intentionally not documented here.

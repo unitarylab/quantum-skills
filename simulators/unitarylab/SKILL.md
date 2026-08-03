@@ -1,216 +1,103 @@
 ---
 name: unitarylab
-description: UnitaryLab is a quantum computing framework for education and research. It offers a simple interface for building and simulating quantum circuits, making it suitable for learning, teaching, and experimenting with quantum algorithms.
+description: Use UnitaryLab for local quantum circuit construction, simulation, measurement, expectation values, transpilation, drawing, serialization, and algorithms provided by unitarylab.library. Trigger for runnable UnitaryLab workflows; consult bundled references for package APIs and dedicated algorithm skills for algorithm-specific workflows.
 ---
 
 # UnitaryLab
 
 ## Purpose
-Use UnitaryLab as the default local simulator for quantum skill tasks.
 
-Choose it when you need:
-- Fast circuit prototyping.
-- Educational algorithm demonstrations.
-- Small, runnable examples with clear outputs.
+Use UnitaryLab when the task needs:
 
----
+- Quantum circuit construction.
+- Local statevector or tensor-network simulation.
+- Measurement, sampling, or expectation values.
+- Circuit analysis, drawing, or transpilation.
+- OpenQASM or Python serialization.
 
-## Environment Installation
+Keep this file as the simulator entry point. Use the references for implementation details and do not reproduce complete API or algorithm documentation here.
 
-> **Rule: Only install the environment when the user is about to run or execute code.**
-> If the task is explanation, circuit design, concept review, or code writing without execution, skip all installation steps and proceed directly to the relevant section.
+## Installation Rule
 
-### Decision: Do I need to install?
+Install only when code will actually be executed.
 
-```
-Is the user asking to RUN or EXECUTE a script?
-│
-├─ YES → Check environment (see "Installation Steps" below)
-│
-└─ NO  → Skip installation entirely.
-         Introduce UnitaryLab concepts, write code, explain circuits.
-         No conda, no pip, no wheel needed.
-```
+- Install for run, execute, verification, or import-error requests.
+- Skip installation for explanation, circuit design, code generation, and review.
 
-### Conditions that require installation
+Check the active environment first:
 
-Install **only** when one of these is true:
-1. The user says "run", "execute", or "try" the code.
-2. You are about to call a terminal command that imports `unitarylab`.
-3. The user reports a `ModuleNotFoundError: unitarylab` error.
-4. A script exists and the user wants to verify its output.
-
-### Conditions that do NOT require installation
-
-Skip installation when:
-- Explaining what UnitaryLab is or how it works.
-- Writing or reviewing circuit code without running it.
-- Answering questions about API methods or gate behavior.
-- Designing an algorithm at a conceptual level.
-- Showing code examples inline (without executing them).
-
----
-
-### Step-by-Step Installation
-
-### Install `uv` First (before any `uv ...` command)
-
-Use a Python-based install first (works across Windows, macOS, and Linux):
-
-```bash
-python -m pip install -U uv
-```
-
-If `python` is not on PATH, use your interpreter explicitly:
-
-```bash
-python3 -m pip install -U uv
-```
-
-If pip-based install is unavailable in your environment, use OS-specific installers:
-
-```bash
-# Windows (PowerShell)
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# macOS / Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-Then verify:
-
-```bash
-uv --version
-```
-
-#### Using `uv` (Recommended)
-
-download via pip
-```bash
-# Ensure `uv` is installed first (see section above)
-uv venv --python 3.11
-uv pip install unitarylab
-uv run python -c "import unitarylab; print('UnitaryLab OK')"
-```
-
-#### Using `conda`
-```bash
-# Step 1 — Create a Python 3.11 conda environment (skip if already exists)
-conda create -n unitarylab-env python=3.11
-
-# Step 2 — Activate it
-conda activate unitarylab-env
-
-# Step 3 — Install UnitaryLab from the pip matching your OS
-python -m pip install unitarylab
-
-# Step 4 — Verify installation
-python -c "import unitarylab; print('UnitaryLab OK')"
-```
-
-**Note**
-
-- Package name: `unitarylab`
-- Import name: `unitarylab`
-- Wheels are platform-specific; using the wrong wheel will result in a "not supported on this platform" error.
-
-### Verify Before Running Any Script
-
-Before executing user code, confirm:
 ```bash
 python -c "from unitarylab import Circuit; print('OK')"
 ```
-If this prints `OK`, proceed. If it raises `ModuleNotFoundError`, go back to Step 3.
 
----
+If the import fails and installation is authorized:
 
-## Minimal Executable Example
-
-```python
-import numpy as np
-from unitarylab import Circuit
-
-qc = Circuit(2)
-qc.h(0)
-qc.cx(0, 1)
-
-initial_state = np.array([1.0, 0.0, 0.0, 0.0], dtype=complex)
-
-result = qc.execute(initial_state.copy())
-final_state = result.state
-
-probs = np.abs(final_state) ** 2
-
-print(final_state)
-print(probs)  # expected: probabilities concentrated on |00⟩ and |11⟩
+```bash
+python -m pip install unitarylab
 ```
 
----
+Use an existing virtual environment when available. Do not create or replace environments unless execution requires it.
 
-## Working Standard for Future Examples
-- When the user asks to run, verify, or demonstrate executable behavior, do not stop at circuit construction; execute the circuit and print at least one validation artifact.
-- Print at least one validation artifact:
-    - final statevector, or
-    - measurement probabilities.
-- Include expected behavior in one line.
+## Minimal Example
 
----
+```python
+from unitarylab import Circuit
+
+circuit = Circuit(2)
+circuit.h(0)
+circuit.cx(0, 1)
+
+result = circuit.execute(backend="numpy")
+print(result.state)
+print(result.probabilities)
+```
+
+Expected Bell-state probabilities are approximately `{"00": 0.5, "11": 0.5}`.
+
+## Simulator Entry
+
+Follow this high-level flow:
+
+1. Convert the request into qubits, gates, measurements, execution constraints, and requested output.
+2. Create a `Circuit` and add operations in program order.
+3. Choose the backend according to scale and output needs.
+4. Execute only when requested.
+5. Return the smallest useful result and explain the little-endian basis convention when relevant.
+6. Consult the references before using unfamiliar signatures or advanced features.
+
+When running a demonstration, print at least one validation artifact such as a statevector, probability distribution, counts, or expectation value.
+
+## Agent Decision
+
+| User need | Route |
+|---|---|
+| Build or simulate a circuit | Use the workflow in [references/circuitsbuild.md](references/circuitsbuild.md). |
+| Measurement counts | Use its measurement workflow with `shots` and `seed`. |
+| Sampling without collapse | Use its ExecutionResult sampling workflow. |
+| Observable or Hamiltonian expectation | Use its expectation workflow. |
+| Large low-entanglement simulation | Use TensorNet and avoid unnecessary dense results. |
+| Circuit lowering or target basis | Use transpilation guidance. |
+| QASM import/export or Python generation | Use serialization guidance. |
+| Simulator signature, parameter, or return-type lookup | Read [references/api-reference.md](references/api-reference.md). |
+| Circuit depth, gate counts, or structure analysis | Read [references/CircuitInfo.md](references/CircuitInfo.md). |
+| QFT, QPE, QSP, QSVT, LCU, block encoding, linear solving, Hamiltonian simulation, or equation algorithms | Use the `unitarylab.library` API in [references/api-reference.md](references/api-reference.md); consult the relevant algorithm skill for the full workflow. |
 
 ## Common Pitfalls
 
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `ModuleNotFoundError: unitarylab` | Wheel not installed in active environment. | Run `pip install unitarylab` in the active env. |
-| `Wheel is not supported on this platform` | Wrong wheel for your OS/architecture, or wrong Python version. | Use Python 3.11 and pick the correct wheel: `win_amd64` (Windows), `macosx_11_0_arm64` (macOS), or `linux_x86_64` (Linux). |
-| Wrong conda environment active | `conda activate` not run. | Run `conda activate unitarylab-env` before executing. |
-| `unitarylab` imports but results are wrong | Initial state not copied before passing to `execute()`. | Always pass `initial_state.copy()` to preserve the original. |
+| Problem | Response |
+|---|---|
+| `ModuleNotFoundError: unitarylab` | Install in the active environment only when execution is required. |
+| Backend or device is unavailable | Select a supported local backend; fall back to NumPy or Torch CPU when appropriate. |
+| TensorNet state is sent to a statevector backend | Use TensorNet or convert the input to a statevector. |
+| TensorNet options are used with another backend | Remove them or select TensorNet. |
+| Invalid `shots` | Require a positive integer. |
+| Invalid `seed` | Require a non-negative integer or `None`. |
+| Result interpretation is ambiguous | Check little-endian basis labels and use the targeted result query described in the Agent Guide. |
 
----
+## References
 
-## Library API Quick Reference
+- [references/api-reference.md](references/api-reference.md): primary simulator and `unitarylab.library` signatures, parameters, return values, and advanced capabilities.
+- [references/circuitsbuild.md](references/circuitsbuild.md): Quantum Circuit Agent Guide for construction, execution, measurement, backend selection, TensorNet, transpilation, and serialization.
+- [references/CircuitInfo.md](references/CircuitInfo.md): circuit analysis, depth, gate counts, layers, coupling maps, and qubit history.
 
-> **Agent instruction:** Before writing any code that calls a high-level quantum algorithm, scan this table first to find the right symbol. Then open `./references/api-reference.md` → `unitarylab.library` for the full parameter list and return types.
-
-All high-level quantum algorithms are in `unitarylab.library`:
-
-```python
-from unitarylab.library import <symbol>
-```
-
-| Symbol | Key signature | What it does |
-|--------|--------------|--------------|
-| `QFT` | `QFT(n)` | Returns an `n`-qubit QFT `Circuit` |
-| `IQFT` | `IQFT(n)` | Returns an `n`-qubit inverse QFT `Circuit` (dagger of QFT) |
-| `QPE` | `QPE(U, d, prepare_target=None, return_circuit=False)` | Quantum Phase Estimation — estimates the phase of unitary `U` using `d` ancilla qubits; returns `(circuit, phi_est, probability)` |
-| `LCU` | `LCU(decompositions)` | Linear Combination of Unitaries — implements `A = Σ αⱼ Uⱼ` from a list of `(Circuit, coeff)` pairs |
-| `QSP` | `QSP(U, n, m, coef, parity, ...)` | Quantum Signal Processing — builds a circuit that applies a polynomial transformation to a block-encoded unitary |
-| `QSP_hamiltonian_simulation` | `QSP_hamiltonian_simulation(U_H, n, alpha, m, t, epsilon, beta, flag)` | Hamiltonian simulation via QSP; approximates `exp(−iHt)` from a block-encoding `U_H` of `H` |
-| `QSVT` | `QSVT(H, function, target_error=1e-6, block_encoding_method='nagy')` | Quantum Singular Value Transformation — applies a scalar function `f(H)` to Hermitian matrix `H`; returns `QSVTResult` |
-| `block_encode` | `block_encode(matrix, method='fable', eps=1e-3, verbose=False)` | Block-encodes a matrix; returns `BlockEncodingResult` (`.circuit`, `.alpha`, `.get_encoded_matrix()`, …) |
-| `hamiltonian_simulation` | `hamiltonian_simulation(H, t, method='trotter', target_error=1e-6, **kwargs)` | Simulate `exp(−iHt)` for Hermitian `H`; available methods: `'trotter'`, `'qdrift'`, `'taylor'`, `'qsp'`/`'qsvt'`, `'cartan-lax'`, `'cartan-optimization'` |
-| `solve` | `solve(A, b, method='hhl', **kwargs)` | Quantum linear-system solver for `Ax = b`; methods: `'hhl'` (default), `'qsvt'`, `'schro'`, `'schro_trotter'`, `'schro_classical'` |
-
-**Choose a function:**
-- Need to encode a matrix into a circuit? → `block_encode`
-- Need to evolve a Hamiltonian in time? → `hamiltonian_simulation`
-- Need to solve a linear system? → `solve`
-- Need phase estimation on a known unitary? → `QPE`
-- Need a polynomial function of a matrix? → `QSVT`
-- Need to decompose an operator as a sum of unitaries? → `LCU`
-- Need QFT as a sub-circuit? → `QFT` / `IQFT`
-
----
-
-## API Read-and-Recall Workflow
-Before writing code, read the local API docs in this order:
-
-### Reference
-- Simulator API reference: `./references/api-reference.md`
-- Circuit building details: `./references/circuitsbuild.md`
-
-
-When to re-open the API docs:
-- You are unsure about method names or argument order.
-- You are unsure about expected input state format.
-- You need multi-qubit gates, controlled gates, or less common operations.
-- A script runs but outputs look physically wrong (normalization or basis-order issues).
+Read only the reference needed for the current task.

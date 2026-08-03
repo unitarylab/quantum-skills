@@ -1,361 +1,79 @@
-# CircuitInfo User Guide
+# Circuit Analysis Reference
 
-## Introduction
+Use circuit analysis when the user asks for circuit depth, gate counts, instruction structure, parallel layers, qubit usage, coupling relationships, parameters, or one qubit's operation history.
 
-`CircuitInfo` is a helper class for statically analyzing quantum circuits. It takes a `Circuit` object, extracts gate data from `qc.gate_sequence.data()`, reads the total number of qubits from `qc.get_num_qubits()`, and provides a set of circuit analysis utilities:
-
-- **Circuit Overview**: Basic statistics including qubit count, gate count, and circuit depth
-- **Gate Statistics**: Detailed analysis of gate types and counts (single-qubit, two-qubit, multi-qubit, parameterized)
-- **Structural Analysis**: Layered gate scheduling, instruction lists, and coupling maps
-- **Qubit Analysis**: Qubit usage patterns and operation histories
-- **Parameter Tracking**: Collection and analysis of parameterized gate parameters
-- **Visualization**: Pretty-print methods for easy viewing of circuit information
-
-This tool is essential for quickly obtaining circuit structure information when building, debugging, or optimizing quantum circuits.
-
-## Quick Start
-
-### 1. Import and Create the Circuit
+## Minimal Workflow
 
 ```python
 from unitarylab import Circuit
-import numpy as np
 
-qc = Circuit(4)
+circuit = Circuit(3)
+circuit.h(0)
+circuit.cx(0, 1)
+circuit.rz(0.5, 2)
 
-qc.x(0)
-qc.cx(0, 1)
-qc.h(0)
-qc.rz(np.pi / 4, 1)
-qc.mcx([0,1],3)
-
-qc.analyze()
-
+info = circuit.analyze(show=False)
+print(info.get_summary())
 ```
 
-**Output example:**
+Prefer `circuit.analyze(show=False)` when the result will be processed or returned programmatically. Use `show=True` only when formatted console output is requested.
+
+## Select the Required Data
+
+| User need | Call |
+|---|---|
+| Qubit count, gate count, depth, and gate histogram | `info.get_summary()` |
+| Gate count | `info.size()` |
+| Circuit depth | `info.depth()` |
+| Gate histogram | `info.count_ops()` |
+| Instruction records | `info.get_instructions()` |
+| Parallel layers | `info.get_layers()` |
+| Qubit usage counts | `info.get_qubit_usage()` |
+| Coupling pairs | `info.get_coupling_map()` |
+| Parameterized-gate values | `info.get_parameters()` |
+| Whether parameters are present | `info.is_parameterized()` |
+| One qubit's operation history | `info.get_qubit_history(qubit)` |
+| All structured analysis data | `info.to_dict()` |
+
+Return the smallest structure that answers the request. Do not print every analysis section by default.
+
+## Formatted Output
+
+Pass one section or a collection of sections to `Circuit.analyze()`:
 
 ```python
-
-
-====================================================
-                  Circuit Overview
-====================================================
-Qubits              : 4
-Total Gates         : 5
-Circuit Depth       : 4
-Single-Qubit Gates  : 3
-Two-Qubit Gates     : 1
-Multi-Qubit Gates   : 1
-Parameterized Gates : 1
-Parameterized       : True
-
-Gate Counts
-  - x               : 1
-  - cx              : 1
-  - h               : 1
-  - rz              : 1
-  - mcx             : 1
-
-Qubit Usage
-  - q0              : 4
-  - q1              : 3
-  - q2              : 0
-  - q3              : 1
-
-Coupling Map
-  - q0 <-> q1
-  - q0 <-> q3
-  - q1 <-> q3
-====================================================
-
-====================================================
-                  Instructions
-====================================================
-[0] x
-    raw_name         : x
-    target           : [0]
-    control          : []
-    params           : {}
-    control_state : None
-----------------------------------------------------
-[1] cx
-    raw_name         : cx
-    target           : [1]
-    control          : [0]
-    params           : {}
-    control_state : [1]
-----------------------------------------------------
-[2] h
-    raw_name         : h
-    target           : [0]
-    control          : []
-    params           : {}
-    control_state : None
-----------------------------------------------------
-[3] rz
-    raw_name         : rz
-    target           : [1]
-    control          : []
-    params           : {'value': 0.7853981633974483}
-    control_state : None
-----------------------------------------------------
-[4] mcx
-    raw_name         : mcx
-    target           : [3]
-    control          : [0, 1]
-    params           : {}
-    control_state : [1, 1]
-----------------------------------------------------
-====================================================
-
-====================================================
-                     Layers
-====================================================
-Layer 0
-  - x         target=[0]  control=[]  params={}
-  - rz        target=[1]  control=[]  params={'value': 0.7853981633974483}
-----------------------------------------------------
-Layer 1
-  - cx        target=[1]  control=[0]  params={}
-----------------------------------------------------
-Layer 2
-  - h         target=[0]  control=[]  params={}
-----------------------------------------------------
-Layer 3
-  - mcx       target=[3]  control=[0, 1]  params={}
-----------------------------------------------------
-====================================================
-
+circuit.analyze(sections="overview")
+circuit.analyze(sections=["instructions", "layers"])
+circuit.analyze(sections="qubit_history", qubit=0)
 ```
 
-### 2. Display Circuit Overview
+Supported sections are:
 
-```python
-info = qc.analyze(show=False)
+- `overview` or `summary`
+- `instructions`
+- `layers`
+- `qubit_usage`
+- `coupling_map`
+- `parameters`
+- `qubit_history` with an explicit `qubit`
 
+With `sections=None`, formatted output includes overview, instructions, and layers.
 
-info.show("overview") 
-# or
-info.show("summary")  
-```
+## Interpretation Rules
 
-**Output example:**
+- Depth is computed by grouping gates into layers without qubit conflicts.
+- Gate width includes target and control qubits.
+- Coupling-map entries are undirected qubit pairs appearing in multi-qubit operations.
+- Instruction records include targets, controls, parameters, and control state.
+- `get_summary()` includes aggregate statistics, qubit usage, and the coupling map.
+- `to_dict()` adds instructions, layers, and parameters.
 
-```python
+## Common Errors
 
-====================================================
-                  Circuit Overview
-====================================================
-Qubits              : 4
-Total Gates         : 5
-Circuit Depth       : 4
-Single-Qubit Gates  : 3
-Two-Qubit Gates     : 1
-Multi-Qubit Gates   : 1
-Parameterized Gates : 1
-Parameterized       : True
-
-Gate Counts
-  - x               : 1
-  - cx              : 1
-  - h               : 1
-  - rz              : 1
-  - mcx             : 1
-
-Qubit Usage
-  - q0              : 4
-  - q1              : 3
-  - q2              : 0
-  - q3              : 1
-
-Coupling Map
-  - q0 <-> q1
-  - q0 <-> q3
-  - q1 <-> q3
-====================================================
-```
-
-### 3. View Instruction List
-
-```python
-info.show("instructions")
-```
-
-**Output example:**
-
-```python
-
-====================================================
-                  Instructions
-====================================================
-[0] x
-    raw_name         : x
-    target           : [0]
-    control          : []
-    params           : {}
-    control_state : None
-----------------------------------------------------
-[1] cx
-    raw_name         : cx
-    target           : [1]
-    control          : [0]
-    params           : {}
-    control_state : [1]
-----------------------------------------------------
-[2] h
-    raw_name         : h
-    target           : [0]
-    control          : []
-    params           : {}
-    control_state : None
-----------------------------------------------------
-[3] rz
-    raw_name         : rz
-    target           : [1]
-    control          : []
-    params           : {'value': 0.7853981633974483}
-    control_state : None
-----------------------------------------------------
-[4] mcx
-    raw_name         : mcx
-    target           : [3]
-    control          : [0, 1]
-    params           : {}
-    control_state : [1, 1]
-----------------------------------------------------
-====================================================
-```
-
-### 4. View Layered Structure
-
-```python
-info.show("layers")
-```
-
-**Output example:**
-
-```python
-
-====================================================
-                     Layers
-====================================================
-Layer 0
-  - x         target=[0]  control=[]  params={}
-  - rz        target=[1]  control=[]  params={'value': 0.7853981633974483}
-----------------------------------------------------
-Layer 1
-  - cx        target=[1]  control=[0]  params={}
-----------------------------------------------------
-Layer 2
-  - h         target=[0]  control=[]  params={}
-----------------------------------------------------
-Layer 3
-  - mcx       target=[3]  control=[0, 1]  params={}
-----------------------------------------------------
-====================================================
-```
-
-### 5. Query Qubit Usage
-
-```python
-info.show("qubit_usage")
-```
-
-**Output example:**
-
-```python
-
-====================================================
-                  Qubit Usage
-====================================================
-  - q0              : 4
-  - q1              : 3
-  - q2              : 0
-  - q3              : 1
-====================================================
-
-```
-
-### 6. Get Coupling Map
-
-```python
-info.show("coupling_map")
-
-```
-
-**Output example:**
-
-```
-
-====================================================
-                 Coupling Map
-====================================================
-  - q0 <-> q1
-  - q0 <-> q3
-  - q1 <-> q3
-====================================================
-```
-
-### 7. View Parameterized Gates
-
-```python
-info.show("parameters")
-```
-
-**Output example:**
-
-```
-====================================================
-                 Gate Parameters
-====================================================
-rz
-  [0] {'value': 0.7853981633974483}
-----------------------------------------------------
-====================================================
-```
-
-### 8. Get Qubit Operation History
-
-```python
-info.show("qubit_history", qubit=0)
-```
-
-**Output example:**
-
-```
-
-====================================================
-                 Qubit History: q0                 
-====================================================
-[0] x
-    raw_name : x
-    role     : target
-    target   : [0]
-    control  : []
-    params   : {}
-----------------------------------------------------
-[1] cx
-    raw_name : cx
-    role     : control
-    target   : [1]
-    control  : [0]
-    params   : {}
-----------------------------------------------------
-[2] h
-    raw_name : h
-    role     : target
-    target   : [0]
-    control  : []
-    params   : {}
-----------------------------------------------------
-[4] mcx
-    raw_name : mcx
-    role     : control
-    target   : [3]
-    control  : [0, 1]
-    params   : {}
-----------------------------------------------------
-====================================================
-```
+| Problem | Agent response |
+|---|---|
+| Full analysis is printed for a narrow question | Use `show=False` and query one method. |
+| `qubit_history` is requested without a qubit | Supply a valid qubit index. |
+| An invalid section name produces no output | Select a supported section. |
+| Analysis is confused with simulation | Use analysis for static structure and `execute()` for state evolution or measurement. |
 
