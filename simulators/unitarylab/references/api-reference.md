@@ -590,7 +590,7 @@ Builds a QSP circuit that applies a polynomial transformation to a block-encoded
 
 ---
 
-#### `QSP_hamiltonian_simulation(U_H, n, alpha, m, t, epsilon, beta, flag)` → `Circuit`
+#### `QSP_hamiltonian_simulation(U_H, n, alpha, m, t, epsilon, beta, flag)` → `tuple[Circuit, float, int, int, int]`
 
 Simulates `exp(−iHt)` or `exp(iHt)` via QSP, given a `(alpha, m, 0)`-block-encoding `U_H` of Hamiltonian `H`.
 
@@ -603,9 +603,9 @@ Simulates `exp(−iHt)` or `exp(iHt)` via QSP, given a `(alpha, m, 0)`-block-enc
 | `t` | float | Evolution time |
 | `epsilon` | float | Approximation error |
 | `beta` | float | Normalization parameter for the output block-encoding |
-| `flag` | int | Sign flag: `0` for `exp(−iHt)`, `1` for `exp(iHt)` |
+| `flag` | bool | Sign flag: `True` for `exp(−iHt)`, `False` for `exp(iHt)` |
 
-**Returns** a `Circuit` that is a `(2/beta, m+2, epsilon)`-block-encoding of the time-evolution operator.
+**Returns** a 5-tuple `(circuit, factor, n_ancilla, n_qubits, degree)`, where `circuit` is a `Circuit` that is a `(2/beta, m+2, epsilon)`-block-encoding of the time-evolution operator, `factor` is the overall block-encoding normalization, `n_ancilla` is the ancilla qubit count, `n_qubits` is the total qubit count, and `degree` is the Chebyshev polynomial degree used.
 
 ---
 
