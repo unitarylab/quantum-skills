@@ -35,7 +35,7 @@ When using this skill:
 
 ## Implementation Architecture
 
-`algorithm.py` is the public workflow. It builds the fermionic and Pauli Hamiltonians, obtains the formal exact reference, calls `run_pauli_vqe`, writes the circuit/plot/parameter files, optionally measures the final circuit, and assembles the public dictionary. `vqe_adapter.py` is an internal bridge to the generic `VQEAlgorithm`: it performs matrix conversion and bit reversal, validates spectra, records objective evaluations, tracks the lowest observed parameters, rebuilds that circuit, and checks its energy. It is not a second public algorithm entry point.
+`algorithm.py` is the public workflow. It builds the fermionic and Pauli Hamiltonians, obtains the formal exact reference, calls `run_pauli_vqe`, writes the circuit/plot/parameter files, optionally measures the final circuit, and assembles the public dictionary. The bridge to the generic `VQEAlgorithm` — matrix conversion and bit reversal, spectrum validation, objective-evaluation recording, lowest-observed-parameter tracking, circuit rebuild, and energy check — is implemented directly inside `algorithm.py` rather than in a separate adapter module. It is not a second public algorithm entry point.
 
 ## Reference Implementation
 

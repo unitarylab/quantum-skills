@@ -100,7 +100,7 @@ print(result_im['Estimated Value'])   # ≈ -sin(0.4) ≈ -0.3894
 |---|---|---|
 | 1 — Validation | Checks `mode` string and required parameters per mode | Prevents invalid mode / missing input combinations |
 | 2 — Circuit Construction | Dispatches to `_build_hadamard_test_circuit()` based on mode; for `swap_test` builds joint prep and U_swap; for `phase_estimation` builds both real and imag circuits | Creates one or two `Circuit` objects stored in `circuits` dict |
-| 3 — Simulation + Sampling | For each circuit: `circ.execute()` → `result.calculate_state([0])` → extracts `p0_exact`; simulates shot noise via `numpy.random.binomial(shots, p0_exact)` | Runs statevector simulation; converts ancilla probabilities to noisy `<Z>` estimate |
+| 3 — Simulation + Sampling | For each circuit: `circ.execute()` → `result.marginal_probabilities(qubits=[0], threshold=0.0)` → extracts `p0_exact`; simulates shot noise via `numpy.random.binomial(shots, p0_exact)` | Runs statevector simulation; converts ancilla probabilities to noisy `<Z>` estimate |
 | 4 — Post-Processing | Accumulates `measurements` from `<Z> = p0 - p1`; computes final `est_val` per mode | Expectation: returns `<Z>` directly; Swap test: clips to `[0,1]`; Phase estimation: calls `_estimate_phi_from_real_imag()` |
 | 5 — Export | `self.save_circuit(circ, filename)` for each circuit; `self.save_txt()` for text output | Saves SVG circuit diagram(s) and result text file; calls `_build_return_dict()` |
 

@@ -108,7 +108,7 @@ print(result['circuit_path'])            # SVG circuit diagram path
 | 1 — Parameter Setup | Extracts `n_target`, computes `total_qubits = d + n_target` | Establishes qubit layout: phase (`d` qubits) + target (`n_target` qubits) |
 | 2 — Circuit Construction | Calls `self.build_qpe_circuit(U, d, prepare_target)` | Delegates all circuit building to the reusable helper |
 | 3 — Simulation | `qc.execute(backend=backend, device=device, dtype=dtype)` → `final_state` | Runs statevector simulation and returns the final state object directly |
-| 4 — Phase Extraction | `final_state._phase_probabilities_from_state(phase_qubits, endian='little', threshold=1e-8)` → picks best bit-string → `phi_est = int(best_bits_str, 2) / (2 ** d)` | Marginalizes target register; converts binary readout to decimal phase |
+| 4 — Phase Extraction | `final_state.marginal_probabilities(qubits=phase_qubits, threshold=1e-8)` → picks best bit-string → `phi_est = int(best_bits_str, 2) / (2 ** d)` | Marginalizes target register; converts binary readout to decimal phase |
 | 5 — Export | `self.save_circuit(qc)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
 
 **`build_qpe_circuit(U, d, prepare_target, backend)` — Reusable Circuit Builder:**
@@ -123,9 +123,9 @@ This method is the core algorithmic component, designed to be called by other al
 **Helper Methods:**
 
 - **`update_output` / `_build_return_dict`** — Store runtime output fields and package the final result dict.
-- `final_state._phase_probabilities_from_state(phase_qubits, endian='little', threshold=...)` — called in Stage 4 to extract phase register marginals from the full statevector.
+- `final_state.marginal_probabilities(qubits=phase_qubits, threshold=...)` — called in Stage 4 to extract phase register marginals from the full statevector.
 
-**Data flow:** `U` → `build_qpe_circuit()` → `Circuit` → `execute()` → `_phase_probabilities_from_state()` → `phi_est` → `_build_return_dict()`.
+**Data flow:** `U` → `build_qpe_circuit()` → `Circuit` → `execute()` → `marginal_probabilities()` → `phi_est` → `_build_return_dict()`.
 
 **Note:** `build_qpe_circuit()` can be called directly without `run()` to obtain the `Circuit` for embedding in a parent algorithm.
 
@@ -157,11 +157,11 @@ The iQFT transforms the phase-encoded register to: if $\phi = k_0/2^d$ exactly, 
 | Controlled $U^{2^k}$ | `cU = U.control(1, '1')` repeated `2^k` times per phase qubit `k` |
 | Inverse QFT | `IQFT(d)` from `unitarylab.library`, appended to `phase_qubits` |
 | Phase readout $\phi = k_0/2^d$ | `int(best_bits_str, 2) / (2 ** d)` in Stage 4 |
-| Probability of best phase | `best_prob = sorted_phases[0][1]` from `final_state._phase_probabilities_from_state()` |
+| Probability of best phase | `best_prob = sorted_phases[0][1]` from `final_state.marginal_probabilities()` |
 | Phase precision $\delta\phi = 1/2^d$ | Implicit: determined by number of bits `d` in phase register |
 | Subroutine for HHL / QAE | `build_qpe_circuit()` returns a standalone `Circuit` embeddable externally |
 
-**Notes on encapsulation:** The iQFT is sourced from `unitarylab.library.IQFT` rather than constructed inline, unlike the amplitude estimation implementation which builds it locally. The controlled-unitary power is realized via `U.repeat(2**k)` passed to `qc.append(..., control=phase_qubits[k], control_state='1')`, which is correct but exponentially expensive in `d`. The `endian='little'` argument in `_phase_probabilities_from_state()` ensures the least-significant bit is on the left, consistent with the register ordering.
+**Notes on encapsulation:** The iQFT is sourced from `unitarylab.library.IQFT` rather than constructed inline, unlike the amplitude estimation implementation which builds it locally. The controlled-unitary power is realized via `U.repeat(2**k)` passed to `qc.append(..., control=phase_qubits[k], control_state='1')`, which is correct but exponentially expensive in `d`.
 
 ## Mathematical Deep Dive
 $$|0\rangle^d|\psi\rangle \rightarrow \frac{1}{\sqrt{2^d}}\sum_{j=0}^{2^d-1} e^{2\pi i\phi j}|j\rangle|\psi\rangle$$

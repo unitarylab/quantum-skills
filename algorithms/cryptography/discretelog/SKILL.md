@@ -98,7 +98,7 @@ print(result.get('Computation time (s)')) # Simulation time in seconds
 |---|---|---|
 | 1 — Parameter Setup | Validates `gcd(g,P)==1` and `gcd(y,P)==1`; sets `n_count = 2*P.bit_length()`, `n_work = P.bit_length()` | Determines register sizes sufficient for continued-fraction accuracy |
 | 2 — Circuit Construction | Creates three registers `reg_a`, `reg_b`, `reg_work`; H on reg_a/reg_b; X on work[0] to set $|1\rangle$; controlled $g^{2^i} \bmod P$ via `qc.unitary()` for each reg_a bit; controlled $(y^{-1})^{2^j} \bmod P$ for each reg_b bit; appends `IQFT(n_count)` to both registers | Two-register DLP Fourier-sampling circuit |
-| 3 — Simulation | `qc.execute(backend=backend, device=device, dtype=dtype)` → `res_vec.calculate_state(range(2*n_count))` | Extracts probability distribution over reg_a ⊗ reg_b (marginalizing over work register) |
+| 3 — Simulation | `qc.execute(backend=backend, device=device, dtype=dtype)` → `res_vec.marginal_probabilities(qubits=range(2*n_count), threshold=1e-5)` | Extracts probability distribution over reg_a ⊗ reg_b (marginalizing over work register) |
 | 4 — Classical Post-Processing | Calls `_classical_post_processing(probs_dict, g, y, P, n_count, N_size)` | Continued fractions plus two-dimensional Fourier-sample congruence solver |
 | 5 — Export | `self.save_circuit(qc)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
 
@@ -106,7 +106,7 @@ print(result.get('Computation time (s)')) # Simulation time in seconds
 
 - **`_get_modular_matrix(a, N, n_qubits)`** — Builds a $2^{n\_work} \times 2^{n\_work}$ permutation matrix for the map $z \mapsto (a \cdot z) \bmod P$ (identity for $z \geq P$). Used for both $g^{2^i}$ and $(y^{-1})^{2^j}$ controlled applications.
 - **`_classical_post_processing(probs, g, y, P, n, N_size)`** — Multi-step classical routine. This is not a one-dimensional period-finding post-process; it uses the joint sample from both counting registers:
-  1. Sorts bitstrings by probability; skips entries below 0.02.
+  1. Sorts bitstrings by probability (the `marginal_probabilities` return value maps each bitstring directly to a float probability); skips entries below 0.02.
   2. Splits each bitstring into `v_bin = bitstring[:n]` and `u_bin = bitstring[n:]`, then converts them to integers `u, v`.
   3. Applies `Fraction(u, N_size).limit_denominator(P)` to estimate the rational sample component `s/r`, producing candidate `(s_base, r_base)`.
   4. Searches multiples of `r_base` to find the true group order `r` where `g^r ≡ 1 (mod P)`.
@@ -116,7 +116,7 @@ print(result.get('Computation time (s)')) # Simulation time in seconds
 
 **Register address translation:** The `get_p(reg_slice)` inline function inside `run()` translates named register slices into flat qubit indices by adding the appropriate offset (`0` for reg_a, `n_count` for reg_b, `2*n_count` for reg_work).
 
-**Data flow:** `(g, y, P)` → register + oracle construction → `qc.execute()` → `res_vec.calculate_state()` → `_classical_post_processing()` → `found_x` → `_build_return_dict()`.
+**Data flow:** `(g, y, P)` → register + oracle construction → `qc.execute()` → `res_vec.marginal_probabilities()` → `_classical_post_processing()` → `found_x` → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
 Both reg_A and reg_B are placed in uniform superposition:
@@ -168,7 +168,7 @@ Do not describe this as a purely one-dimensional continued-fraction period extra
 | Controlled $(y^{-1})^{2^j} \bmod P$ via reg_b bit $j$ | Same pattern with `y_inv = pow(y, -1, P)` |
 | Inverse QFT on reg_a | `qc.append(IQFT(n_count), get_p(ra[:]))` |
 | Inverse QFT on reg_b | `qc.append(IQFT(n_count), get_p(rb[:]))` |
-| Probability distribution over (A, B) | `state_obj.calculate_state(range(2*n_count))` marginalizes work register |
+| Probability distribution over (A, B) | `state_obj.marginal_probabilities(qubits=range(2*n_count), threshold=1e-5)` marginalizes work register; returns a flat `{bitstring: probability}` dict |
 | Split joint two-register sample | `v_bin = bitstring[:n]`, `u_bin = bitstring[n:]`; then `u, v = int(u_bin, 2), int(v_bin, 2)` |
 | Continued fractions: $u/N \approx s/r$ | `Fraction(u, N_size).limit_denominator(P)` |
 | True group order $r$: $g^r \equiv 1$ | Search loop over multiples of `r_base` with `pow(g, r_base*k, P) == 1` |
@@ -274,12 +274,12 @@ def solve_dlp(g: int, y: int, P: int, backend: str = 'torch', device: str = 'cpu
 
     qc = build_dlp_circuit(g, y, P, n_count, n_work)
     res_vec = qc.execute(backend=backend, device=device, dtype=np.complex128)
-    probs_dict = res_vec.calculate_state(range(2 * n_count))
+    probs_dict = res_vec.marginal_probabilities(qubits=range(2 * n_count), threshold=1e-5)
 
     # Sort by probability and post-process the two-dimensional Fourier sample.
-    sorted_probs = sorted(probs_dict.items(), key=lambda item: item[1]['prob'], reverse=True)
-    for bitstring, data in sorted_probs:
-        if data['prob'] < 0.02:
+    sorted_probs = sorted(probs_dict.items(), key=lambda item: item[1], reverse=True)
+    for bitstring, probability in sorted_probs:
+        if probability < 0.02:
             continue
         v_bin, u_bin = bitstring[:n_count], bitstring[n_count:]
         u, v = int(u_bin, 2), int(v_bin, 2)

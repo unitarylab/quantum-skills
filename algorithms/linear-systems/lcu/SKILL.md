@@ -95,7 +95,7 @@ print(result['Result state'])          # Post-selected system state
 | 1 — Parameter Setup | Validates `len(alphas)==len(unitaries)`; computes `m`, `n_anc = ceil(log2(m))`, `s_norm = sum(alphas)` | Determines ancilla size |
 | 2 — Circuit Construction | Creates `Circuit(n_anc + n_sys, name='LCU_circuit')`; optionally appends `initial_state` to system; calls `_build_V`, `_build_select`, `V_circ.dagger()` in sequence | Assembles full PREPARE → SELECT → UNPREPARE circuit |
 | 3 — Simulation | `qc.execute(backend=backend, device=device, dtype=dtype)` → `raw_result` | Runs statevector simulation |
-| 4 — Post-Processing | `raw_result._phase_probabilities_from_state(anc_qubits, endian="little", threshold=0.0)` → extracts probability of `'0'*n_anc`; builds `output` dict with `'Success probability'`, `'Computation time (s)'`, `'Result state'` | Computes LCU success probability and post-selected state |
+| 4 — Post-Processing | `raw_result.marginal_probabilities(qubits=anc_qubits, threshold=0.0)` → extracts probability of `'0'*n_anc`; builds `output` dict with `'Success probability'`, `'Computation time (s)'`, `'Result state'` | Computes LCU success probability and post-selected state |
 | 5 — Export | `self.save_circuit(qc)` and `self.save_txt()` | Saves SVG circuit diagram and text result file |
 
 **Helper Methods:**
@@ -104,7 +104,7 @@ print(result['Result state'])          # Post-selected system state
 - **`_build_select(unitaries, m, n_anc, n_sys)`** — Constructs the SELECT operator. Creates `Circuit(n_anc + n_sys, name='SELECT-U')`. Loops over all `(j, U_j)` pairs; for each, computes `ctrl_state = format(j, f"0{n_anc}b")` (reversed if `U.order == 'little'`) and calls `qc.append(U_j, target=sys_qubits, control=anc_qubits, control_state=ctrl_state)`. This applies $U_j$ conditionally on ancilla $= |j\rangle$ in binary.
 - **`_build_return_dict(success, circuit_path, filepath, circuit)`** — Packages the result. Sets `status='ok'` if `success=True`, `'failed'` otherwise. Wraps `filepath` into a list of `{'format': filename[-3:], 'filename': filename}` dicts stored under `'plot'`. Merges `self.output` (containing `'Success probability'`, `'Computation time (s)'`, `'Result state'`) into the returned dict.
 
-**Data flow:** `(alphas, unitaries)` → `_build_V()` → `_build_select()` → `V_circ.dagger()` → `qc.execute()` → `_phase_probabilities_from_state()` → `success_prob` → `update_output()` → `_build_return_dict()`.
+**Data flow:** `(alphas, unitaries)` → `_build_V()` → `_build_select()` → `V_circ.dagger()` → `qc.execute()` → `marginal_probabilities()` → `success_prob` → `update_output()` → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
 Maps $|0\rangle_{\text{anc}} \rightarrow \sum_j \sqrt{\alpha_j/s}|j\rangle_{\text{anc}}$ where $s = \sum_k \alpha_k$. Implemented as a state-preparation circuit on the ancilla.
@@ -132,7 +132,7 @@ On success, the system register holds $M|\psi\rangle/\|M|\psi\rangle\|$.
 | UNPREPARE operator | `V_circ.dagger()` is appended after the SELECT block to implement `V†`, mapping the prepared ancilla/select state back toward `|0>`. |
 | Normalization factor | `s_norm = float(np.sum(alphas))` in Stage 1 computes `s = sum_k alpha_k`, which is used to normalize the LCU coefficients. |
 | Ancilla/select register size | `n_anc = int(np.ceil(np.log2(m)))` in Stage 1 determines the number of ancilla/select qubits required to index all `m` unitary terms. |
-| Post-selection condition | `raw_result._phase_probabilities_from_state(anc_qubits, endian="little", threshold=0.0)` is used to obtain the probability distribution on the ancilla/select register. The successful branch corresponds to the all-zero key: `'0' * n_anc`. |
+| Post-selection condition | `raw_result.marginal_probabilities(qubits=anc_qubits, threshold=0.0)` is used to obtain the probability distribution on the ancilla/select register. The successful branch corresponds to the all-zero key: `'0' * n_anc`. |
 | Success probability | `success_prob` is extracted from the Stage 4 measurement result. It represents the probability of successfully projecting the ancilla/select register onto `|0>^{n_anc}` after applying `PREPARE → SELECT → UNPREPARE`. |
 | LCU output relation | After successful post-selection, the system state is proportional to `M|psi> / s`, where `M = sum_j alpha_j U_j`. Therefore, the success probability is related to `||M|psi>||^2 / s^2`. |
 

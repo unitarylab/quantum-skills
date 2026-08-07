@@ -98,7 +98,7 @@ print(result['plot'])             # List of saved output files: [{'format': 'svg
 | Pre-check | Handles `N % 2 == 0` and `gcd(a, N) > 1` cases without any quantum circuit | Classical short-circuit for trivial cases |
 | 1 — Parameter Setup | Picks random `a`; computes `n_work = N.bit_length()`, `n_count = 2 * n_work`, `n_work_actual` (method-dependent), `total_qubits` | Determines qubit counts for the chosen method |
 | 2 — Circuit Construction | Creates `Circuit(total_qubits, name=...)`; applies H to counting register via `qc.h(range(n_count))`; sets work register to $|1\rangle$ via `qc.x(n_count)`; calls `_build_modular_matrix_circuit` or `_build_modular_operator_circuit`; appends `IQFT(n_count)` via `qc.append(IQFT(n_count), range(n_count))` | Builds the QPE circuit for period finding |
-| 3 — Simulation | `result = qc.execute(backend=backend, device=device, dtype=dtype)`; `measure_bin = result.measure(range(n_count), endian='little')`; `measure_int = int(measure_bin, 2)` | Single-shot measurement of counting register |
+| 3 — Simulation | `result = qc.execute(backend=backend, device=device, dtype=dtype)`; `measure_bin = result.measure(range(n_count))`; `measure_int = int(measure_bin, 2)` | Single-shot measurement of counting register |
 | 4 — Classical Post-Processing | `phase = measure_int / (2**n_count)`; `Fraction(phase).limit_denominator(N).denominator` gives `r`; checks `r % 2 == 0`; computes `gcd(a^(r/2)±1, N)` | Continued fractions + factor extraction |
 | 5 — Export | `self.save_circuit(qc)` and `self.save_txt()` (on success and failure) | Saves SVG circuit diagram and text results |
 
@@ -146,7 +146,7 @@ yields non-trivial factors of $N$.
 | Controlled $a^{2^k} \bmod N$ (matrix method) | `_build_modular_matrix_circuit()` — `qc.unitary(matrix, work, control=q)` |
 | Controlled $a^{2^k} \bmod N$ (operator method) | `_build_modular_operator_circuit()` via `_multiple_mod()` using QFT-domain adders |
 | Inverse QFT (iQFT) | `qc.append(IQFT(n_count), range(n_count))` from `unitarylab.library` |
-| Measurement of counting register | `result = qc.execute(...)`; `result.measure(range(n_count), endian='little')` → binary string → integer |
+| Measurement of counting register | `result = qc.execute(...)`; `result.measure(range(n_count))` → binary string → integer |
 | Phase $\phi \approx k/r$ | `phase = measure_int / 2^n_count` |
 | Continued fractions algorithm | `Fraction(phase).limit_denominator(N).denominator` → `r` |
 | Factor extraction $\gcd(a^{r/2}\pm1, N)$ | `math.gcd(guess - 1, N)` and `math.gcd(guess + 1, N)` |
@@ -285,7 +285,7 @@ def shor_factor(N: int, max_retries: int = 15, backend: str = 'torch'):
 
         # Measure counting register
         result = qc.execute(backend=backend)
-        meas = result.measure(range(n_count), endian='little')
+        meas = result.measure(range(n_count))
         phase_int = int(meas, 2)
 
         # Classical post-processing: continued fractions -> period r
