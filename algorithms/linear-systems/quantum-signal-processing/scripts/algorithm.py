@@ -1,54 +1,42 @@
-"""Quantum Signal Processing (QSP) — polynomial approximation of cos(t * x)."""
+"""Verification script generated from the leaf SKILL.md.
+
+This file is generated from the first Python code block under
+`Reference Implementation Example`. Regenerate it after editing the skill.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+def _add_workspace_paths() -> None:
+    here = Path(__file__).resolve()
+    for candidate in [here.parent, *here.parents]:
+        if (candidate / "unitarylab_algorithms").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+        if (candidate / "quantum-skills-new").is_dir() and (candidate / "unitarylab_algorithms").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+    workspace = here.parents[4] if len(here.parents) > 4 else here.parent
+    sys.path.insert(0, str(workspace))
+
+
+_add_workspace_paths()
 
 from unitarylab_algorithms import QSPAlgorithm
 
+algo = QSPAlgorithm(text_mode="legacy")
+result = algo.run(
+    t=1.0,         # Evolution time t: targets cos(t * x)
+    d=10,          # Polynomial degree d
+    x=0.5,         # Test signal point x ∈ [-1, 1]
+    backend='torch'
+)
 
-def example_low_degree():
-    """Approximate cos(t * x) with t=1.0, degree d=6, at x=0.5."""
-    algo = QSPAlgorithm(text_mode="legacy")
-    result = algo.run(
-        t=1.0,
-        d=6,
-        x=0.5,
-        backend="torch",
-    )
-
-    print("=" * 50)
-    print("QSP Example: t=1.0, d=6, x=0.5")
-    print("=" * 50)
-    for f in result.get("plot", []):
-        print(f"  Output file      : {f['filename']} ({f['format']})")
-    print(f"  Status           : {result['status']}")
-    print(f"  Estimated value  : {result['Estimated value']}")
-    print(f"  Ideal value      : {result['Ideal value']:.6f}")
-    print(f"  Absolute error   : {result['Absolute error']:.6e}")
-    print(f"  Computation time : {result['Computation time (s)']:.4f} s")
-    print(f"  Circuit path     : {result.get('circuit_path')}")
-
-
-def example_high_degree():
-    """Higher degree for better accuracy: t=2.0, d=15, x=0.3."""
-    algo = QSPAlgorithm(text_mode="legacy")
-    result = algo.run(
-        t=2.0,
-        d=15,
-        x=0.3,
-        backend="torch",
-    )
-
-    print("=" * 50)
-    print("QSP Example: t=2.0, d=15, x=0.3")
-    print("=" * 50)
-    for f in result.get("plot", []):
-        print(f"  Output file      : {f['filename']} ({f['format']})")
-    print(f"  Status           : {result['status']}")
-    print(f"  Estimated value  : {result['Estimated value']}")
-    print(f"  Ideal value      : {result['Ideal value']:.6f}")
-    print(f"  Absolute error   : {result['Absolute error']:.6e}")
-    print(f"  Computation time : {result['Computation time (s)']:.4f} s")
-    print(f"  Circuit path     : {result.get('circuit_path')}")
-
-
-if __name__ == "__main__":
-    example_low_degree()
-    example_high_degree()
+print(result['Absolute error'])    # Absolute error |QSP(x) - cos(t*x)|
+print(result['Estimated value'])   # QSP estimated value at x
+print(result['Ideal value'])       # cos(t * x) at test point
+print(result['circuit_path'])      # SVG circuit diagram
+print(result['plot'])              # List of saved output file dicts

@@ -1,28 +1,40 @@
-"""VQC — Variational Quantum Classifier on the Iris dataset."""
+"""Verification script generated from the leaf SKILL.md.
 
-from unitarylab_algorithms import VQCAlgorithm
+This file is generated from the first Python code block under
+`Reference Implementation Example`. Regenerate it after editing the skill.
+"""
 
+from __future__ import annotations
 
-def main():
-    algo = VQCAlgorithm(text_mode="plain")
-    result = algo.run(
-        layers=3,
-        epochs=20,
-        lr=0.05,
-        batch_size=16,
-        backend="torch",
-    )
-
-    print("=" * 50)
-    print("VQC: Iris Classification (4 features, 3 classes)")
-    print("=" * 50)
-    for plot_file in result.get("plot", []):
-        print(f"  Plot           : {plot_file['filename']}")
-    print(f"  Status         : {result['status']}")
-    print(f"  Test accuracy  : {result['Final Accuracy']:.2%}")
-    print(f"  Final loss     : {result['Final Loss']:.4f}")
-    print(f"  Quantum time   : {result['Quantal Computation Time (s)']:.4f}s")
+import sys
+from pathlib import Path
 
 
-if __name__ == "__main__":
-    main()
+def _add_workspace_paths() -> None:
+    here = Path(__file__).resolve()
+    for candidate in [here.parent, *here.parents]:
+        if (candidate / "unitarylab_algorithms").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+        if (candidate / "quantum-skills-new").is_dir() and (candidate / "unitarylab_algorithms").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+    workspace = here.parents[4] if len(here.parents) > 4 else here.parent
+    sys.path.insert(0, str(workspace))
+
+
+_add_workspace_paths()
+
+from unitarylab_algorithms.quantum_machine_learning.vqc.algorithm import VQCAlgorithm
+
+algo = VQCAlgorithm()
+result = algo.run(
+    layers=3,
+    epochs=20,
+    lr=0.05,
+    batch_size=16,
+    backend='torch'
+)
+
+print(f"Final test accuracy: {result['Final Accuracy']:.2%}")
+print(result['plot'])

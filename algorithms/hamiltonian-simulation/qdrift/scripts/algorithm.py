@@ -1,38 +1,47 @@
-"""QDrift Hamiltonian Simulation — randomized Pauli sampling for e^{-iHt}."""
+"""Verification script generated from the leaf SKILL.md.
+
+This file is generated from the first Python code block under
+`Reference Implementation Example`. Regenerate it after editing the skill.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+def _add_workspace_paths() -> None:
+    here = Path(__file__).resolve()
+    for candidate in [here.parent, *here.parents]:
+        if (candidate / "unitarylab_algorithms").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+        if (candidate / "quantum-skills-new").is_dir() and (candidate / "unitarylab_algorithms").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+    workspace = here.parents[4] if len(here.parents) > 4 else here.parent
+    sys.path.insert(0, str(workspace))
+
+
+_add_workspace_paths()
 
 import numpy as np
 from unitarylab_algorithms import QDriftAlgorithm
 
+# 2x2 Hermitian Hamiltonian matrix
+H = np.array([[2, 1],
+              [1, 3]], dtype=float)
 
-def main():
-    # 2-qubit Heisenberg-like Hamiltonian (4×4 matrix)
-    XX = np.array([[0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0]], dtype=float)
-    ZZ = np.array([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]], dtype=float)
-    H = XX + ZZ
-    t = 1.0
+algo = QDriftAlgorithm()
+result = algo.run(
+    H=H,
+    t=1.0,
+    error=1e-8,
+    steps=5000,
+    backend='torch',
+)
 
-    print("=" * 50)
-    print("QDrift Hamiltonian Simulation")
-    print("=" * 50)
-
-    for steps in [1000, 5000]:
-        np.random.seed(42)
-        algo = QDriftAlgorithm()
-        result = algo.run(
-            H=H,
-            t=t,
-            error=1e-8,
-            steps=steps,
-            backend="torch",
-        )
-
-        print(f"\n  steps={steps}:")
-        print(f"    status                : {result['status']}")
-        print(f"    Frobenius norm of error: {result['Frobenius norm of error']:.6e}")
-        print(f"    circuit_path          : {result['circuit_path']}")
-        for f in result["plot"]:
-            print(f"    saved {f['format']} file: {f['filename']}")
-
-
-if __name__ == "__main__":
-    main()
+print("status:", result['status'])
+print("Frobenius norm of error:", result['Frobenius norm of error'])
+for f in result['plot']:
+    print(f"Saved {f['format']} file: {f['filename']}")

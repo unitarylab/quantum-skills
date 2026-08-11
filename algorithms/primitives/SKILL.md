@@ -1,6 +1,6 @@
 ---
 name: primitives
-description: A collection of fundamental quantum computing primitives implemented using UnitaryLab, including basic gates, state preparation techniques, and measurement protocols. Provides efficient implementations and educational resources for understanding and utilizing quantum primitives in algorithm development.
+description: "A collection of fundamental quantum computing primitives implemented using UnitaryLab, including basic gates, state preparation techniques, and measurement protocols. Provides efficient implementations and educational resources for understanding and utilizing quantum primitives in algorithm development. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 # Quantum Primitives
 
@@ -11,9 +11,7 @@ Use this category when the user asks about amplitude methods, phase estimation, 
 
 ## Routing Rules
 
-- If the user asks about Grover search, unstructured search, or finding a marked bit string:
-  - Read `./grover/SKILL.md`
-- If the user asks about general amplitude amplification, oracle amplification, or increasing marked-state probability from a custom state-preparation circuit:
+- If the user asks about Grover-style search, oracle amplification, or increasing marked-state probability:
   - Read `./amplitude-amplification/SKILL.md`
 - If the user asks to estimate an unknown amplitude or success probability:
   - Read `./amplitude-estimation/SKILL.md`
@@ -26,12 +24,11 @@ Use this category when the user asks about amplitude methods, phase estimation, 
 
 ## Available Leaf Skills
 
-1. Grover Search: `./grover/SKILL.md`
-2. Amplitude Amplification: `./amplitude-amplification/SKILL.md`
-3. Amplitude Estimation: `./amplitude-estimation/SKILL.md`
-4. Quantum Phase Estimation: `./quantum-phase-estimation/SKILL.md`
-5. Hadamard Test: `./hadamard-test/SKILL.md`
-6. Hadamard Transform: `./hadamard-transform/SKILL.md`
+1. Amplitude Amplification: `./amplitude-amplification/SKILL.md`
+2. Amplitude Estimation: `./amplitude-estimation/SKILL.md`
+3. Quantum Phase Estimation: `./quantum-phase-estimation/SKILL.md`
+4. Hadamard Test: `./hadamard-test/SKILL.md`
+5. Hadamard Transform: `./hadamard-transform/SKILL.md`
 
 ## Response Contract
 

@@ -1,6 +1,6 @@
 ---
 name: fermi-hubbard-vqe
-description: Guides small open-chain Fermi-Hubbard ground-state calculations with UnitaryLab's VQE workflow, including its Jordan-Wigner mapping, Ry-Rz COBYLA ansatz, exact-energy reference, endianness checks, output contract, and paired-mode spin measurements.
+description: "Guides small open-chain Fermi-Hubbard ground-state calculations with UnitaryLab's VQE workflow, including its Jordan-Wigner mapping, Ry-Rz COBYLA ansatz, exact-energy reference, endianness checks, output contract, and paired-mode spin measurements."
 ---
 
 # Fermi-Hubbard VQE
@@ -35,7 +35,7 @@ When using this skill:
 
 ## Implementation Architecture
 
-`algorithm.py` is the public workflow. It builds the fermionic and Pauli Hamiltonians, obtains the formal exact reference, calls `run_pauli_vqe`, writes the circuit/plot/parameter files, optionally measures the final circuit, and assembles the public dictionary. The bridge to the generic `VQEAlgorithm` — matrix conversion and bit reversal, spectrum validation, objective-evaluation recording, lowest-observed-parameter tracking, circuit rebuild, and energy check — is implemented directly inside `algorithm.py` rather than in a separate adapter module. It is not a second public algorithm entry point.
+`algorithm.py` is the public workflow. It builds the fermionic and Pauli Hamiltonians, obtains the formal exact reference, calls `run_pauli_vqe`, writes the circuit/plot/parameter files, optionally measures the final circuit, and assembles the public dictionary. The tracking bridge is implemented in the same file through `_TrackingVQEAlgorithm` and `run_pauli_vqe`; there is no separate public `vqe_adapter.py` module.
 
 ## Reference Implementation
 

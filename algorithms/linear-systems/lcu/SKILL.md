@@ -1,16 +1,27 @@
 ---
 name: lcu
-description: A subroutine for probabilistically applying a non-unitary operator M = Σⱼ αⱼUⱼ to a quantum state via PREPARE-SELECT-UNPREPARE. A key building block for block encoding, Hamiltonian simulation, and quantum linear solvers — not a standalone linear system solver.
+description: "A quantum algorithm for solving linear systems of equations using the Linear Combination of Unitaries (LCU) method, providing exponential speedup over classical methods for certain types of problems. This skill includes efficient implementations and educational resources for understanding and utilizing the LCU algorithm in various applications. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
+
 # Linear Combination of Unitaries (LCU)
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Linear Combination of Unitaries (LCU).
 
 LCU probabilistically applies a non-unitary operator $M = \sum_j \alpha_j U_j$ to a quantum state by using an ancilla register, a SELECT oracle, and amplitude amplification post-selection. It is a key subroutine in QSVT, Hamiltonian simulation, and quantum linear solvers.
 
 Use this skill when you need to:
 - Apply a weighted sum of unitaries to a quantum state.
 - Implement block-encodings for non-unitary operations.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -25,7 +36,7 @@ The LCU circuit has three components:
 - Ancilla qubits and post-selection.
 - Python: `numpy`, `Circuit`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab_algorithms import LCUAlgorithm
@@ -107,6 +118,7 @@ print(result['Result state'])          # Post-selected system state
 **Data flow:** `(alphas, unitaries)` → `_build_V()` → `_build_select()` → `V_circ.dagger()` → `qc.execute()` → `marginal_probabilities()` → `success_prob` → `update_output()` → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
+
 Maps $|0\rangle_{\text{anc}} \rightarrow \sum_j \sqrt{\alpha_j/s}|j\rangle_{\text{anc}}$ where $s = \sum_k \alpha_k$. Implemented as a state-preparation circuit on the ancilla.
 
 ### 2. SELECT Operator ($U_c$)
@@ -139,6 +151,7 @@ On success, the system register holds $M|\psi\rangle/\|M|\psi\rangle\|$.
 **Notes on encapsulation:** The PREPARE operator uses `qc.initialize(state, range(n_anc))` to directly load the amplitude distribution — no recursive gate decomposition in `_build_V` itself. The SELECT operator directly calls `qc.append()` with `control_state` and reverses `ctrl_state` when `U.order == 'little'`. `_build_return_dict` always receives `success=True` (hardcoded in `run()`), so `status` is always `'ok'`; the actual LCU outcome quality is in `result['Success probability']`.
 
 ## Mathematical Deep Dive
+
 $$V|0\rangle_{\text{anc}}|\psi\rangle = \sum_j \sqrt{\frac{\alpha_j}{s}}|j\rangle|\psi\rangle$$
 
 After SELECT:
@@ -175,7 +188,7 @@ print(f"Status: {result['status']}")
 print(f"Result state: {result['Result state']}")
 ```
 
-## Implementing Your Own Version
+## Minimal Manual Implementation
 
 The following Python skeleton reconstructs the three structural components of LCU: PREPARE, SELECT, and UNPREPARE.
 

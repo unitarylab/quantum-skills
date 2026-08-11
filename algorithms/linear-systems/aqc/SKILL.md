@@ -1,6 +1,6 @@
 ---
 name: aqc
-description: Explains and demonstrates UnitaryLab's small-scale adiabatic quantum linear-system solver. Use it for AQC or QLSP questions, simulator examples, and work involving Householder state preparation, SVD block encoding, adiabatic schedules, post-selection, solution rescaling, or residual checks.
+description: "Explains and demonstrates UnitaryLab's small-scale adiabatic quantum linear-system solver. Use it for AQC or QLSP questions, simulator examples, and work involving Householder state preparation, SVD block encoding, adiabatic schedules, post-selection, solution rescaling, or residual checks."
 ---
 
 # Adiabatic Quantum Linear-System Solver (AQC)

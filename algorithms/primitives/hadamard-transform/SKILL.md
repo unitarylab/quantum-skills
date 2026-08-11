@@ -1,11 +1,13 @@
 ---
 name: hadamard-transform
-description: A quantum algorithm for performing the Hadamard transform, which is a fundamental operation in quantum computing that creates superposition states. This skill includes efficient implementations and educational resources for understanding and utilizing the Hadamard transform in various quantum algorithms and applications.
+description: "A quantum algorithm for performing the Hadamard transform, which is a fundamental operation in quantum computing that creates superposition states. This skill includes efficient implementations and educational resources for understanding and utilizing the Hadamard transform in various quantum algorithms and applications. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Hadamard Transform
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Hadamard Transform.
 
 The Hadamard Transform ($H^{\otimes n}$) applies a Hadamard gate to every qubit simultaneously, mapping the computational basis to a uniform superposition and vice versa. It is a foundational building block in virtually all quantum algorithms.
 
@@ -13,6 +15,14 @@ Use this skill when you need to:
 - Prepare a uniform superposition $\frac{1}{\sqrt{2^n}}\sum_{x=0}^{2^n-1}|x\rangle$ from $|0\rangle^n$.
 - Verify the self-inverse property $H^2 = I$ numerically.
 - Understand the relationship between QFT and Hadamard transforms.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -25,7 +35,7 @@ The algorithm supports two modes:
 - Basic single-qubit Hadamard gate: $H = \frac{1}{\sqrt{2}}\begin{pmatrix}1&1\\1&-1\end{pmatrix}$
 - Python: `numpy`, `Circuit`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab_algorithms import HadamardTransformAlgorithm
@@ -94,10 +104,11 @@ print(result2['status'])         # 'ok' if H^2 recovers original state
 
 **Key design note:** In `'reflexive_test'` mode, the random initial state is generated with `numpy` and loaded into the circuit via `qc.initialize(original_state, target=target_qubits)`. The state is stored in a local variable `original_state` for comparison after two H-layer applications.
 
-**Data flow (superposition):** `n` → `Circuit` → `_apply_hadamard_layer` → `execute()` → `raw_result.probabilities` → uniformity check → `_build_return_dict()`.  
+**Data flow (superposition):** `n` → `Circuit` → `_apply_hadamard_layer` → `execute()` → `raw_result.probabilities` → uniformity check → `_build_return_dict()`.
 **Data flow (reflexive_test):** random `psi` → `qc.initialize(psi)` → two `_apply_hadamard_layer()` calls → `execute()` → `np.allclose(raw_result.state, psi)` → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
+
 $$H = \frac{1}{\sqrt{2}}\begin{pmatrix}1&1\\1&-1\end{pmatrix}, \quad H|0\rangle = |+\rangle = \frac{|0\rangle+|1\rangle}{\sqrt{2}}, \quad H|1\rangle = |-\rangle = \frac{|0\rangle-|1\rangle}{\sqrt{2}}$$
 
 ### Tensor Product of $n$ Hadamard Gates
@@ -129,7 +140,7 @@ When the input is $|0\rangle^n$, the Hadamard transform equals the Quantum Fouri
 
 **Notes on encapsulation:** This implementation is the simplest in the codebase. The transform itself is entirely realized by `qc.h(q)` calls inside `_apply_hadamard_layer`. There is no separate `_build_circuit` method; circuit construction happens inline in `run()`. The `_probabilities()` helper avoids near-zero states using a `threshold=1e-12` filter.
 
-## Mathematical Deep Dive = \bigotimes_{j=1}^n \frac{|0\rangle + (-1)^{x_j}|1\rangle}{\sqrt{2}}$$
+## Mathematical Deep Dive
 
 For $|0\rangle^n$:
 $$H^{\otimes n}|0\rangle^n = \frac{1}{\sqrt{2^n}}\sum_{y \in \{0,1\}^n}|y\rangle$$
@@ -156,7 +167,7 @@ result2 = algo.run(n=4, mode='reflexive_test', backend='torch')
 print(f"State vector shape: {result2['State vector'].shape}")
 ```
 
-## Implementing Your Own Version
+## Minimal Manual Implementation
 
 ```python
 from unitarylab.core import Circuit

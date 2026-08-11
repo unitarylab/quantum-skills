@@ -1,54 +1,48 @@
-"""Amplitude Amplification — boost probability of target states."""
+"""Verification script generated from the leaf SKILL.md.
+
+This file is generated from the first Python code block under
+`Reference Implementation Example`. Regenerate it after editing the skill.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+def _add_workspace_paths() -> None:
+    here = Path(__file__).resolve()
+    for candidate in [here.parent, *here.parents]:
+        if (candidate / "unitarylab_algorithms").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+        if (candidate / "quantum-skills-new").is_dir() and (candidate / "unitarylab_algorithms").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+    workspace = here.parents[4] if len(here.parents) > 4 else here.parent
+    sys.path.insert(0, str(workspace))
+
+
+_add_workspace_paths()
 
 from unitarylab_algorithms import AmplitudeAmplificationAlgorithm
 from unitarylab.core import Circuit
 
+# Prepare state U such that some target qubits land in |0>
+# Example: 2-qubit state preparation
+U = Circuit(2, name="PrepU")
+U.ry(0.6, 0)   # Partially rotates qubit 0
+U.cx(0, 1)     # Entangles
 
-def example_2qubit():
-    """Amplify |00> from a 2-qubit uniform superposition (initial p=0.25)."""
-    U = Circuit(2, name="PrepU")
-    U.h(0)
-    U.h(1)
+algo = AmplitudeAmplificationAlgorithm()
+result = algo.run(
+    U=U,
+    good_zero_qubits=[0, 1],   # Good state: both qubits = |0>
+    p=0.1,                      # Initial success probability estimate
+    backend='torch'
+)
 
-    algo = AmplitudeAmplificationAlgorithm()
-    result = algo.run(
-        U=U,
-        good_zero_qubits=[0, 1],
-        p=0.25,
-        backend="torch",
-    )
-
-    print("=" * 50)
-    print("Amplitude Amplification: 2-Qubit (p=0.25)")
-    print("=" * 50)
-    print(result.get("plot", ""))
-    print(f"  Status        : {result['status']}")
-    print(f"  Amplified prob: {result['Amplified Target Probability']:.4f}")
-    print(f"  Circuit path  : {result.get('circuit_path')}")
-
-
-def example_3qubit():
-    """Amplify |000> from a 3-qubit uniform superposition (initial p=0.125)."""
-    U = Circuit(3, name="PrepU")
-    for q in range(3):
-        U.h(q)
-
-    algo = AmplitudeAmplificationAlgorithm()
-    result = algo.run(
-        U=U,
-        good_zero_qubits=[0, 1, 2],
-        p=1.0 / 8.0,
-        backend="torch",
-    )
-
-    print("=" * 50)
-    print("Amplitude Amplification: 3-Qubit (p=0.125)")
-    print("=" * 50)
-    print(result.get("plot", ""))
-    print(f"  Status        : {result['status']}")
-    print(f"  Amplified prob: {result['Amplified Target Probability']:.4f}")
-
-
-if __name__ == "__main__":
-    example_2qubit()
-    example_3qubit()
+print(result['Amplified Target Probability'])  # Amplified probability of good state
+print(result['circuit_path'])                  # SVG circuit diagram path
+print(result['status'])                        # 'ok' if amplification succeeded
+print(result['plot'])                          # List of saved file dicts [{"format": ..., "filename": ...}]

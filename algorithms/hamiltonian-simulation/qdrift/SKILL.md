@@ -1,9 +1,28 @@
 ---
 name: qdrift
-description: QDrift randomized Hamiltonian simulation, approximating e^{-iHt} by stochastically sampling Pauli-term evolutions with probability proportional to coefficient magnitude.
+description: "QDrift randomized Hamiltonian simulation, approximating e^{-iHt} by stochastically sampling Pauli-term evolutions with probability proportional to coefficient magnitude. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # QDrift Hamiltonian Simulation Skill Guide
+
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement QDrift Hamiltonian Simulation Skill Guide.
+
+After using this skill, you should be able to:
+1. Derive and implement QDrift sampling probabilities.
+2. Understand how `steps` controls variance and depth.
+3. Use reproducible random seeds for fair comparisons.
+4. Interpret matrix-level outputs and spectral-norm error.
+5. Build aggregate statistics over repeated runs.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -33,15 +52,6 @@ Instead of applying every Pauli term each slice, QDrift samples a single term at
 3. Resource tradeoff experiments under depth constraints.
 4. Comparative studies with Trotter/Taylor/QSP pipelines.
 
-## Learning Objectives
-
-After using this skill, you should be able to:
-1. Derive and implement QDrift sampling probabilities.
-2. Understand how `steps` controls variance and depth.
-3. Use reproducible random seeds for fair comparisons.
-4. Interpret matrix-level outputs and spectral-norm error.
-5. Build aggregate statistics over repeated runs.
-
 ## Prerequisites
 
 ### Essential knowledge:
@@ -56,36 +66,11 @@ After using this skill, you should be able to:
 2. Norm-based approximation error metrics.
 3. Scaling intuition with sample count.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
-### Quick Start Example
+## Core Parameters Explained
 
-```python
-import numpy as np
-from unitarylab_algorithms import QDriftAlgorithm
-
-# 2x2 Hermitian Hamiltonian matrix
-H = np.array([[2, 1],
-              [1, 3]], dtype=float)
-
-algo = QDriftAlgorithm()
-result = algo.run(
-    H=H,
-    t=1.0,
-    error=1e-8,
-    steps=5000,
-    backend='torch',
-)
-
-print("status:", result['status'])
-print("Frobenius norm of error:", result['Frobenius norm of error'])
-for f in result['plot']:
-    print(f"Saved {f['format']} file: {f['filename']}")
-```
-
-### Core Parameters Explained
-
-#### Constructor
+### Constructor
 
 ```python
 class QDriftAlgorithm:
@@ -115,7 +100,7 @@ def run(self, H: np.ndarray, t: float, error: float, steps: int = 5000, backend=
 | `device` | `str` | `'cpu'` | Device for backend computation. |
 | `dtype` | `type` | `np.complex128` | Dtype for matrix computation. |
 
-### Return Fields
+## Return Fields
 
 The `run()` method returns a dictionary built by `_build_return_dict(success, circuit_path, filepath, circuit)`. The `self.output` fields are merged into the result via `result.update(self.output)`, so all keys below are accessible directly on the returned dict:
 
@@ -129,7 +114,7 @@ The `run()` method returns a dictionary built by `_build_return_dict(success, ci
 | `Exact evolution matrix` | `np.ndarray` | Exact reference unitary $e^{-iHt}$ computed via `scipy.linalg.expm`. |
 | `Frobenius norm of error` | `float` | $\|U_{\text{approx}} - U_{\text{exact}}\|_F$ — Frobenius norm of the difference. |
 
-## Understanding the Core Components
+## Understanding the Key Quantum Components
 
 ### 1) Probability and angle construction
 
@@ -186,38 +171,6 @@ Interpretation:
 1. `pauli_string_decomposition` from `unitarylab.library.pauli_operator` decomposes the matrix into Pauli terms.
 2. `pauli_string_evolution` creates the gate implementation for each sampled term.
 3. Error is assessed via Frobenius norm against `scipy.linalg.expm(-1j * H * t)`.
-
-## Hands-On Example: Hamiltonian Simulation
-
-Measure variance across random seeds and step counts.
-
-```python
-import numpy as np
-from unitarylab_algorithms import QDriftAlgorithm
-
-# 2-qubit Heisenberg-like Hamiltonian (4×4 matrix)
-XX = np.array([[0,0,0,1],[0,0,1,0],[0,1,0,0],[1,0,0,0]], dtype=float)
-ZZ = np.array([[1,0,0,0],[0,-1,0,0],[0,0,-1,0],[0,0,0,1]], dtype=float)
-H = XX + ZZ
-
-for steps in [1000, 5000]:
-    for seed in [0, 1, 2]:
-        np.random.seed(seed)
-        algo = QDriftAlgorithm()
-        result = algo.run(
-            H=H,
-            t=1.0,
-            error=1e-8,
-            steps=steps,
-            backend='torch',
-        )
-        err = result['Frobenius norm of error']
-        print(f"steps={steps}, seed={seed}, Frobenius error={err:.3e}")
-```
-
-What to look for:
-1. Larger `steps` reduces the Frobenius-norm error on average.
-2. Different seeds produce different random trajectories with some variance.
 
 ## Mathematical Deep Dive
 
@@ -295,9 +248,109 @@ Implementation-consistent notes:
 2. The common statement "no explicit dependence on $L$" refers to the randomized quantum-step complexity form. In practical implementation, classical decomposition and sampling still iterate across terms.
 3. In this code path, `target_error` is not used to automatically choose `steps`; users should tune `steps` experimentally.
 
-## Real-World Applications
+## Hands-On Example
+
+Measure variance across random seeds and step counts.
+
+```python
+import numpy as np
+from unitarylab_algorithms import QDriftAlgorithm
+
+# 2-qubit Heisenberg-like Hamiltonian (4×4 matrix)
+XX = np.array([[0,0,0,1],[0,0,1,0],[0,1,0,0],[1,0,0,0]], dtype=float)
+ZZ = np.array([[1,0,0,0],[0,-1,0,0],[0,0,-1,0],[0,0,0,1]], dtype=float)
+H = XX + ZZ
+
+for steps in [1000, 5000]:
+    for seed in [0, 1, 2]:
+        np.random.seed(seed)
+        algo = QDriftAlgorithm()
+        result = algo.run(
+            H=H,
+            t=1.0,
+            error=1e-8,
+            steps=steps,
+            backend='torch',
+        )
+        err = result['Frobenius norm of error']
+        print(f"steps={steps}, seed={seed}, Frobenius error={err:.3e}")
+```
+
+What to look for:
+1. Larger `steps` reduces the Frobenius-norm error on average.
+2. Different seeds produce different random trajectories with some variance.
 
 1. Noisy simulation pipelines where randomized depth patterns are useful.
 2. Fast baseline approximations for large Pauli expansions.
 3. Statistical benchmarking for algorithm selection.
 4. Randomized circuit studies in NISQ-style analyses.
+
+## Implementation Architecture
+
+`QDriftAlgorithm` in `algorithm.py` implements the randomized simulation in three stages plus export.
+
+| Stage | Code Action | Algorithmic Role |
+|---|---|---|
+| 1 — Validation & Decomposition | `_format_system(H, t, error)` pads dimension to power-of-2; `pauli_string_decomposition(H)` extracts `(pauli_str, coeff)` pairs | Prepares Hermitian $H$ and its Pauli decomposition |
+| 2 — Random Sampling | `_expand(decomposition, t, steps)` computes $\lambda = \sum \|c_j\|$, probabilities $p_j = \|c_j\|/\lambda$, samples `steps` indices via `np.random.choice`, builds `sequence` of `(pauli_str, angle)` with `angle = sign(c_j) * lam * t / steps` | Core QDrift stochastic mechanism |
+| 3 — Circuit Assembly | Iterates `sequence`, applies `pauli_string_evolution(pauli_str, angle)` to each term; wraps in `qc = Circuit(reg, name='QDrift Decomposition')` | Builds the full random trajectory circuit |
+| 4 — Verification & Export | `qc.get_matrix(backend, device, dtype)` extracts $U_{\text{approx}}$; `expm(-1j * H * t)` computes $U_{\text{exact}}$; Frobenius norm error; saves circuit SVG and text report | Benchmarks against exact evolution |
+
+**Key design decision:** `np.random.choice` is unseeded by default — each `run()` produces a different random trajectory. For reproducible results, call `np.random.seed(seed)` before `algo.run()`.
+
+## Theory-to-Code Mapping
+
+| Theory Concept | Code Object or Location |
+|---|---|
+| Pauli decomposition $H = \sum c_j P_j$ | `pauli_string_decomposition(H)` from `unitarylab.library.pauli_operator` |
+| Coefficient norm sum $\lambda = \sum \|c_j\|$ | `lam = np.sum(np.abs(coeffs))` |
+| Sampling probabilities $p_j = \|c_j\| / \lambda$ | `probs = np.abs(coeffs) / lam` |
+| Random index sampling | `np.random.choice(len(decomposition), size=steps, p=probs)` |
+| Per-step angle $\text{sign}(c_j) \cdot \lambda t / N$ | `angle = sign * lam * t / steps` |
+| Pauli evolution gate | `pauli_string_evolution(pauli_str, angle)` |
+| Approximate unitary $U_{\text{qdrift}}$ | `qc.get_matrix(backend, device, dtype)` |
+| Exact reference $e^{-iHt}$ | `scipy.linalg.expm(-1j * H * t)` |
+| Error metric | `norm(U_approx - U_exact, ord='fro')` |
+| Complexity expression | $N = O((\lambda t)^2 / \epsilon)$ for randomized setting |
+
+## Minimal Manual Implementation
+
+```python
+import numpy as np
+
+def qdrift_simulation(pauli_terms, coeffs, t, steps, rng=None):
+    """Simplified QDrift: sample Pauli terms by coefficient magnitude.
+
+    Args:
+        pauli_terms: list of Pauli string identifiers
+        coeffs: list of real coefficients
+        t: total evolution time
+        steps: number of random samples N
+        rng: numpy random generator (optional)
+
+    Returns:
+        sequence of (pauli_str, angle) pairs
+    """
+    if rng is None:
+        rng = np.random.default_rng()
+    coeffs = np.abs(np.array(coeffs, dtype=float))
+    lam = np.sum(coeffs)
+    probs = coeffs / lam
+    indices = rng.choice(len(pauli_terms), size=steps, p=probs)
+    sequence = []
+    for idx in indices:
+        sign = np.sign(coeffs[idx]) if coeffs[idx] != 0 else 1.0
+        angle = sign * lam * t / steps
+        sequence.append((pauli_terms[idx], angle))
+    return sequence
+```
+
+This matches the core `_expand()` logic: probability mass follows coefficient magnitude; every sampled gate uses the same magnitude scale `lam * t / steps` modulated by sign.
+
+## Debugging Tips
+
+1. **Non-reproducible results**: QDrift uses unseeded `np.random.choice` by default. For consistent trajectories across runs, call `np.random.seed(seed)` before each `algo.run()`.
+2. **Insufficient steps**: Large Frobenius error typically means `steps` is too small. The error scales as $O(1/\sqrt{N})$ for a single trajectory — quadrupling `steps` roughly halves the expected error.
+3. **Variance across seeds**: Different random seeds produce different trajectories with varying error. For benchmarking, average across 5-10 seeds and report mean ± std of the Frobenius error.
+4. **Complex coefficients**: The current implementation uses `coeffs.real` for probability computation. Hamiltonians with significant imaginary Pauli coefficients may produce biased sampling — verify the decomposition produces real-dominant coefficients.
+5. **Backend selection**: `backend='torch'` is the default and most tested path. Other backends may have different performance characteristics for `qc.get_matrix()`.

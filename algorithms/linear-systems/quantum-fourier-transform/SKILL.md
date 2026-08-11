@@ -1,10 +1,13 @@
 ---
 name: quantum-fourier-transform
-description: Use this skill when the user asks for Quantum Fourier Transform (QFT), inverse QFT (IQFT), Fourier-basis state conversion, QFT circuit construction, or implementing/running/debugging QFTAlgorithm in the UnitaryLab algorithm library. Prefer the UnitaryLab `QFTAlgorithm` and `unitarylab.core.Circuit` implementation; PennyLane material is reference-only.
+description: "Use this skill when the user asks for Quantum Fourier Transform (QFT), inverse QFT (IQFT), Fourier-basis state conversion, QFT circuit construction, or implementing/running/debugging QFTAlgorithm in the UnitaryLab algorithm library. Prefer the UnitaryLab `QFTAlgorithm` and `unitarylab.core.Circuit` implementation; PennyLane material is reference-only. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
+
 # Quantum Fourier Transform (QFT)
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Quantum Fourier Transform (QFT).
 
 The Quantum Fourier Transform maps computational-basis amplitudes into the Fourier basis. It is the quantum analogue of the discrete Fourier transform and is a core subroutine in phase estimation, Shor-style period finding, quantum arithmetic, and several linear-algebra routines.
 
@@ -13,6 +16,14 @@ Use this skill when you need to:
 - Verify a QFT simulation against NumPy FFT/iFFT.
 - Explain the `QFTAlgorithm` implementation in `unitarylab_algorithms.linear_algebra.qft.algorithm`.
 - Diagnose phase-ordering, inverse-transform, or bit-reversal issues.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -36,7 +47,7 @@ The algorithm then appends this QFT/IQFT block to an optional initialized state 
 - Hadamard, controlled phase rotation, and SWAP gates.
 - Python: `numpy`, `numpy.fft`, `unitarylab.core.Circuit`, `unitarylab_algorithms`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 import numpy as np
@@ -197,7 +208,72 @@ def run_qft_state(state, inverse: bool = False, backend: str = "torch"):
 | State amplitudes unexpectedly scaled | Input vector was not normalized before comparison | Normalize the state before both circuit initialization and NumPy verification. |
 | Circuit name still says QFT for inverse run | Forgot to rename after `dagger()` | Use `update_name("IQFT")` and `gate_sequence.update_name("IQFT")` as in the implementation. |
 
-## Reference Implementation (PennyLane)
+## Understanding the Key Quantum Components
+
+1. **Hadamard layer**: Each qubit $i$ receives a Hadamard gate `h(i)`, creating the local Fourier superposition $|0\rangle \to (|0\rangle + |1\rangle)/\sqrt{2}$.
+2. **Controlled phase rotations**: Multi-controlled phase gates `mcp(pi/2**(i-j), j, i)` apply relative phase $e^{2\pi i / 2^{i-j+1}}$ between basis states. The angle decreases exponentially with qubit separation $i-j$.
+3. **Bit-reversal swaps**: The natural QFT construction produces output in bit-reversed order. Final `swap(i, n-1-i)` gates restore the canonical ordering.
+4. **Inverse QFT via dagger**: Calling `qft.dagger()` inverts all gates (Hadamards are self-inverse, phases negate, swaps reverse). The circuit is renamed to `IQFT`.
+5. **State initialization**: An optional input statevector can be loaded via `qc.initialize(state, range(n))`. The state is normalized internally before initialization.
+
+## Mathematical Deep Dive
+
+The QFT on $n$ qubits maps computational basis state $|x\rangle$ to:
+
+$$|x\rangle \mapsto \frac{1}{\sqrt{2^n}} \sum_{y=0}^{2^n-1} e^{2\pi i x y / 2^n} |y\rangle$$
+
+For a general state $|\psi\rangle = \sum_x \alpha_x |x\rangle$, the QFT produces $\sum_y \tilde{\alpha}_y |y\rangle$ where $\tilde{\alpha}_y = \frac{1}{\sqrt{2^n}} \sum_x \alpha_x e^{2\pi i x y / 2^n}$ — the discrete Fourier transform of the amplitudes.
+
+**Gate decomposition** for qubit $i$ (descending from $n-1$ to $0$):
+
+1. Hadamard on qubit $i$: $H_i$
+2. Controlled phase rotations from lower-index control qubits: $R_k^{ji}$ with angle $\pi/2^k$ for $k = i-j$
+
+The controlled phase used by the source applies an angle of $\pi/2^k$ through `qc.mcp(np.pi/2**k, ...)`:
+
+$$R_k = \begin{pmatrix} 1 & 0 \\ 0 & e^{i\pi / 2^k} \end{pmatrix}$$
+
+For $n=3$, the forward circuit structure (before swaps) is:
+$$H_2 \cdot R_1^{12} \cdot R_2^{02} \cdot H_1 \cdot R_1^{01} \cdot H_0$$
+
+**Verification convention**: The implementation uses:
+- QFT: `ifft(state) * sqrt(2**n)` (NumPy convention matches the implemented phase signs)
+- IQFT: `fft(state) / sqrt(2**n)`
+
+The normalization factor $\sqrt{2^n}$ accounts for the difference between the quantum state normalization ($\sum |\alpha_x|^2 = 1$) and the classical DFT convention.
+
+## Hands-On Example
+
+Verify QFT and IQFT are exact inverses by applying both in sequence:
+
+```python
+import numpy as np
+from unitarylab_algorithms.linear_algebra.qft.algorithm import QFTAlgorithm
+
+algo = QFTAlgorithm(text_mode="plain")
+
+# Create a non-trivial input state
+state = np.array([0.3+0.1j, 0.5-0.2j, -0.4+0.3j, 0.2-0.6j,
+                  0.1+0.4j, -0.3-0.1j, 0.6+0.2j, -0.1+0.5j], dtype=complex)
+
+# Forward QFT
+result_fwd = algo.run(n=3, state=state, inverse=False, backend="torch")
+fwd_state = result_fwd["Final state"]
+
+# Inverse QFT on the transformed state
+result_inv = algo.run(n=3, state=fwd_state, inverse=True, backend="torch")
+recovered = result_inv["Final state"]
+
+# Check round-trip fidelity
+fidelity = np.abs(np.vdot(recovered, state / np.linalg.norm(state)))**2
+print(f"Round-trip fidelity: {fidelity:.10f}")
+print(f"Verification error (fwd): {result_fwd['Verification error']:.2e}")
+print(f"Verification error (inv): {result_inv['Verification error']:.2e}")
+```
+
+Expected behavior: round-trip fidelity should be $> 0.9999$; forward and inverse verification errors should be near machine precision.
+
+## Reference Implementation
 
 PennyLane's `QFT` operation is useful as a reference for matrix conventions, decomposition, and resource counts. In this repository, however, the primary implementation path is **UnitaryLab** through `QFTAlgorithm`, `Circuit`, and simulator verification against NumPy.
 

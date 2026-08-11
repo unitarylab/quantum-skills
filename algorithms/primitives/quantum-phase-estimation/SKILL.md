@@ -1,17 +1,27 @@
 ---
 name: quantum-phase-estimation
-description: A quantum phase estimation algorithm that can estimate the eigenvalues of a unitary operator with high precision, which is a fundamental component in many quantum algorithms such as Shor's algorithm and quantum simulation.
+description: "A quantum phase estimation algorithm that can estimate the eigenvalues of a unitary operator with high precision, which is a fundamental component in many quantum algorithms such as Shor's algorithm and quantum simulation. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Quantum Phase Estimation (QPE)
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Quantum Phase Estimation (QPE).
 
 Given a unitary operator $U$ and one of its eigenstates $|\psi\rangle$ satisfying $U|\psi\rangle = e^{2\pi i\phi}|\psi\rangle$, QPE uses $d$ auxiliary qubits and the inverse QFT to extract a binary approximation of the phase $\phi$ with precision $1/2^d$.
 
 Use this skill when you need to:
 - Estimate an eigenphase of a known unitary.
 - Use QPE as a subroutine in HHL, QAE, or Shor's algorithm.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -29,7 +39,7 @@ The `QPEAlgorithm` class also exposes `build_qpe_circuit()` for embedding QPE as
 - Understanding of the Quantum Fourier Transform (QFT) and iQFT.
 - Python: `numpy`, `Circuit`, project library `IQFT`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab_algorithms import QPEAlgorithm
@@ -130,6 +140,7 @@ This method is the core algorithmic component, designed to be called by other al
 **Note:** `build_qpe_circuit()` can be called directly without `run()` to obtain the `Circuit` for embedding in a parent algorithm.
 
 ## Understanding the Key Quantum Components
+
 The $d$ phase qubits are initialized to $|0\rangle^d$ and Hadamard-transformed:
 $$H^{\otimes d}|0\rangle^d = \frac{1}{\sqrt{2^d}}\sum_{j=0}^{2^d-1}|j\rangle$$
 
@@ -157,13 +168,14 @@ The iQFT transforms the phase-encoded register to: if $\phi = k_0/2^d$ exactly, 
 | Controlled $U^{2^k}$ | `cU = U.control(1, '1')` repeated `2^k` times per phase qubit `k` |
 | Inverse QFT | `IQFT(d)` from `unitarylab.library`, appended to `phase_qubits` |
 | Phase readout $\phi = k_0/2^d$ | `int(best_bits_str, 2) / (2 ** d)` in Stage 4 |
-| Probability of best phase | `best_prob = sorted_phases[0][1]` from `final_state.marginal_probabilities()` |
+| Probability of best phase | `best_prob = sorted_phases[0][1]` from `final_state.marginal_probabilities(qubits=phase_qubits, threshold=1e-8)` |
 | Phase precision $\delta\phi = 1/2^d$ | Implicit: determined by number of bits `d` in phase register |
 | Subroutine for HHL / QAE | `build_qpe_circuit()` returns a standalone `Circuit` embeddable externally |
 
-**Notes on encapsulation:** The iQFT is sourced from `unitarylab.library.IQFT` rather than constructed inline, unlike the amplitude estimation implementation which builds it locally. The controlled-unitary power is realized via `U.repeat(2**k)` passed to `qc.append(..., control=phase_qubits[k], control_state='1')`, which is correct but exponentially expensive in `d`.
+**Notes on encapsulation:** The iQFT is sourced from `unitarylab.library.IQFT` rather than constructed inline, unlike the amplitude estimation implementation which builds it locally. The controlled-unitary power is realized via `U.repeat(2**k)` passed to `qc.append(..., control=phase_qubits[k], control_state='1')`. Phase-register probabilities are obtained with `marginal_probabilities(qubits=phase_qubits, threshold=1e-8)`.
 
 ## Mathematical Deep Dive
+
 $$|0\rangle^d|\psi\rangle \rightarrow \frac{1}{\sqrt{2^d}}\sum_{j=0}^{2^d-1} e^{2\pi i\phi j}|j\rangle|\psi\rangle$$
 
 The iQFT then maps this to:
@@ -175,7 +187,7 @@ When $\phi = k_0/2^d$ exactly, the sum equals $\delta_{k', k_0}$ and the measure
 
 **Library backend:** This implementation uses `unitarylab.library.IQFT` for the inverse QFT.
 
-## Hands-On Example (UnitaryLab)
+## Hands-On Example
 
 ```python
 from unitarylab_algorithms import QPEAlgorithm
@@ -197,7 +209,41 @@ print(f"Best probability = {result['Best phase probability']:.4f}")
 print(f"Status = {result['status']}")
 ```
 
-## Reference Implementation (Qiskit)
+## Minimal Manual Implementation
+
+```python
+from unitarylab.core import Circuit
+from unitarylab.library import IQFT
+
+def qpe_circuit(U: Circuit, d: int, prepare_target=None):
+    n_target = U.get_num_qubits()
+    qc = Circuit(d + n_target, name=f"QPE_d{d}")
+    phase_qubits = list(range(d))
+    target_qubits = list(range(d, d + n_target))
+
+    if prepare_target is not None:
+        qc.append(prepare_target, target_qubits)
+
+    for q in phase_qubits:
+        qc.h(q)
+
+    for k in range(d):
+        power = 2 ** k
+        qc.append(U.repeat(power), target=target_qubits, control=phase_qubits[k], control_state='1')
+
+    qc.append(IQFT(d), phase_qubits)
+    return qc
+```
+
+## Debugging Tips
+
+1. **Wrong phase estimate**: Check that `prepare_target` actually prepares an eigenstate of `U`. If the initial state is a superposition of eigenstates, QPE will show multiple peaks.
+2. **Phase not in $[0, 1)$**: The output `result['Estimated phase'] = int(best_bits_str, 2) / (2 ** d)` is always in $[0, 1)$ by construction; no folding needed for QPE (unlike QAE).
+3. **Precision insufficient**: Increase `d`. Each additional bit doubles the resolution.
+4. **Gate count explodes**: $U^{2^{d-1}}$ is applied up to $2^{d-1}$ times. For deep $U$, use matrix exponentiation to build $U^{2^k}$ directly.
+5. **IQFT sign convention**: The unitarylab's `IQFT` matches the standard convention. Do not swap QFT and IQFT orders.
+
+## Reference Implementation
 
 In addition to the UnitaryLab implementation above, the same quantum phase estimation idea can also be expressed using Qiskit’s `PhaseEstimation` workflow. This section is provided only as a reference example for users who want to compare different software ecosystems. The main implementation path of this skill remains the UnitaryLab version described above.
 
@@ -259,7 +305,7 @@ print("Most likely phase:", result.phase)
 print("Raw phase distribution:", result.phases)
 print("Filtered phases:", result.filter_phases(cutoff=0.01, as_float=True))
 ```
-## Reference Implementation (PennyLane)
+
 In addition to the UnitaryLab implementation above, PennyLane also provides a
 template-based standard QPE workflow through `QuantumPhaseEstimation`. This
 section is included only as a reference example. The primary implementation path
@@ -270,7 +316,7 @@ import pennylane as qml
 from pennylane.templates import QuantumPhaseEstimation
 from pennylane import numpy as np
 
-# 使用 @ 组合复合算子
+# Compose the unitary with the @ operator.
 unitary = qml.RX(np.pi / 2, wires=[0]) @ qml.CNOT(wires=[0, 1])
 eigenvector = np.array([-1 / 2, -1 / 2, 1 / 2, 1 / 2])
 
@@ -283,7 +329,7 @@ dev = qml.device("default.qubit", wires=n_estimation_wires + 2)
 def circuit():
     qml.StatePrep(eigenvector, wires=[0, 1])
     QuantumPhaseEstimation(
-        unitary,  # 已含 target_wires，无需再传
+        unitary,  # Already contains target wires; do not pass them again.
         estimation_wires=estimation_wires,
     )
     return qml.probs(estimation_wires)
@@ -297,60 +343,25 @@ print(phase_estimated)
 Qiskit also includes several phase-estimation-related variants beyond the standard
 `PhaseEstimation` workflow:
 
-- **`IterativePhaseEstimation`**  
+- **`IterativePhaseEstimation`**
   An iterative phase-estimation method that estimates the phase bit-by-bit using a single
   auxiliary qubit rather than a full multi-qubit evaluation register. It performs multiple rounds
   of controlled-unitary application and feedback-angle updates, and is useful when qubit resources
-  are limited.  
-  Official reference:  
+  are limited.
+  Official reference:
   `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.IterativePhaseEstimation.html#qiskit_algorithms.IterativePhaseEstimation`
 
-- **`HamiltonianPhaseEstimation`**  
+- **`HamiltonianPhaseEstimation`**
   A Hamiltonian-oriented phase-estimation variant for estimating eigenvalues of Hermitian operators.
   Instead of taking a unitary circuit directly, it accepts a Pauli or `SparsePauliOp` Hamiltonian,
   computes or uses an eigenvalue bound, scales the operator to avoid phase wrapping, exponentiates it
-  into a unitary evolution, and then runs phase estimation internally.  
-  Official reference:  
+  into a unitary evolution, and then runs phase estimation internally.
+  Official reference:
   `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.HamiltonianPhaseEstimation.html#qiskit_algorithms.HamiltonianPhaseEstimation`
 
 
 ### Other PennyLane PE Variant (Reference)
 
-PennyLane also provides an **iterative quantum phase estimation** interface through `qml.iterative_qpe(base, aux_wire, iters)`. Unlike standard QPE, this variant uses **one auxiliary qubit** and returns a list of **mid-circuit measurement values with qubit reset**. It is a resource-efficient alternative when qubit count is limited. 
-Official reference: 
+PennyLane also provides an **iterative quantum phase estimation** interface through `qml.iterative_qpe(base, aux_wire, iters)`. Unlike standard QPE, this variant uses **one auxiliary qubit** and returns a list of **mid-circuit measurement values with qubit reset**. It is a resource-efficient alternative when qubit count is limited.
+Official reference:
 `https://docs.pennylane.ai/en/stable/code/api/pennylane.iterative_qpe.html`
-
-
-## Minimal Manual Implementation (UnitaryLab) 
-
-```python
-from unitarylab.core import Circuit
-from unitarylab.library import IQFT
-
-def qpe_circuit(U: Circuit, d: int, prepare_target=None):
-    n_target = U.get_num_qubits()
-    qc = Circuit(d + n_target, name=f"QPE_d{d}")
-    phase_qubits = list(range(d))
-    target_qubits = list(range(d, d + n_target))
-
-    if prepare_target is not None:
-        qc.append(prepare_target, target_qubits)
-
-    for q in phase_qubits:
-        qc.h(q)
-
-    for k in range(d):
-        power = 2 ** k
-        qc.append(U.repeat(power), target=target_qubits, control=phase_qubits[k], control_state='1')
-
-    qc.append(IQFT(d), phase_qubits)
-    return qc
-```
-
-## Debugging Tips
-
-1. **Wrong phase estimate**: Check that `prepare_target` actually prepares an eigenstate of `U`. If the initial state is a superposition of eigenstates, QPE will show multiple peaks.
-2. **Phase not in $[0, 1)$**: The output `result['Estimated phase'] = int(best_bits_str, 2) / (2 ** d)` is always in $[0, 1)$ by construction; no folding needed for QPE (unlike QAE).
-3. **Precision insufficient**: Increase `d`. Each additional bit doubles the resolution.
-4. **Gate count explodes**: $U^{2^{d-1}}$ is applied up to $2^{d-1}$ times. For deep $U$, use matrix exponentiation to build $U^{2^k}$ directly.
-5. **IQFT sign convention**: The unitarylab's `IQFT` matches the standard convention. Do not swap QFT and IQFT orders.

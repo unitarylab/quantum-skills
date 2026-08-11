@@ -1,11 +1,13 @@
 ---
 name: qaoa
-description: Skill for understanding, using, and implementing the Quantum Approximate Optimization Algorithm (QAOA) for Max-Cut problems via the QAOAAlgorithm class.
+description: "Skill for understanding, using, and implementing the Quantum Approximate Optimization Algorithm (QAOA) for Max-Cut problems via the QAOAAlgorithm class. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Quantum Approximate Optimization Algorithm (QAOA)
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Quantum Approximate Optimization Algorithm (QAOA).
 
 QAOA is a hybrid quantum-classical algorithm for combinatorial optimization. This implementation solves the Max-Cut problem: partition graph vertices into two sets to maximize the number of cut edges. It alternates between cost-Hamiltonian and mixer-Hamiltonian evolution layers.
 
@@ -13,9 +15,17 @@ Use this skill when you need to:
 - Solve Max-Cut or weighted graph partitioning with a quantum algorithm.
 - Learn the QAOA workflow: cost encoding → variational layers → COBYLA optimization.
 
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
+
 ## Overview
 
-1. Encode the Max-Cut cost Hamiltonian: $H_C = -\frac{1}{2}\sum_{(u,v)\in E}(I - Z_u Z_v)$.
+1. Encode the source cost Hamiltonian: $H_C = \sum_{(u,v)\in E} Z_u Z_v$.
 2. Build the QAOA circuit: $p$ alternating layers of $e^{-i\gamma_k H_C}$ and $e^{-i\beta_k H_{\text{mix}}}$.
 3. Optimize $\gamma, \beta$ using COBYLA to minimize $\langle H_C\rangle$.
 4. Extract the bit string with maximum probability as the cut solution.
@@ -27,7 +37,7 @@ Use this skill when you need to:
 - COBYLA gradient-free optimizer.
 - `numpy`, `torch`, `networkx`, `scipy.optimize`, `Circuit`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab_algorithms.quantum_machine_learning.qaoa.algorithm import QAOAAlgorithm
@@ -109,8 +119,8 @@ print(result['plot'])  # list of {"format": "svg", "filename": "..."} dicts
 ## Understanding the Key Quantum Components
 
 ### 1. Cost Hamiltonian $H_C$
-$$H_C = -\frac{1}{2}\sum_{(u,v)\in E}(I - Z_u Z_v)$$
-Implemented as: for each edge $(u,v)$, embed the corresponding $Z_u Z_v$ interaction into the full $n$-qubit space using Kronecker products, together with the identity contribution required by the Max-Cut objective. The minimum-energy states of this cost Hamiltonian correspond to bit strings with larger cut values.
+$$H_C = \sum_{(u,v)\in E} Z_u Z_v$$
+Implemented as: for each edge $(u,v)$, embed the corresponding $Z_u Z_v$ interaction into the full $n$-qubit space using Kronecker products and add it to the cost matrix. The source does not add the identity offset or the negative one-half Max-Cut normalization.
 
 ### 2. Cost Layer $e^{-i\gamma H_C}$
 For each edge $(u,v)$: `CX(u, v) → Rz(2γ, v) → CX(u, v)`. This implements $e^{-i\gamma Z_u Z_v}$ via phase kickback.
@@ -130,7 +140,7 @@ QAOA at depth $p$ achieves approximation ratio $\geq \alpha_p$ for Max-Cut, wher
 | README / Theory Concept | Code Object or Location |
 |---|---|
 | Initial state $|+\rangle^{\otimes n}$ | `for i in range(n_qubits): qc.h(i)` in `_build_circuit` |
-| Cost Hamiltonian $H_C = -\frac{1}{2}\sum_{(u,v)\in E}(I - Z_u Z_v)$ | `_get_h_cost(edges, n_qubits)` — builds the Max-Cut cost Hamiltonian in matrix form | 
+| Cost Hamiltonian $H_C = \sum_{(u,v)\in E} Z_u Z_v$ | `_get_h_cost(edges, n_qubits)` — builds the source cost Hamiltonian in matrix form |
 | Cost layer $e^{-i\gamma Z_uZ_v}$ | `cx(u,v) → rz(2*gamma, v) → cx(u,v)` per edge per layer |
 | Mixer layer $e^{-i\beta X_j}$ | `rx(2*beta, j)` for each qubit per layer |
 | Parameters $(\gamma_1,\ldots,\gamma_p, \beta_1,\ldots,\beta_p)$ | `params[:p]` = gammas, `params[p:]` = betas (flat array) |
@@ -140,11 +150,11 @@ QAOA at depth $p$ achieves approximation ratio $\geq \alpha_p$ for Max-Cut, wher
 | Max-Cut count | `len([(u,v) for (u,v) in edges if best_bits[u] != best_bits[v]])` |
 | Exact maximum energy $\lambda_{\min}(-H_C)$ | `np.linalg.eigvalsh(h_cost)[0]` (note: ground state of $H_C$ = minimum energy) |
 
-**Notes on implementation:** This skill consistently uses the Max-Cut cost Hamiltonian defined in the overview,
+**Notes on implementation:** This skill consistently uses the source cost Hamiltonian defined in the overview,
 $$
-H_C = -\frac{1}{2}\sum_{(u,v)\in E}(I - Z_u Z_v).
+H_C = \sum_{(u,v)\in E} Z_u Z_v.
 $$
-The final Max-Cut solution is extracted from the most-probable basis state of the optimized statevector, which is a greedy decoding strategy rather than a full measurement-sampling workflow.
+For an unweighted graph, minimizing this Ising objective favors anti-aligned endpoints and is related to Max-Cut up to a constant/scale transformation. The final bit string is extracted from the most-probable basis state of the optimized statevector, which is a greedy decoding strategy rather than a full measurement-sampling workflow.
 
 ## Mathematical Deep Dive
 
@@ -155,15 +165,15 @@ $$|\psi(\gamma, \beta)\rangle = e^{-i\beta_p H_{\text{mix}}} e^{-i\gamma_p H_C} 
 $$
 \min_{\gamma,\beta} \langle\psi(\gamma,\beta)|H_C|\psi(\gamma,\beta)\rangle
 \quad \text{with} \quad
-H_C = -\frac{1}{2}\sum_{(u,v)\in E}(I - Z_u Z_v)
+H_C = \sum_{(u,v)\in E} Z_u Z_v
 $$
 
 
-**Approximation ratio:** $r = \langle H_C\rangle_{\text{QAOA}} / C_{\text{max}}$ where $C_{\text{max}}$ is the true Max-Cut value.
+The source does not compute a Max-Cut approximation ratio; it reports the optimized energy of this Ising cost and the most-probable bit string.
 
 **Total parameters:** $2p$ real numbers ($p$ gammas + $p$ betas).
 
-## Hands-On Example (UnitaryLab)
+## Hands-On Example
 
 ```python
 from unitarylab_algorithms.quantum_machine_learning.qaoa.algorithm import QAOAAlgorithm
@@ -178,46 +188,8 @@ result = algo.run(edges=edges, n=n, layers=2, max_iter=80)
 print(f"Cut value: {result['Max-Cut Value']}")
 print(f"Partition: {result['Optimal bitstring']}")
 ```
-## Reference Implementation (Qiskit)
 
-The main implementation in this skill is based on the project’s own `QAOAAlgorithm`.  
-The following Qiskit example is provided only as a **reference implementation** for users who want to compare the workflow with the standard Qiskit QAOA interface.
-
-Qiskit provides a built-in `QAOA` class in `qiskit_algorithms.minimum_eigensolvers`, where the typical workflow is:
-
-1. Define a diagonal cost Hamiltonian.
-2. Instantiate `QAOA` with a sampler and a classical optimizer.
-3. Call `compute_minimum_eigenvalue(...)` to solve the optimization problem.
-
-### Minimal Qiskit Example
-
-```python
-from qiskit.primitives import StatevectorSampler
-from qiskit.quantum_info import SparsePauliOp
-from qiskit_algorithms.minimum_eigensolvers import QAOA
-from qiskit_algorithms.optimizers import COBYLA
-
-# Example 2-qubit diagonal cost Hamiltonian
-cost_op = SparsePauliOp.from_list([
-    ("ZZ", 1.0),
-    ("ZI", 0.5),
-    ("IZ", 0.5),
-])
-
-qaoa = QAOA(
-    sampler=StatevectorSampler(),
-    optimizer=COBYLA(),
-    reps=2,
-)
-
-result = qaoa.compute_minimum_eigenvalue(operator=cost_op)
-
-print("Eigenvalue:", result.eigenvalue)
-print("Best measurement:", result.best_measurement)
-print("Eigenstate:", result.eigenstate)
-```
-
-## Minimal Manual Implementation (UnitaryLab) 
+## Minimal Manual Implementation
 
 The following Python skeleton reconstructs the core QAOA components — the cost Hamiltonian builder, the QAOA circuit, and the hybrid optimization loop.
 
@@ -228,7 +200,7 @@ from scipy.optimize import minimize
 from unitarylab.core import Circuit
 
 def build_cost_hamiltonian(edges, n_qubits: int) -> np.ndarray:
-    """Build H_C = sum_{(u,v) in E} Z_u Z_u as a (2^n x 2^n) matrix."""
+    """Build H_C = sum_{(u,v) in E} Z_u Z_v as a (2^n x 2^n) matrix."""
     dim = 2**n_qubits
     H_c = np.zeros((dim, dim), dtype=np.complex128)
     Z = np.array([[1,0],[0,-1]], dtype=np.complex128)
@@ -298,3 +270,42 @@ def run_qaoa(edges, n: int = 6, layers: int = 2,
 4. **Large `n`**: Circuit simulation grows exponentially as $2^{n}$. Practical limit is ~20 qubits.
 5. **`edges=None`**: Uses the built-in default 6-node graph. Always pass explicit `edges` and matching `n`.
 6. **Approximation ratio interpretation**: The `Optimal bitstring` maps qubit $q$ to side 0 or 1. Count edges between different sides to verify `Max-Cut Value`.
+
+## Reference Implementation
+
+The main implementation in this skill is based on the project’s own `QAOAAlgorithm`.
+The following Qiskit example is provided only as a **reference implementation** for users who want to compare the workflow with the standard Qiskit QAOA interface.
+
+Qiskit provides a built-in `QAOA` class in `qiskit_algorithms.minimum_eigensolvers`, where the typical workflow is:
+
+1. Define a diagonal cost Hamiltonian.
+2. Instantiate `QAOA` with a sampler and a classical optimizer.
+3. Call `compute_minimum_eigenvalue(...)` to solve the optimization problem.
+
+### Minimal Qiskit Example
+
+```python
+from qiskit.primitives import StatevectorSampler
+from qiskit.quantum_info import SparsePauliOp
+from qiskit_algorithms.minimum_eigensolvers import QAOA
+from qiskit_algorithms.optimizers import COBYLA
+
+# Example 2-qubit diagonal cost Hamiltonian
+cost_op = SparsePauliOp.from_list([
+    ("ZZ", 1.0),
+    ("ZI", 0.5),
+    ("IZ", 0.5),
+])
+
+qaoa = QAOA(
+    sampler=StatevectorSampler(),
+    optimizer=COBYLA(),
+    reps=2,
+)
+
+result = qaoa.compute_minimum_eigenvalue(operator=cost_op)
+
+print("Eigenvalue:", result.eigenvalue)
+print("Best measurement:", result.best_measurement)
+print("Eigenstate:", result.eigenstate)
+```

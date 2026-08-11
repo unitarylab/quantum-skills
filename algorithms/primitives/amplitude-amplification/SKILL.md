@@ -1,19 +1,29 @@
 ---
 name: amplitude-amplification
-description: A quantum algorithm that generalizes Grover's search algorithm, allowing for the amplification of the probability of desired outcomes in a quantum state. It is used to find marked items in an unsorted database with quadratic speedup compared to classical algorithms. This skill provides a comprehensive guide to understanding, implementing (using UnitaryLab's quantum simulator), and utilizing amplitude amplification in quantum computing applications.
+description: "A quantum algorithm that generalizes Grover's search algorithm, allowing for the amplification of the probability of desired outcomes in a quantum state. It is used to find marked items in an unsorted database with quadratic speedup compared to classical algorithms. This skill provides a comprehensive guide to understanding, implementing (using UnitaryLab's quantum simulator), and utilizing amplitude amplification in quantum computing applications. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Amplitude Amplification
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Amplitude Amplification.
 
 Amplitude Amplification generalizes Grover's search algorithm. Given a unitary operator $U$ that prepares a state with a small initial success probability $p$, this algorithm iteratively applies a Grover-style operator to amplify the probability of the "good" (target) states, achieving probability close to 1 after $O(1/\sqrt{p})$ iterations.
-
-Grover search is the standard special case of amplitude amplification where $U=H^{\otimes n}$ prepares the uniform superposition, the good subspace is a marked computational-basis state, and $p=1/2^n$ for a single target. For the repository's standalone Grover implementation, use `../grover/SKILL.md`.
 
 Use this skill when you need to:
 - Boost the probability of sampling a desired outcome from a quantum circuit.
 - Apply the quantum quadratic speedup over classical random sampling.
+
+For the repository's standalone Grover implementation, use `../grover/SKILL.md`.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -33,7 +43,7 @@ or set manually via `reps`.
 - Understanding of quantum state vectors and measurement probabilities.
 - Python: `numpy`, project core classes `Circuit`, `Register`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab_algorithms import AmplitudeAmplificationAlgorithm
@@ -183,7 +193,8 @@ $$k = \left\lfloor \frac{\pi}{4\theta} - \frac{1}{2} \right\rceil \approx \frac{
 
 Query complexity: $O(1/\sqrt{p})$, quadratic speedup over classical $O(1/p)$.
 
-## Hands-On Example (UnitaryLab)
+## Hands-On Example
+
 ```python
 from unitarylab_algorithms import AmplitudeAmplificationAlgorithm
 from unitarylab.core import Circuit
@@ -214,7 +225,55 @@ print(f"Amplified probability: {result['Amplified Target Probability']:.4f}")
 print(f"Status: {result['status']}")
 print(result['plot'])   # [{'format': 'txt', 'filename': '...'}]
 ```
-## Reference Implementation (Qiskit)
+
+## Minimal Manual Implementation
+
+```python
+from unitarylab.core import Circuit
+import math
+
+def amplitude_amplification(U: Circuit, good_zero_qubits, p: float, backend='torch'):
+    n_data = U.get_num_qubits()
+    ancilla = n_data
+    reps = max(1, round(math.pi / (4 * math.asin(math.sqrt(p))) - 0.5))
+
+    qc = Circuit(n_data + 1)
+    qc.append(U, list(range(n_data)))
+
+    for _ in range(reps):
+        # --- Oracle ---
+        qc.x(ancilla); qc.h(ancilla)
+        for q in good_zero_qubits: qc.x(q)
+        if len(good_zero_qubits) == 1:
+            qc.cx(good_zero_qubits[0], ancilla)
+        else:
+            qc.mcx(good_zero_qubits, ancilla)
+        for q in good_zero_qubits: qc.x(q)
+        qc.h(ancilla); qc.x(ancilla)
+
+        # --- Diffuser ---
+        qc.append(U.dagger(), list(range(n_data)))
+        # (repeat oracle on all data qubits)
+        qc.x(ancilla); qc.h(ancilla)
+        all_data = list(range(n_data))
+        for q in all_data: qc.x(q)
+        qc.mcx(all_data, ancilla)
+        for q in all_data: qc.x(q)
+        qc.h(ancilla); qc.x(ancilla)
+        qc.append(U, list(range(n_data)))
+
+    return qc
+```
+
+## Debugging Tips
+
+1. **`p` estimate is inaccurate**: If you misestimate $p$, `reps` may be wrong. Use `reps` manually if you know the true probability.
+2. **No amplification (status='failed')**: Double-check that `good_zero_qubits` indices are correct and that the good state has nonzero initial probability.
+3. **Good state never in $|0\rangle$**: If the target condition is "qubit in $|1\rangle$", apply an `X` gate to those qubits in $U$ before running, or add them to `good_zero_qubits` after an X pre-rotation.
+4. **Circuit grows too large**: Each Grover iteration adds `O(n)` gates. For large `reps`, simulation may be slow.
+5. **Ancilla index conflict**: The ancilla is always placed at index `n_data` (one beyond the data register). Do not include it in `good_zero_qubits`.
+
+## Reference Implementation
 
 In addition to the UnitaryLab implementation above, the same amplitude amplification idea can also be expressed using Qiskit’s AmplificationProblem and Grover workflow. This section is provided only as a reference example for users who want to compare different software ecosystems. The main implementation path of this skill remains the UnitaryLab version described above.
 ### Example A: Minimal Qiskit Grover Run
@@ -272,8 +331,6 @@ print("Decoded assignment:", result.assignment)
 print("Tried powers:", result.iterations)
 ```
 
-## Reference Implementation (PennyLane)
-
 PennyLane also provides an amplitude amplification template through
 `qml.AmplitudeAmplification`. This section is included only as a reference
 implementation for comparison with other quantum software frameworks. The main
@@ -309,51 +366,3 @@ probs = circuit()
 print(np.round(probs, 3))
 # Expected: dominant probability at index 2
 ```
-
-
-## Minimal Manual Implementation (UnitaryLab) 
-
-```python
-from unitarylab.core import Circuit
-import math
-
-def amplitude_amplification(U: Circuit, good_zero_qubits, p: float, backend='torch'):
-    n_data = U.get_num_qubits()
-    ancilla = n_data
-    reps = max(1, round(math.pi / (4 * math.asin(math.sqrt(p))) - 0.5))
-
-    qc = Circuit(n_data + 1)
-    qc.append(U, list(range(n_data)))
-
-    for _ in range(reps):
-        # --- Oracle ---
-        qc.x(ancilla); qc.h(ancilla)
-        for q in good_zero_qubits: qc.x(q)
-        if len(good_zero_qubits) == 1:
-            qc.cx(good_zero_qubits[0], ancilla)
-        else:
-            qc.mcx(good_zero_qubits, ancilla)
-        for q in good_zero_qubits: qc.x(q)
-        qc.h(ancilla); qc.x(ancilla)
-
-        # --- Diffuser ---
-        qc.append(U.dagger(), list(range(n_data)))
-        # (repeat oracle on all data qubits)
-        qc.x(ancilla); qc.h(ancilla)
-        all_data = list(range(n_data))
-        for q in all_data: qc.x(q)
-        qc.mcx(all_data, ancilla)
-        for q in all_data: qc.x(q)
-        qc.h(ancilla); qc.x(ancilla)
-        qc.append(U, list(range(n_data)))
-
-    return qc
-```
-
-## Debugging Tips
-
-1. **`p` estimate is inaccurate**: If you misestimate $p$, `reps` may be wrong. Use `reps` manually if you know the true probability.
-2. **No amplification (status='failed')**: Double-check that `good_zero_qubits` indices are correct and that the good state has nonzero initial probability.
-3. **Good state never in $|0\rangle$**: If the target condition is "qubit in $|1\rangle$", apply an `X` gate to those qubits in $U$ before running, or add them to `good_zero_qubits` after an X pre-rotation.
-4. **Circuit grows too large**: Each Grover iteration adds `O(n)` gates. For large `reps`, simulation may be slow.
-5. **Ancilla index conflict**: The ancilla is always placed at index `n_data` (one beyond the data register). Do not include it in `good_zero_qubits`.

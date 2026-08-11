@@ -1,11 +1,11 @@
 ---
 name: algorithms
-description: A top-level index of quantum algorithms centered on the UnitaryLab implementation, covering quantum primitives, linear systems, state preparation, cryptography, Hamiltonian simulation, Schrodingerization, quantum machine learning, eigensolvers, gradients, and quantum error correction, with selected Qiskit, PennyLane, and Classiq examples included as reference extensions.
+description: "A top-level index of quantum algorithms centered on the UnitaryLab implementation, covering quantum primitives, linear systems, cryptography, Hamiltonian simulation, Schrodingerization, quantum machine learning, eigensolvers, gradients, and quantum error correction, with selected Qiskit, PennyLane, and Classiq examples included as reference extensions. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Quantum Algorithms
 
-This directory collects the main quantum algorithm modules in UnitaryLab.  
+This directory collects the main quantum algorithm modules in UnitaryLab.
 Each subdirectory contains its own `SKILL.md` with more detailed usage notes and implementation guidance.
 
 ## Note
@@ -19,48 +19,53 @@ Use the following workflow when handling `unitarylab_algorithms`:
 	- `pip install unitarylab-algorithms`
 4. Re-run the script or notebook cell and confirm the import works.
 
+## Reference-Only Scripts Policy
+
+Leaf algorithm skills often include a `scripts/` directory with two kinds of material: a small example that calls the corresponding `unitarylab_algorithms` class, and a direct implementation reference for the algorithm. Treat both as fallback references for troubleshooting, API comparison, and validation. They are not files to import from generated answers, and they should not become runtime dependencies.
+
+For user-facing code generation, first write standalone code for the requested task. If that generated code fails, or if the required API/algorithm detail is ambiguous, inspect the scripts to understand the intended behavior and adapt the idea without importing or depending on the script files.
 
 ## 1. Quantum Primitives
 
-Core building blocks for quantum algorithms, including Grover search, phase estimation, amplitude amplification/estimation, Hadamard-based routines, and related primitives.
+Core building blocks for quantum algorithms, including phase estimation, amplitude amplification/estimation, Hadamard-based routines, and related primitives.
 
 See reference: `./primitives/SKILL.md`
 
 ## 2. Quantum Linear Systems
 
-Algorithms for solving linear systems on quantum hardware, including AQC, HHL, LCU, the basic single-qubit QSP demo, QSVT-QLSA, and VQLS. Route QSP-based Hamiltonian simulation requests to `./hamiltonian-simulation/SKILL.md`.
+Algorithms for solving linear systems on quantum hardware, including HHL, LCU, AQC, the basic single-qubit Quantum Signal Processing (QSP) demo, and QSVT-QLSA. Route QSP-based Hamiltonian simulation requests to `./hamiltonian-simulation/SKILL.md`.
 
 See reference: `./linear-systems/SKILL.md`
 
-## 3. State Preparation
-
-Methods for loading target amplitude vectors into quantum circuits, including sparse-superposition, Möttönen, MPS, multiplexer, and variational Pauli-word preparation.
-
-See reference: `./state-preparation/SKILL.md`
-
-## 4. Quantum Cryptography
+## 3. Quantum Cryptography
 
 Quantum algorithms with cryptographic relevance: Shor's factoring algorithm, discrete logarithm, and Simon's algorithm.
 
 See reference: `./cryptography/SKILL.md`
 
-## 5. Hamiltonian Simulation
+## 4. Hamiltonian Simulation
 
-Methods for simulating quantum Hamiltonians, including Trotter-Suzuki decomposition and QDrift randomized simulation.
+Methods for simulating quantum Hamiltonians, including Trotter-Suzuki decomposition, QDrift randomized simulation, Taylor series simulation, and QSP-HS.
 
 See reference: `./hamiltonian-simulation/SKILL.md`
 
-## 6. Schrodingerization
+## 5. Schrodingerization
 
 PDE-to-quantum mapping via Schrodingerization, covering advection and 1D/2D heat equation examples.
 
 See reference: `./schrodingerization/SKILL.md`
 
-## 7. Quantum Machine Learning
+## 6. Quantum Machine Learning
 
-Variational and hybrid quantum-classical learning algorithms, including VQE, Fermi-Hubbard VQE, VQC, QAOA, QCBM, and CVQNN.
+Variational and hybrid quantum-classical learning algorithms, including VQE, VQC, QAOA, QCBM, CVQNN, and Fermi-Hubbard VQE.
 
 See reference: `./quantum-machine-learning/SKILL.md`
+
+## 7. Quantum State Preparation
+
+Methods for loading target quantum states, including sparse superposition, Möttönen, MPS, multiplexer, and variational Pauli-word preparation.
+
+See reference: `./state-preparation/SKILL.md`
 
 ## 8. Eigensolvers
 

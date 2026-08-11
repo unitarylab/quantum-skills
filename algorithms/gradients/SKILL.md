@@ -1,6 +1,6 @@
 ---
 name: gradients
-description: Master routing guide for all quantum gradient and geometric tensor methods in this folder. Read this file first, then follow the leaf skill for the chosen method.
+description: "Master routing guide for all quantum gradient and geometric tensor methods in this folder. Read this file first, then follow the leaf skill for the chosen method. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Quantum Gradients — Master Guide
@@ -103,7 +103,7 @@ All gradient classes share the same run interface:
 result = gradient_or_qfi.run(
     circuits=[qc],
     observables=[obs],      # only for estimator-based methods
-    parameter_values=[[...]], 
+    parameter_values=[[...]],
     parameters=[[...]],     # subset to differentiate; None = all
 ).result()
 ```

@@ -1,11 +1,13 @@
 ---
 name: hadamard-test
-description: A quantum algorithm that uses the Hadamard test to estimate the expectation value of a unitary operator with respect to a given quantum state. This algorithm is fundamental in quantum computing and has applications in various quantum algorithms, including quantum phase estimation and variational quantum algorithms.
+description: "A quantum algorithm that uses the Hadamard test to estimate the expectation value of a unitary operator with respect to a given quantum state. This algorithm is fundamental in quantum computing and has applications in various quantum algorithms, including quantum phase estimation and variational quantum algorithms. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Hadamard Test
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Hadamard Test.
 
 The Hadamard Test uses a single ancilla qubit to estimate the complex expectation value $\langle\psi|U|\psi\rangle$ for a unitary $U$ and state $|\psi\rangle$. It is a fundamental subroutine in quantum algorithms, supporting expectation value estimation, state overlap testing (swap test), and single-bit phase estimation.
 
@@ -13,6 +15,14 @@ Use this skill when you need to:
 - Estimate $\text{Re}\langle\psi|U|\psi\rangle$ or $\text{Im}\langle\psi|U|\psi\rangle$.
 - Measure $|\langle\phi|\psi\rangle|^2$ (overlap between two states) via the swap test.
 - Reconstruct a complex eigenphase from real and imaginary parts.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -34,7 +44,7 @@ The core circuit (for mode `'expectation'`):
 - Quantum gates: H, S, $S^\dagger$, controlled-U.
 - Python: `numpy`, `Circuit`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab_algorithms import HadamardTestAlgorithm
@@ -119,6 +129,7 @@ print(result_im['Estimated Value'])   # ≈ -sin(0.4) ≈ -0.3894
 **Data flow:** mode selection → `_build_hadamard_test_circuit()` per branch → `execute()` → ancilla `p0` → shot noise → `<Z>` → mode-specific reduction → `est_val` → `update_output()` → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
+
 The ancilla qubit (qubit 0) acts as a quantum probe. After the circuit, its measurement probabilities encode the inner product:
 - Real test: $p(0) - p(1) = \text{Re}\langle\psi|U|\psi\rangle$
 - Imaginary test: $p(0) - p(1) = \text{Im}\langle\psi|U|\psi\rangle$
@@ -199,7 +210,7 @@ result2 = algo.run(mode='phase_estimation', U=U2, shots=20000)
 print(result2['Estimated Value'])
 ```
 
-## Implementing Your Own Version
+## Minimal Manual Implementation
 
 ```python
 from unitarylab.core import Circuit

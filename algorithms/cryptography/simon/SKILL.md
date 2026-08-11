@@ -1,17 +1,27 @@
 ---
 name: simon
-description: Use for implementing, explaining, running, or debugging Simon's algorithm in this repository, especially for oracle construction, measurement interpretation, GF(2) post-processing, simulator state extraction, and compatible reimplementation.
+description: "Use for implementing, explaining, running, or debugging Simon's algorithm in this repository, especially for oracle construction, measurement interpretation, GF(2) post-processing, simulator state extraction, and compatible reimplementation. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Simon's Algorithm
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Simon's Algorithm.
 
 Simon's algorithm solves Simon's problem: given a black-box function $f: \{0,1\}^n \rightarrow \{0,1\}^n$ with the promise $f(x) = f(y) \iff x \oplus y = s$ for some hidden string $s$, find $s$ using $O(n)$ quantum queries instead of the classical $O(2^{n/2})$.
 
 Use this skill when you need to:
 - Demonstrate an exponential quantum speedup over classical algorithms.
 - Understand the hidden subgroup problem structure behind Shor's algorithm.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -29,7 +39,7 @@ Simon's algorithm:
 - XOR (bitwise addition mod 2) and binary linear algebra.
 - Python: `numpy`, `Circuit`, `Register`, `ClassicalRegister`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab_algorithms import SimonAlgorithm
@@ -109,6 +119,7 @@ print(result['plot'])            # List of saved file dicts [{"format": ..., "fi
 **Data flow:** `s` → `_build_simon_oracle(qc, s)` → `qc.execute()` → `result.marginal_probabilities(qubits=range(n), threshold=1e-5)` → `_get_basis_simple()` → `_solve_simon_general()` → `found_s` (`result['Computed s']`) → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
+
 The $n$-qubit input register $|x\rangle$ starts in $|0\rangle^n$. After Hadamard:
 $$H^{\otimes n}|0\rangle^n = \frac{1}{\sqrt{2^n}}\sum_{x \in \{0,1\}^n}|x\rangle$$
 
@@ -172,7 +183,105 @@ print(f"Found  s:  {result['Computed s']}")
 print(f"Success:   {result['status'] == 'ok'}")
 print(result['plot'])   # [{'format': 'txt', 'filename': '...'}]
 ```
-## Reference Implementation (Classiq)
+
+## Minimal Manual Implementation
+
+The following Python skeleton reconstructs the core components of Simon's algorithm at the oracle, circuit, and post-processing level.
+
+### Step 1: Build the Simon oracle
+
+```python
+# Simplified reconstruction — mirrors SimonAlgorithm._build_simon_oracle()
+
+def build_simon_oracle(qc, s: str, n: int):
+    """Build U_f for Simon's problem with hidden string s.
+
+    Structure: copy x → y via CX, then XOR the pivot column into all
+    positions where s[i]='1'.
+    """
+    # Copy x to y
+    for i in range(n):
+        qc.cx(i, i + n)
+
+    pivot_idx = s.find('1')    # leftmost '1' in s
+    if pivot_idx < 0:
+        return  # trivial case: s=0...0, nothing to do
+
+    for i in range(n):
+        if s[i] == '1':
+            # XOR: qubit (n-1-pivot_idx) in x controls qubit (n-1-i+n) in y
+            qc.cx(n - 1 - pivot_idx, n - 1 - i + n)
+```
+
+### Step 2: Build and run the full Simon circuit
+
+```python
+# Exact usage example (uses actual API)
+from unitarylab_algorithms import SimonAlgorithm
+from unitarylab.core import Circuit, Register
+
+def simon_circuit(s_target: str, backend: str = 'torch'):
+    n = len(s_target)
+    rx = Register('x', n)
+    ry = Register('y', n)
+    from unitarylab.core import ClassicalRegister
+    cqr = ClassicalRegister('c', n)
+    qc = Circuit(rx, ry, cqr)
+
+    # H on input
+    for i in range(n): qc.h(i)
+
+    # Oracle
+    build_simon_oracle(qc, s_target, n)
+
+    # Mid-circuit measurement of output register
+    qc.measure(list(range(n, 2*n)), list(range(n)))
+
+    # H on input again
+    for i in range(n): qc.h(i)
+
+    return qc
+```
+
+### Step 3: Classical post-processing (Gaussian elimination over F₂)
+
+```python
+# Simplified reconstruction — mirrors _get_basis_simple() and _solve_simon_general()
+
+def extract_basis(state_dict, n):
+    """Greedy pivot selection: collect n-1 linearly independent vectors."""
+    basis = {}
+    for bits in state_dict:
+        pivot = bits.find('1')
+        if pivot >= 0 and pivot not in basis:
+            basis[pivot] = bits
+        if len(basis) >= n - 1:
+            break
+    return list(basis.values())
+
+def solve_simon(basis, n):
+    """Back-substitution over F₂ to find hidden string s."""
+    pivot_positions = {bits.find('1'): bits for bits in basis}
+    all_positions = set(range(n))
+    free_vars = all_positions - set(pivot_positions.keys())
+    s = ['0'] * n
+    for pos in free_vars:
+        s[pos] = '1'  # free variable set to 1
+    for pivot_pos in sorted(pivot_positions.keys(), reverse=True):
+        row = pivot_positions[pivot_pos]
+        val = sum(int(row[j]) * int(s[j]) for j in range(n) if j != pivot_pos) % 2
+        s[pivot_pos] = str(val)
+    return ''.join(s)
+```
+
+## Debugging Tips
+
+1. **`s` all zeros**: Will raise `ValueError`. Always include at least one `'1'` bit.
+2. **`backend` not `'torch'`**: Will raise `ValueError`. Simon's algorithm requires mid-circuit measurement, supported only by `'torch'`.
+3. **`result['Computed s']` differs from `s`**: The solver may find a different or trivial $s$ if too few linearly independent equations were collected. Re-run or increase measurements.
+4. **Odd register size vs. qubit count**: The circuit uses $2n$ qubits (input + output) plus a classical register of $n$ bits.
+
+## Reference Implementation
 
 Classiq can be used as a high-level reference implementation of Simon's algorithm.
 It describes the algorithm with QMOD functions, automatic synthesis, and a declarative oracle definition.
@@ -278,99 +387,3 @@ print("Recovered secret:", secret)
 
 assert secret == S_SECRET
 ```
-## Minimal Manual Implementation (UnitaryLab) 
-
-The following Python skeleton reconstructs the core components of Simon's algorithm at the oracle, circuit, and post-processing level.
-
-### Step 1: Build the Simon oracle
-
-```python
-# Simplified reconstruction — mirrors SimonAlgorithm._build_simon_oracle()
-
-def build_simon_oracle(qc, s: str, n: int):
-    """Build U_f for Simon's problem with hidden string s.
-
-    Structure: copy x → y via CX, then XOR the pivot column into all
-    positions where s[i]='1'.
-    """
-    # Copy x to y
-    for i in range(n):
-        qc.cx(i, i + n)
-
-    pivot_idx = s.find('1')    # leftmost '1' in s
-    if pivot_idx < 0:
-        return  # trivial case: s=0...0, nothing to do
-
-    for i in range(n):
-        if s[i] == '1':
-            # XOR: qubit (n-1-pivot_idx) in x controls qubit (n-1-i+n) in y
-            qc.cx(n - 1 - pivot_idx, n - 1 - i + n)
-```
-
-### Step 2: Build and run the full Simon circuit
-
-```python
-# Exact usage example (uses actual API)
-from unitarylab_algorithms import SimonAlgorithm
-from unitarylab.core import Circuit, Register
-
-def simon_circuit(s_target: str, backend: str = 'torch'):
-    n = len(s_target)
-    rx = Register('x', n)
-    ry = Register('y', n)
-    from unitarylab.core import ClassicalRegister
-    cqr = ClassicalRegister('c', n)
-    qc = Circuit(rx, ry, cqr)
-
-    # H on input
-    for i in range(n): qc.h(i)
-
-    # Oracle
-    build_simon_oracle(qc, s_target, n)
-
-    # Mid-circuit measurement of output register
-    qc.measure(list(range(n, 2*n)), list(range(n)))
-
-    # H on input again
-    for i in range(n): qc.h(i)
-
-    return qc
-```
-
-### Step 3: Classical post-processing (Gaussian elimination over F₂)
-
-```python
-# Simplified reconstruction — mirrors _get_basis_simple() and _solve_simon_general()
-
-def extract_basis(state_dict, n):
-    """Greedy pivot selection: collect n-1 linearly independent vectors."""
-    basis = {}
-    for bits in state_dict:
-        pivot = bits.find('1')
-        if pivot >= 0 and pivot not in basis:
-            basis[pivot] = bits
-        if len(basis) >= n - 1:
-            break
-    return list(basis.values())
-
-def solve_simon(basis, n):
-    """Back-substitution over F₂ to find hidden string s."""
-    pivot_positions = {bits.find('1'): bits for bits in basis}
-    all_positions = set(range(n))
-    free_vars = all_positions - set(pivot_positions.keys())
-    s = ['0'] * n
-    for pos in free_vars:
-        s[pos] = '1'  # free variable set to 1
-    for pivot_pos in sorted(pivot_positions.keys(), reverse=True):
-        row = pivot_positions[pivot_pos]
-        val = sum(int(row[j]) * int(s[j]) for j in range(n) if j != pivot_pos) % 2
-        s[pivot_pos] = str(val)
-    return ''.join(s)
-```
-
-## Debugging Tips
-
-1. **`s` all zeros**: Will raise `ValueError`. Always include at least one `'1'` bit.
-2. **`backend` not `'torch'`**: Will raise `ValueError`. Simon's algorithm requires mid-circuit measurement, supported only by `'torch'`.
-3. **`result['Computed s']` differs from `s`**: The solver may find a different or trivial $s$ if too few linearly independent equations were collected. Re-run or increase measurements.
-4. **Odd register size vs. qubit count**: The circuit uses $2n$ qubits (input + output) plus a classical register of $n$ bits.

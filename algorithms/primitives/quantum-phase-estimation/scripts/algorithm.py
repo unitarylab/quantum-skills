@@ -1,61 +1,51 @@
-"""Quantum Phase Estimation (QPE) — estimate eigenphase of a unitary operator."""
+"""Verification script generated from the leaf SKILL.md.
 
-import numpy as np
+This file is generated from the first Python code block under
+`Reference Implementation Example`. Regenerate it after editing the skill.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+def _add_workspace_paths() -> None:
+    here = Path(__file__).resolve()
+    for candidate in [here.parent, *here.parents]:
+        if (candidate / "unitarylab_algorithms").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+        if (candidate / "quantum-skills-new").is_dir() and (candidate / "unitarylab_algorithms").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+    workspace = here.parents[4] if len(here.parents) > 4 else here.parent
+    sys.path.insert(0, str(workspace))
+
+
+_add_workspace_paths()
+
 from unitarylab_algorithms import QPEAlgorithm
 from unitarylab.core import Circuit
+import numpy as np
 
+# Build a 1-qubit unitary with known phase phi = 1/4
+# U = diag(1, e^{2pi*i*phi}) so with phi=0.25: U = diag(1, i) = S gate
+U = Circuit(1, name="S_gate")
+U.s(0)   # S gate has phase e^{i*pi/2} = e^{2pi*i*0.25}
 
-def example_s_gate():
-    """Estimate phase of S gate eigenstate |1>.  Expected phi = 0.25."""
-    U = Circuit(1, name="S_gate")
-    U.s(0)
+# Prepare eigenstate |1> (eigenstate of S is |1> with eigenvalue i=e^{i*pi/2})
+prepare_psi = Circuit(1, name="prep_1")
+prepare_psi.x(0)   # |0> -> |1>
 
-    prepare_target = Circuit(1, name="prep_1")
-    prepare_target.x(0)
+algo = QPEAlgorithm()          # algo_dir can be set here; defaults to results/
+result = algo.run(
+    U=U,
+    d=4,                       # 4-bit phase precision (1/16 = 0.0625)
+    prepare_target=prepare_psi,
+    backend='torch'
+)
 
-    algo = QPEAlgorithm()
-    result = algo.run(
-        U=U,
-        d=4,
-        prepare_target=prepare_target,
-        backend="torch",
-    )
-
-    print("=" * 50)
-    print("QPE Example: S Gate  (expected phi = 0.25)")
-    print("=" * 50)
-    for f in result.get("plot", []):
-        print(f"  Saved file      : {f['filename']} ({f['format']})")
-    print(f"  Estimated phase : {result['Estimated phase']}")
-    print(f"  Best probability: {result['Best phase probability']:.4f}")
-    print(f"  Circuit path    : {result.get('circuit_path')}")
-
-
-def example_t_gate():
-    """Estimate phase of T gate eigenstate |1>.  Expected phi = 0.125."""
-    U = Circuit(1, name="T_gate")
-    U.p(np.pi / 4, 0)
-
-    prepare_target = Circuit(1, name="prep_1")
-    prepare_target.x(0)
-
-    algo = QPEAlgorithm()
-    result = algo.run(
-        U=U,
-        d=5,
-        prepare_target=prepare_target,
-        backend="torch",
-    )
-
-    print("=" * 50)
-    print("QPE Example: T Gate  (expected phi = 0.125)")
-    print("=" * 50)
-    for f in result.get("plot", []):
-        print(f"  Saved file      : {f['filename']} ({f['format']})")
-    print(f"  Estimated phase : {result['Estimated phase']}")
-    print(f"  Best probability: {result['Best phase probability']:.4f}")
-
-
-if __name__ == "__main__":
-    example_s_gate()
-    example_t_gate()
+print(result['Estimated phase'])         # Should be ~0.25
+print(result['Best phase probability'])  # Probability of the best state
+print(result['circuit_path'])            # SVG circuit diagram path

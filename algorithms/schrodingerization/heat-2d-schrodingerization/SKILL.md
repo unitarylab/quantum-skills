@@ -1,9 +1,40 @@
 ---
 name: heat-2d-schrodingerization
-description: A quantum-compatible solver for the 2D Heat Equation using Schrödingerization to transform the non-unitary diffusion equation into a unitary evolution problem. Supports anisotropic diffusion, Dirichlet and periodic boundary conditions, source terms, and both classical and Trotter-based quantum evolution with automatic 2D circuit generation and 3D temperature field visualization.
+description: "A quantum-compatible solver for the 2D Heat Equation using Schrödingerization to transform the non-unitary diffusion equation into a unitary evolution problem. Supports anisotropic diffusion, Dirichlet and periodic boundary conditions, source terms, and both classical and Trotter-based quantum evolution with automatic 2D circuit generation and 3D temperature field visualization. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
-## Entry Point
+
+# Skill: 2D Heat Equation (Schrödingerization-based Solver)
+
+## Overview
+
+### 2D Heat Equation
+
+$$
+\frac{\partial u}{\partial t} = a_1 \frac{\partial^2 u}{\partial x^2} + a_2 \frac{\partial^2 u}{\partial y^2} + f(x,y)
+$$
+
+- $a_1, a_2$: diffusion coefficients in x/y directions
+- $u(x,y,t)$: temperature field
+- $f(x,y)$: source term
+
+### Schrödingerized Hamiltonian (Periodic Form)
+
+$$
+H = - \hat{\eta} \otimes \left( a_1 \hat{p}_x^2 + a_2 \hat{p}_y^2 \right)
+$$
+
+Valid if:
+
+1. Discrete derivative operator is Hermitian
+2. Periodic BC in both x/y directions
+3. Source term $f(x,y) = 0$
+
+Otherwise, full Schrödingerization procedure is required.
+
+------
+
+## Reference Implementation Example
 
 Use the provided algorithm class first. It owns parameter parsing, solver dispatch, plotting, and circuit export.
 
@@ -33,49 +64,45 @@ algo = Heat2dEquationAlgorithm()
 result = algo.run(params=params, backend="torch", device="cpu")
 ```
 
-# Skill: 2D Heat Equation (Schrödingerization-based Solver)
 
-## Mathematical Model
+## Inputs and Outputs
 
-### 2D Heat Equation
+`Heat2dEquationAlgorithm.run()` dispatches to `_solve_classical`, `_solve_trotter`, or `_solve_block`. The block path currently logs a fallback message and calls the classical solver. Classical and Trotter paths return dictionaries with this shape:
 
-$$
-\frac{\partial u}{\partial t} = a_1 \frac{\partial^2 u}{\partial x^2} + a_2 \frac{\partial^2 u}{\partial y^2} + f(x,y)
-$$
+```python
+{
+    "status": "ok",
+    "message": "2D Heat equation solved",
+    "grid": {
+        "n_points": 2**nx,
+        "dx": dx,
+        # Trotter only:
+        "dt": dt,
+        "nt": Nt,
+    },
+    "x": [...],
+    "y": [...],
+    "u": [[...], ...],
+    "circuit": circuit_plot_paths,
+    "plot": {
+        "format": "svg",
+        "filename": "<solution_plot_filename>",
+    },
+}
+```
 
-- $a_1, a_2$: diffusion coefficients in x/y directions
-- $u(x,y,t)$: temperature field
-- $f(x,y)$: source term
-
-### Schrödingerized Hamiltonian (Periodic Form)
-
-$$
-H = - \hat{\eta} \otimes \left( a_1 \hat{p}_x^2 + a_2 \hat{p}_y^2 \right)
-$$
-
-Valid if:
-
-1. Discrete derivative operator is Hermitian
-2. Periodic BC in both x/y directions
-3. Source term $f(x,y) = 0$
-
-Otherwise, full Schrödingerization procedure is required.
-
-------
-
-## Supported Features
-
-- 2D anisotropic heat conduction
-- Boundary conditions: **Dirichlet**, **Periodic**
-- Initial conditions: 2D sine wave, custom
-- Quantum solvers: Classical matrix exponentiation, Trotter splitting, Block encoding (fallback)
-- Tensor-product finite-difference discretization
-- 3D surface / contour visualization
-- Automatic quantum circuit generation
+Key fields:
+- `grid.n_points`: number of grid points per spatial dimension
+- `grid.dx`: spatial step size
+- `grid.dt` and `grid.nt`: present for the Trotter solver
+- `x`, `y`: spatial grids
+- `u`: final 2D solution array serialized as nested lists
+- `circuit`: filenames returned by `_generate_circuit_plots(name, qc, ...)`
+- `plot.filename`: filename returned by `_generate_solution_plot(name, x, y, u)`
 
 ------
 
-## Full Algorithm Pipeline (Step-by-Step)
+## Implementation Architecture
 
 ### Step 0: Import the Algorithm Class
 
@@ -234,7 +261,19 @@ ax.plot_surface(X, Y, u, cmap='viridis')
 
 ------
 
-## Boundary & Initial Conditions
+## Understanding the Key Quantum Components
+
+- 2D anisotropic heat conduction
+- Boundary conditions: **Dirichlet**, **Periodic**
+- Initial conditions: 2D sine wave, custom
+- Quantum solvers: Classical matrix exponentiation, Trotter splitting, Block encoding (fallback)
+- Tensor-product finite-difference discretization
+- 3D surface / contour visualization
+- Automatic quantum circuit generation
+
+------
+
+## Mathematical Deep Dive
 
 - **Dirichlet**: $u=0$ on domain boundary
 - **Periodic**: $u(0,y)=u(L,y), u(x,0)=u(x,L)$
@@ -246,8 +285,6 @@ $$
 
 ------
 
-## Finite-Difference Scheme
-
 2D central difference for Laplacian:
 $$
 \Delta u_{i,j} = \Delta t \left[ a_1 \frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{\Delta x^2} + a_2 \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{\Delta y^2} \right]
@@ -255,53 +292,7 @@ $$
 
 ------
 
-## Outputs
-
-`Heat2dEquationAlgorithm.run()` dispatches to `_solve_classical`, `_solve_trotter`, or `_solve_block`. The block path currently logs a fallback message and calls the classical solver. Classical and Trotter paths return dictionaries with this shape:
-
-```python
-{
-    "status": "ok",
-    "message": "2D Heat equation solved",
-    "grid": {
-        "n_points": 2**nx,
-        "dx": dx,
-        # Trotter only:
-        "dt": dt,
-        "nt": Nt,
-    },
-    "x": [...],
-    "y": [...],
-    "u": [[...], ...],
-    "circuit": circuit_plot_paths,
-    "plot": {
-        "format": "svg",
-        "filename": "<solution_plot_filename>",
-    },
-}
-```
-
-Key fields:
-- `grid.n_points`: number of grid points per spatial dimension
-- `grid.dx`: spatial step size
-- `grid.dt` and `grid.nt`: present for the Trotter solver
-- `x`, `y`: spatial grids
-- `u`: final 2D solution array serialized as nested lists
-- `circuit`: filenames returned by `_generate_circuit_plots(name, qc, ...)`
-- `plot.filename`: filename returned by `_generate_solution_plot(name, x, y, u)`
-
-------
-
-## Trigger Phrases
-
-- Solve 2D heat equation using quantum Schrödingerization
-- Quantum simulation for planar heat conduction
-- 2D thermal analysis
-- Quantum PDE solver for heat conduction
-
-------
-
-## Use Cases
+## Hands-On Example
 
 - Chip / PCB thermal simulation
 - 2D material heat conduction
@@ -320,3 +311,109 @@ This skill provides a **complete quantum solution for the 2D heat equation**:
 - Automatically reshapes to 2D field
 - Generates professional 3D visualizations
 - Fully aligned with your implementation and mathematical framework
+
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement the 2D heat-equation Schrödingerization solver.
+
+- Solve 2D heat equation using quantum Schrödingerization
+- Quantum simulation for planar heat conduction
+- 2D thermal analysis
+- Quantum PDE solver for heat conduction
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
+- **PDE configuration:** Confirm both spatial domains, grid sizes, time interval, diffusion coefficients, initial field, and boundary conditions before running the solver.
+- **Solver path:** Distinguish classical Schrödingerization from Trotterized quantum simulation and preserve the selected execution path.
+- **Two-dimensional shape:** Preserve the flattening, axis ordering, and reshape conventions between the 2D field and the solver state vector.
+- **Operator construction:** Preserve the Kronecker-product construction of the 2D Laplacian and verify its dimensions.
+- **Result validation:** Verify grid dimensions, reshaped solution, finite numerical values, and boundary-condition behavior before interpreting plots or circuit outputs.
+
+## Prerequisites
+
+- PDE fundamentals: 2D heat equation $\partial u/\partial t = a_1 \partial^2 u/\partial x^2 + a_2 \partial^2 u/\partial y^2 + f(x,y)$
+- Numerical methods: 2D finite-difference Laplacian via Kronecker products
+- Schrödingerization theory: extending the 1D auxiliary-variable method to 2D tensor-product domains
+- Python: `numpy`, `scipy.sparse`, `unitarylab` core
+
+## Core Parameters Explained
+
+| Parameter | Type | Description |
+|---|---|---|
+| `nx` | `int` | Grid exponent per dimension; $N_x = N_y = 2^{n_x}$ |
+| `a1`, `a2` | `float` | Diffusion coefficients in x/y directions (anisotropic) |
+| `L` | `float` | Domain length $[0, L] \times [0, L]$ |
+| `T` | `float` | Final simulation time |
+| `boundary` | `str` | `"dirichlet"` or `"periodic"` |
+| `scheme` | `str` | Discretization scheme (`"central"`) |
+| `solver.type` | `str` | `"classical"`, `"trotter"`, or `"block"` (block encoder falls back to classical) |
+| `na` | `int` | Auxiliary qubit count |
+| `R` | `int` | Schrödingerization scaling parameter |
+| `order` | `int` | Trotter order |
+| `dt` | `float` | Time step (Trotter only) |
+
+## Return Fields
+
+| Key | Type | Description |
+|---|---|---|
+| `status` | `str` | `"ok"` or `"failed"` |
+| `message` | `str` | Descriptive status message |
+| `grid.n_points` | `int` | Grid points per dimension |
+| `grid.dx` | `float` | $\Delta x = \Delta y$ |
+| `grid.dt` | `float` | Time step (Trotter only) |
+| `grid.nt` | `int` | Number of time steps (Trotter only) |
+| `x` | `list[float]` | x-coordinate grid |
+| `y` | `list[float]` | y-coordinate grid |
+| `u` | `list[list[float]]` | Final 2D solution $u(x, y, T)$ as nested lists |
+| `circuit` | `list[str]` | Circuit SVG paths |
+| `plot.filename` | `str` | 3D surface plot SVG path |
+
+## Theory-to-Code Mapping
+
+| Theory Concept | Code Object or Location |
+|---|---|
+| 2D heat PDE | `parse_equation(params)` — extracts $a_1$, $a_2$, BC |
+| 1D Laplacian $A_0$ | `CDiff(Nx, dx, 2, scheme, boundary).get_matrix()` |
+| 2D Laplacian via Kronecker | `A = a1 * kron(A0, I) + a2 * kron(I, A0)` |
+| 2D initial condition | `u0 = f0(x[:, None], y[None, :]).flatten()` |
+| Classical solver | `schro_classical(A, u0, T, na, R, order, point, b)` |
+| Trotter 2D Hamiltonian | `H1` assembled from per-direction `TDiff` blocks on $2 n_x$ qubits |
+| Solution reshape | `u.reshape((Nx, Nx))` after solver |
+
+## Minimal Manual Implementation
+
+```python
+import numpy as np
+from scipy.sparse import kron, eye
+from scipy.linalg import expm
+
+def heat2d_skeleton(Nx, dx, a1, a2, T, boundary='dirichlet'):
+    """Simplified 2D heat: Kronecker Laplacian and dense evolution."""
+    # Build 1D Laplacian
+    A0 = np.zeros((Nx, Nx))
+    for i in range(Nx):
+        A0[i, i] = -2.0
+        if i > 0: A0[i, i-1] = 1.0
+        if i < Nx-1: A0[i, i+1] = 1.0
+    if boundary == 'periodic':
+        A0[0, -1] = 1.0; A0[-1, 0] = 1.0
+    A0 = A0 / (dx ** 2)
+
+    # 2D Laplacian via Kronecker products
+    I = np.eye(Nx)
+    A = a1 * np.kron(A0, I) + a2 * np.kron(I, A0)
+    return expm(A * T)
+```
+
+## Debugging Tips
+
+1. **Kronecker order matters**: `kron(A0, I)` applies the Laplacian in the x-direction; `kron(I, A0)` in y. Swapping them silently transposes the diffusion tensor.
+2. **Anisotropic coefficients**: $a_1 \neq a_2$ produces direction-dependent diffusion. If the solution looks unexpectedly directional, verify $a_1$ and $a_2$ are assigned to the correct Kronecker term.
+3. **2D reshape**: The solver operates on flattened vectors of length $N_x^2$. Always reshape back to `(Nx, Nx)` before visualization — failing to reshape produces garbled 3D plots.
+4. **Block solver fallback**: The `"block"` solver currently falls back to the classical path with a log message. Do not rely on it for quantum speedup — use `"trotter"` for quantum evolution.
+5. **Memory scaling**: The 2D Laplacian is $N_x^2 \times N_x^2$. For $n_x = 5$ ($N_x = 32$), the matrix is $1024 \times 1024$. For $n_x = 7$ ($N_x = 128$), it's $16384 \times 16384$ — sparse matrix methods are essential.

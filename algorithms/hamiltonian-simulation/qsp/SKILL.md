@@ -1,10 +1,30 @@
 ---
 name: qsp
-description: QSP-HS provides QSP-based Hamiltonian simulation for approximating e^{-iHt} by block-encoding a Hamiltonian and applying polynomial spectral transformations. Use the basic QSP demo skill instead for single-qubit scalar QSP examples such as cos(t*x).
+description: "QSP-HS: QSP-based Hamiltonian simulation for approximating e^{-iHt} by block-encoding a Hamiltonian and applying polynomial spectral transformations. Use the basic QSP demo skill instead for single-qubit scalar QSP examples such as cos(t*x). Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
-
 # QSP-HS Hamiltonian Simulation Skill Guide
+
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement QSP Hamiltonian Simulation / QSP-HS.
+
+Use this skill when the request is specifically about QSP for Hamiltonian simulation, time evolution, block-encoding a Hamiltonian, or the `QSPHSAlgorithm` implementation. For the basic single-qubit QSP demo with scalar input `x` and target `cos(t*x)`, use `../../linear-systems/quantum-signal-processing/SKILL.md`.
+
+After using this skill, you should be able to:
+1. Explain how block encoding and polynomial approximation replace term-by-term Trotterization.
+2. Understand how `degree` and `time_slices` jointly control accuracy and circuit depth.
+3. Use the `QSPHSAlgorithm` class correctly for Hamiltonian simulation experiments.
+4. Interpret the approximate and exact evolution matrices and the Frobenius-norm error.
+5. Build reproducible comparisons of accuracy across parameter sweeps.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -15,8 +35,6 @@ U(t) = e^{-iHt}
 $$
 
 by converting it into a polynomial approximation problem on the eigenvalues of the block-encoded Hamiltonian.
-
-Use this skill when the request is specifically about QSP for Hamiltonian simulation, time evolution, block-encoding a Hamiltonian, or the `QSPHSAlgorithm` implementation. For the basic single-qubit QSP demo with scalar input `x` and target `cos(t*x)`, use `../../linear-systems/quantum-signal-processing/SKILL.md`.
 
 ### Key Insight
 
@@ -36,15 +54,6 @@ Rather than decomposing $H$ term-by-term as in Trotterization, QSP encodes the f
 3. Benchmarking advanced simulation methods against product formulas.
 4. Digital simulation pipelines where gate budget is the primary constraint.
 
-## Learning Objectives
-
-After using this skill, you should be able to:
-1. Explain how block encoding and polynomial approximation replace term-by-term Trotterization.
-2. Understand how `degree` and `time_slices` jointly control accuracy and circuit depth.
-3. Use the `QSPHSAlgorithm` class correctly for Hamiltonian simulation experiments.
-4. Interpret the approximate and exact evolution matrices and the Frobenius-norm error.
-5. Build reproducible comparisons of accuracy across parameter sweeps.
-
 ## Prerequisites
 
 ### Essential knowledge:
@@ -59,36 +68,11 @@ After using this skill, you should be able to:
 2. Matrix norms, especially the Frobenius norm.
 3. Linear combination of unitaries (LCU) framework.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
-### Quick Start Example
+## Core Parameters Explained
 
-```python
-import numpy as np
-from unitarylab_algorithms import QSPHSAlgorithm
-
-# 2x2 Hermitian Hamiltonian
-H = np.array([[2, 1],
-              [1, 3]], dtype=complex)
-
-algo = QSPHSAlgorithm(text_mode="plain")
-result = algo.run(
-    H=H,
-    t=1.0,
-    error=1e-8,
-    degree=15,
-    beta=0.7,
-)
-
-print("status      :", result["status"])
-print("circuit_path:", result["circuit_path"])
-print("plot        :", result["plot"])
-print("frob_error  :", result["Frobenius norm of error"])
-```
-
-### Core Parameters Explained
-
-#### Constructor
+### Constructor
 
 ```python
 class QSPHSAlgorithm:
@@ -116,7 +100,7 @@ def run(self, H, t, error, degree=15, beta=0.7):
 | `degree` | `int` | `15` | `≥ 1` | Upper bound on QSP polynomial degree per time slice. |
 | `beta` | `float` | `0.7` | `(0, 1)` strictly | Preconditioning factor for numerical stability. |
 
-### Return Fields
+## Return Fields
 
 `run()` returns a dictionary built by `_build_return_dict()`. The output fields from `algo.output` are merged directly into the same dict via `result.update(self.output)`.
 
@@ -132,7 +116,7 @@ def run(self, H, t, error, degree=15, beta=0.7):
 
 The same output fields are also accessible via `algo.output` after `run()` completes.
 
-## Understanding the Core Components
+## Understanding the Key Quantum Components
 
 ### 1) Block encoding and degree estimation
 
@@ -217,30 +201,6 @@ Interpretation:
 3. `Circuit.get_matrix(n)` extracts the $2^n \times 2^n$ unitary submatrix acting on the $n$ system qubits.
 4. Error is computed in `run()` by comparing to `scipy.linalg.expm(-1j * H * t)` via Frobenius norm.
 
-## Hands-On Example: Hamiltonian Simulation
-
-Sweep `degree` and `t` to observe accuracy vs. circuit depth trade-offs.
-
-```python
-import numpy as np
-from unitarylab_algorithms import QSPHSAlgorithm
-
-H = np.array([[2, 1],
-              [1, 3]], dtype=complex)
-
-for t in [1.0, 3.0, 5.0]:
-    for degree in [10, 20, 40]:
-        algo = QSPHSAlgorithm(text_mode="plain")
-        result = algo.run(H=H, t=t, error=1e-8, degree=degree, beta=0.7)
-        frob_err = algo.output["Frobenius norm of error"]
-        print(f"t={t:.1f}, degree={degree:>2d}, error={frob_err:.2e}, status={result['status']}")
-```
-
-What to look for:
-1. Larger `t` requires a higher `degree` or more time slices to maintain accuracy.
-2. Increasing `degree` reduces error until it saturates at the Bessel-approximation limit.
-3. When `degree` is insufficient, the algorithm compensates by splitting into more time slices.
-
 ## Mathematical Deep Dive
 
 The block encoding scales the Hamiltonian as
@@ -294,9 +254,102 @@ Implementation-consistent notes:
 2. The `QSP_MAX_TIME_SLICES` environment variable (default `4096`) caps the automatic slice expansion loop.
 3. `H` must be Hermitian to within `atol=1e-12`; non-power-of-2 dimensions are zero-padded before encoding.
 
-## Real-World Applications
+## Hands-On Example
+
+Sweep `degree` and `t` to observe accuracy vs. circuit depth trade-offs.
+
+```python
+import numpy as np
+from unitarylab_algorithms import QSPHSAlgorithm
+
+H = np.array([[2, 1],
+              [1, 3]], dtype=complex)
+
+for t in [1.0, 3.0, 5.0]:
+    for degree in [10, 20, 40]:
+        algo = QSPHSAlgorithm(text_mode="plain")
+        result = algo.run(H=H, t=t, error=1e-8, degree=degree, beta=0.7)
+        frob_err = algo.output["Frobenius norm of error"]
+        print(f"t={t:.1f}, degree={degree:>2d}, error={frob_err:.2e}, status={result['status']}")
+```
+
+What to look for:
+1. Larger `t` requires a higher `degree` or more time slices to maintain accuracy.
+2. Increasing `degree` reduces error until it saturates at the Bessel-approximation limit.
+3. When `degree` is insufficient, the algorithm compensates by splitting into more time slices.
 
 1. High-precision digital simulation of molecular electronic structure.
 2. Ground-state preparation via imaginary-time evolution via polynomial approximation.
 3. Quantum linear systems algorithms that use $e^{-iHt}$ as a subroutine.
 4. Circuit resource estimation studies comparing QSP, Trotter, and QDrift on the same Hamiltonian.
+
+## Implementation Architecture
+
+`QSPHSAlgorithm` in `algorithm.py` implements Hamiltonian simulation via QSP in five stages.
+
+| Stage | Code Action | Algorithmic Role |
+|---|---|---|
+| 1 — Block Encoding | `block_encode(H, method="nagy")` returns `encoded_H` with `.circuit` ($U_H$), `.alpha` ($\alpha$), `.total_qubits` | Encodes $H/\alpha$ into a unitary oracle |
+| 2 — Degree & Slice Estimation | `_estimate_required_degree(alpha, t, error)` computes $d_{\text{req}}$; if `degree` is insufficient, `time_slices` is doubled until per-slice degree fits | Balances polynomial degree against time-slicing |
+| 3 — Chebyshev Coefficient Construction | `coef_cos` (even Bessel $J_k$) and `coef_sin` (odd Bessel $J_k$) arrays, scaled by `beta` | Builds $\beta\cos(sH)$ and $\beta\sin(sH)$ polynomial approximations |
+| 4 — QSP Circuit Construction | `QSP(UH, n, m, coef_cos, 0)` and `QSP(UH, n, m, coef_sin, 1)` build cosine/sine circuits; LCU merges them with one selection qubit | Constructs $U_{\text{slice}} \approx e^{-iHt_{\text{slice}}}$ |
+| 5 — Matrix Composition & Verification | `u_slice = qc.get_matrix(n) * factor`; if `time_slices > 1`, `U_approx = np.linalg.matrix_power(u_slice, time_slices)`; Frobenius error vs `expm` | Composes slices via matrix power; benchmarks accuracy |
+
+**Key design decision:** Multiple time slices are composed by matrix power (`np.linalg.matrix_power`) rather than circuit repetition, enabling exact linear-algebra comparison without circuit-depth explosion.
+
+## Theory-to-Code Mapping
+
+| Theory Concept | Code Object or Location |
+|---|---|
+| Block encoding $\langle 0^m\|U_H\|0^m\rangle = H/\alpha$ | `block_encode(H, method="nagy")` from `unitarylab.library` |
+| Scaling factor $\alpha$ | `encoded_H.alpha` |
+| Dimensionless parameter $s = \alpha \cdot t_{\text{slice}}$ | `t = alpha * slice_time` |
+| Bessel coefficients $J_k(s)$ | `jn(k, t)` from `scipy.special` |
+| Cosine polynomial $\beta\cos(sx)$ | `coef_cos` — even-index Bessel, scaled by $\beta$ |
+| Sine polynomial $\beta\sin(sx)$ | `coef_sin` — odd-index Bessel, scaled by $\beta$ |
+| QSP circuit per polynomial | `QSP(UH, n, m, coef, parity, is_coef_cheby=True)` |
+| LCU combination | Selection qubit + Hadamard/S gates + controlled cos/sin blocks |
+| Rescaling factor | `factor = 2 / beta` |
+| Slice composition | `np.linalg.matrix_power(u_slice, time_slices)` |
+| Required degree | `_estimate_required_degree`: $\lceil 1.4 \cdot \|\alpha t_{\text{slice}}\| + \ln(1/\epsilon)\rceil$ |
+
+## Minimal Manual Implementation
+
+```python
+import numpy as np
+from scipy.special import jn
+
+def qsp_coefficients_skeleton(alpha, t_slice, degree, beta=0.7):
+    """Build Chebyshev coefficients for QSP Hamiltonian simulation.
+
+    In practice, the full implementation uses block_encode() and QSP()
+    from unitarylab.library. This skeleton shows the coefficient construction.
+    """
+    s = alpha * t_slice  # dimensionless parameter
+    d = degree
+
+    # Cosine polynomial: even Bessel terms
+    coef_cos = np.zeros(d + 1)
+    coef_cos[0] = jn(0, s) * beta
+    for i in range(1, d + 1):
+        if i % 2 == 0:
+            coef_cos[i] = jn(i, s) * 2 * (-1) ** (i // 2) * beta
+
+    # Sine polynomial: odd Bessel terms
+    coef_sin = np.zeros(d + 1)
+    for i in range(d + 1):
+        if i % 2 != 0:
+            coef_sin[i] = jn(i, s) * 2 * (-1) ** ((i - 1) // 2) * beta
+
+    return coef_cos, coef_sin
+```
+
+The LCU recovers $e^{-iHt_{\text{slice}}} \approx (2/\beta)(\beta\cos(sH) - i\beta\sin(sH))$. For multiple slices, the per-slice unitary is raised to the `time_slices`-th power.
+
+## Debugging Tips
+
+1. **Degree insufficient → auto-slicing**: If the requested `degree` is too low for the target $t$, the algorithm automatically increases `time_slices`. Check the per-slice degree and slice count in `algo.output` to understand the actual configuration used.
+2. **beta preconditioning**: `beta` must be in $(0, 1)$. Too small: polynomials lose accuracy. Too large (near 1): Chebyshev values may exceed $[-1, 1]$, causing QSP construction failures. Default `0.7` is calibrated for typical Hamiltonians.
+3. **Large $t$ requires many slices**: The per-slice dimensionless parameter $s = \alpha t / \text{time\_slices}$ must be manageable for the polynomial degree. If $t > 10$, expect many slices — each slice adds one matrix multiplication via `matrix_power`.
+4. **Hermiticity tolerance**: $H$ is checked to `atol=1e-12`. Non-Hermitian inputs cause block-encoding failures. Symmetrize with `H = (H + H.conj().T) / 2` if needed.
+5. **QSP_MAX_TIME_SLICES**: The environment variable `QSP_MAX_TIME_SLICES` (default 4096) caps automatic slice expansion. If the algorithm hits this cap, increase `degree` or relax `error`.

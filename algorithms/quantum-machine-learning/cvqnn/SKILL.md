@@ -1,11 +1,13 @@
 ---
 name: cvqnn
-description: Skill for understanding, using, and implementing the Continuous Variable Quantum Neural Network (CVQNN) for binary classification via the CVQNNAlgorithm class, CVSimulator, and CVClassifier.
+description: "Skill for understanding, using, and implementing the Continuous Variable Quantum Neural Network (CVQNN) for binary classification via the CVQNNAlgorithm class, CVSimulator, and CVClassifier. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Continuous Variable Quantum Neural Network (CVQNN)
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Continuous Variable Quantum Neural Network (CVQNN).
 
 `CVQNNAlgorithm` implements binary classification using continuous variable (CV) quantum optics. Classical 2D features are encoded as coherent-state displacements in a truncated Fock space. Per-layer unitary evolution (squeezing, displacement, rotation, Kerr nonlinearity, beamsplitter) is parameterized by `torch.nn.Parameter` tensors and trained end-to-end with PyTorch's automatic differentiation. The observable is the $\hat{x}$ quadrature expectation value of mode 0.
 
@@ -13,6 +15,14 @@ Use this skill when you need to:
 - Apply a CV quantum model to 2-feature binary classification tasks.
 - Understand the structure of optical quantum gates in truncated Fock space.
 - Run gradient-based training over quantum circuit parameters using PyTorch.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -28,7 +38,7 @@ Use this skill when you need to:
 - PyTorch `nn.Module` and `autograd`; Adam optimizer.
 - `numpy`, `torch`, `matplotlib`, `unitarylab.Circuit`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 import numpy as np
@@ -200,7 +210,7 @@ for p in result['plot']:
     print(f"Plot:     {p['filename']}")
 ```
 
-## Implementing Your Own Version
+## Minimal Manual Implementation
 
 The following skeleton reconstructs `CVSimulator` and the `CVClassifier` forward pass.
 

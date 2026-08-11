@@ -1,47 +1,46 @@
-"""Taylor Series Hamiltonian Simulation — approximate e^{-iHt} via LCU of Taylor-expanded Pauli terms."""
+"""Verification script generated from the leaf SKILL.md.
+
+This file is generated from the first Python code block under
+`Reference Implementation Example`. Regenerate it after editing the skill.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+def _add_workspace_paths() -> None:
+    here = Path(__file__).resolve()
+    for candidate in [here.parent, *here.parents]:
+        if (candidate / "unitarylab_algorithms").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+        if (candidate / "quantum-skills-new").is_dir() and (candidate / "unitarylab_algorithms").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+    workspace = here.parents[4] if len(here.parents) > 4 else here.parent
+    sys.path.insert(0, str(workspace))
+
+
+_add_workspace_paths()
 
 import numpy as np
 from unitarylab_algorithms import TaylorAlgorithm
 
+# 2×2 Hermitian Hamiltonian
+H = np.array([[2, 1],
+              [1, 3]], dtype=complex)
 
-def main():
-    # 2×2 Hermitian Hamiltonian
-    H = np.array([[2, 1],
-                  [1, 3]], dtype=complex)
+algo = TaylorAlgorithm(text_mode="plain")
+result = algo.run(
+    H=H,
+    t=1.0,
+    error=1e-8,
+    degree=15,
+)
 
-    t = 1.0
-    error = 1e-8
-
-    print("=" * 55)
-    print("Taylor Series Hamiltonian Simulation")
-    print("=" * 55)
-    print(f"\nHamiltonian H =\n{H}")
-    print(f"Evolution time t = {t}")
-    print(f"Target error    = {error}\n")
-
-    # --- Minimal example ---
-    algo = TaylorAlgorithm(text_mode="plain")
-    result = algo.run(H=H, t=t, error=error, degree=15)
-
-    print("status      :", result["status"])
-    print("circuit_path:", result["circuit_path"])
-    print("plot        :", result["plot"])
-    print("Frobenius error:", result["Frobenius norm of error"])
-
-    # --- Accuracy sweep: degree vs. t ---
-    print("\n" + "=" * 55)
-    print("Accuracy Sweep — degree vs. t")
-    print("=" * 55)
-    print(f"{'t':>5}  {'degree':>6}  {'Frobenius error':>16}  {'status':>6}")
-    print("-" * 40)
-
-    for t_val in [1.0, 3.0, 5.0]:
-        for deg in [5, 10, 15]:
-            sweep_algo = TaylorAlgorithm(text_mode="plain")
-            sweep_result = sweep_algo.run(H=H, t=t_val, error=1e-8, degree=deg)
-            frob_err = sweep_algo.output["Frobenius norm of error"]
-            print(f"{t_val:>5.1f}  {deg:>6d}  {frob_err:>16.2e}  {sweep_result['status']:>6}")
-
-
-if __name__ == "__main__":
-    main()
+print("status      :", result["status"])
+print("circuit_path:", result["circuit_path"])
+print("plot        :", result["plot"])
+print("Frobenius error:", result["Frobenius norm of error"])

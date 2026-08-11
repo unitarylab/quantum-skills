@@ -1,17 +1,27 @@
 ---
 name: amplitude-estimation
-description: A quantum algorithm for estimating the amplitude of a specific state in a quantum superposition, which can be used for various applications such as Monte Carlo simulations and optimization problems. Provides efficient implementations and educational resources for understanding and utilizing amplitude estimation in quantum algorithm development.
+description: "A quantum algorithm for estimating the amplitude of a specific state in a quantum superposition, which can be used for various applications such as Monte Carlo simulations and optimization problems. Provides efficient implementations and educational resources for understanding and utilizing amplitude estimation in quantum algorithm development. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Amplitude Estimation (QAE)
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Amplitude Estimation (QAE).
 
 Quantum Amplitude Estimation (QAE) estimates the success probability $a$ of a quantum circuit $U$ (i.e., $U|0\rangle = \sqrt{a}|\text{good}\rangle + \sqrt{1-a}|\text{bad}\rangle$) with $O(1/\epsilon)$ circuit evaluations — a quadratic speedup over the classical $O(1/\epsilon^2)$ Monte Carlo sampling.
 
 Use this skill when you need to:
 - Precisely estimate a probability amplitude output by a quantum circuit.
 - Apply QAE as a subroutine in quantum finance, quantum Monte Carlo, or other estimation tasks.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -27,7 +37,7 @@ QAE combines Grover/Amplitude Amplification with Quantum Phase Estimation (QPE):
 - Understanding of Quantum Phase Estimation (QPE) and the inverse QFT.
 - Python: `numpy`, `Circuit`, `Register`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab_algorithms import AmplitudeEstimationAlgorithm
@@ -175,7 +185,7 @@ $$\delta a \approx \pi \cdot \delta\phi = \frac{\pi}{2^d}$$
 
 **Peak success probability:** The main QPE peak appears with probability $\geq 4/\pi^2 \approx 0.405$.
 
-## Hands-On Example (UnitaryLab)
+## Hands-On Example
 
 ```python
 from unitarylab_algorithms import AmplitudeEstimationAlgorithm
@@ -199,95 +209,8 @@ print(f"Best bits   = {result['Most likely phase (bits)']}")
 print(f"Status      = {result['status']}")
 print(result['plot'])   # list of saved output file dicts
 ```
-## Reference Implementation (Qiskit)
 
-In addition to the UnitaryLab implementation above, the same amplitude estimation idea can also be expressed using Qiskit’s EstimationProblem and AmplitudeEstimation workflow. This section is provided only as a reference example for users who want to compare different software ecosystems. The main implementation path of this skill remains the UnitaryLab version described above.
-
-### Example A: Minimal Qiskit Amplitude Estimation Run
-```python
-from qiskit.circuit import QuantumCircuit
-from qiskit.primitives import StatevectorSampler
-from qiskit_algorithms.amplitude_estimators import AmplitudeEstimation, EstimationProblem
-
-# State preparation A
-# A|0> = cos(theta)|0> + sin(theta)|1>
-theta = 0.3
-A = QuantumCircuit(1)
-A.ry(2 * theta, 0)
-
-problem = EstimationProblem(
-    state_preparation=A,
-    objective_qubits=0,
-)
-
-ae = AmplitudeEstimation(
-    num_eval_qubits=4,
-    sampler=StatevectorSampler()
-)
-
-result = ae.estimate(problem)
-
-print("Grid estimate:", result.estimation)
-print("MLE estimate:", result.mle)
-print("Confidence interval:", result.confidence_interval)
-print("Oracle queries:", result.num_oracle_queries)
-```
-### Example B: Qiskit with Custom Grover Operator
-```python
-from qiskit.circuit import QuantumCircuit
-from qiskit.circuit.library import GroverOperator
-from qiskit.primitives import StatevectorSampler
-from qiskit_algorithms.amplitude_estimators import AmplitudeEstimation, EstimationProblem
-
-theta = 0.3
-A = QuantumCircuit(1)
-A.ry(2 * theta, 0)
-
-custom_Q = GroverOperator(oracle=A)
-
-problem = EstimationProblem(
-    state_preparation=A,
-    objective_qubits=0,
-    grover_operator=custom_Q,
-)
-
-ae = AmplitudeEstimation(
-    num_eval_qubits=4,
-    sampler=StatevectorSampler()
-)
-
-result = ae.estimate(problem)
-
-print("Grid estimate:", result.estimation)
-print("MLE estimate:", result.mle)
-print("Samples:", result.samples)
-```
-
-### Other Qiskit AE Variants (Reference)
-
-Qiskit also includes several amplitude-estimation variants beyond the standard
-QPE-based `AmplitudeEstimation`:
-
-- **`IterativeAmplitudeEstimation`**  
-  An iterative AE method that does not rely on Quantum Phase Estimation. It uses selected Grover
-  powers to produce an estimate with target error `epsilon_target` and confidence level `1 - alpha`.  
-  Official reference:  
-  `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.IterativeAmplitudeEstimation.html`
-
-- **`MaximumLikelihoodAmplitudeEstimation`**  
-  An AE method without phase estimation. It evaluates multiple Grover powers and determines the
-  final result through maximum-likelihood estimation, without requiring additional evaluation qubits.  
-  Official reference:  
-  `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.MaximumLikelihoodAmplitudeEstimation.html`
-
-- **`FasterAmplitudeEstimation`**  
-  A faster AE variant that replaces the QPE component with an iterative Grover-search-style
-  procedure. Compared with canonical QAE, it does not require the additional evaluation qubits and
-  yields less complex circuits.  
-  Official reference:  
-  `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.FasterAmplitudeEstimation.html#qiskit_algorithms.FasterAmplitudeEstimation`
-
-## Minimal Manual Implementation (UnitaryLab) 
+## Minimal Manual Implementation
 
 The following Python skeleton reconstructs the key components of the QAE algorithm and can be adapted into a compatible implementation.
 
@@ -422,3 +345,91 @@ def qae_full(U, good_zero_qubits, d, backend='torch'):
 3. **`result['Target amplitude']` misses a factor**: Ensure the good state condition (all `good_zero_qubits` in $|0\rangle$) matches your circuit's actual target. A common mistake is using wrong qubit indices.
 4. **Symmetric peaks**: The histogram may show two peaks at $\phi$ and $1-\phi$. The code folds both to the same estimate — this is correct behavior.
 5. **Circuit size scaling**: Total circuit depth scales as $O(2^d)$ due to QPE. For `d=10`, expect a deep circuit.
+
+## Reference Implementation
+
+In addition to the UnitaryLab implementation above, the same amplitude estimation idea can also be expressed using Qiskit’s EstimationProblem and AmplitudeEstimation workflow. This section is provided only as a reference example for users who want to compare different software ecosystems. The main implementation path of this skill remains the UnitaryLab version described above.
+
+### Example A: Minimal Qiskit Amplitude Estimation Run
+```python
+from qiskit.circuit import QuantumCircuit
+from qiskit.primitives import StatevectorSampler
+from qiskit_algorithms.amplitude_estimators import AmplitudeEstimation, EstimationProblem
+
+# State preparation A
+# A|0> = cos(theta)|0> + sin(theta)|1>
+theta = 0.3
+A = QuantumCircuit(1)
+A.ry(2 * theta, 0)
+
+problem = EstimationProblem(
+    state_preparation=A,
+    objective_qubits=0,
+)
+
+ae = AmplitudeEstimation(
+    num_eval_qubits=4,
+    sampler=StatevectorSampler()
+)
+
+result = ae.estimate(problem)
+
+print("Grid estimate:", result.estimation)
+print("MLE estimate:", result.mle)
+print("Confidence interval:", result.confidence_interval)
+print("Oracle queries:", result.num_oracle_queries)
+```
+### Example B: Qiskit with Custom Grover Operator
+```python
+from qiskit.circuit import QuantumCircuit
+from qiskit.circuit.library import GroverOperator
+from qiskit.primitives import StatevectorSampler
+from qiskit_algorithms.amplitude_estimators import AmplitudeEstimation, EstimationProblem
+
+theta = 0.3
+A = QuantumCircuit(1)
+A.ry(2 * theta, 0)
+
+custom_Q = GroverOperator(oracle=A)
+
+problem = EstimationProblem(
+    state_preparation=A,
+    objective_qubits=0,
+    grover_operator=custom_Q,
+)
+
+ae = AmplitudeEstimation(
+    num_eval_qubits=4,
+    sampler=StatevectorSampler()
+)
+
+result = ae.estimate(problem)
+
+print("Grid estimate:", result.estimation)
+print("MLE estimate:", result.mle)
+print("Samples:", result.samples)
+```
+
+### Other Qiskit AE Variants (Reference)
+
+Qiskit also includes several amplitude-estimation variants beyond the standard
+QPE-based `AmplitudeEstimation`:
+
+- **`IterativeAmplitudeEstimation`**
+  An iterative AE method that does not rely on Quantum Phase Estimation. It uses selected Grover
+  powers to produce an estimate with target error `epsilon_target` and confidence level `1 - alpha`.
+  Official reference:
+  `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.IterativeAmplitudeEstimation.html`
+
+- **`MaximumLikelihoodAmplitudeEstimation`**
+  An AE method without phase estimation. It evaluates multiple Grover powers and determines the
+  final result through maximum-likelihood estimation, without requiring additional evaluation qubits.
+  Official reference:
+  `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.MaximumLikelihoodAmplitudeEstimation.html`
+
+- **`FasterAmplitudeEstimation`**
+  A faster AE variant that replaces the QPE component with an iterative Grover-search-style
+  procedure. Compared with canonical QAE, it does not require the additional evaluation qubits and
+  yields less complex circuits.
+  Official reference:
+  `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.FasterAmplitudeEstimation.html#qiskit_algorithms.FasterAmplitudeEstimation`

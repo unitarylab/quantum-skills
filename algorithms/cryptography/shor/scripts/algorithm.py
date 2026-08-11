@@ -1,52 +1,43 @@
-"""Shor's Algorithm — factor a composite integer."""
+"""Verification script generated from the leaf SKILL.md.
+
+This file is generated from the first Python code block under
+`Reference Implementation Example`. Regenerate it after editing the skill.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+def _add_workspace_paths() -> None:
+    here = Path(__file__).resolve()
+    for candidate in [here.parent, *here.parents]:
+        if (candidate / "unitarylab_algorithms").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+        if (candidate / "quantum-skills-new").is_dir() and (candidate / "unitarylab_algorithms").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+    workspace = here.parents[4] if len(here.parents) > 4 else here.parent
+    sys.path.insert(0, str(workspace))
+
+
+_add_workspace_paths()
 
 from unitarylab_algorithms import ShorAlgorithm
 
+algo = ShorAlgorithm()
+result = algo.run(
+    N=15,              # Number to factor
+    method='matrix',   # 'matrix' or 'operator'
+    backend='torch',
+    max_retries=15
+)
 
-def example_factor_15():
-    """Factor N=15.  Expected factors: {3, 5}."""
-    algo = ShorAlgorithm()
-    result = algo.run(
-        N=15,
-        method="matrix",
-        backend="torch",
-        max_retries=15,
-    )
-
-    print("=" * 50)
-    print("Shor Example: N = 15")
-    print("=" * 50)
-    print(f"  Status        : {result['status']}")
-    print(f"  Factors       : {result['factors']}")
-    print(f"  Period        : {result['period']}")
-    print(f"  Selected base : {result['Selected base']}")
-    print(f"  Circuit path  : {result.get('circuit_path')}")
-    for f in result.get('plot', []):
-        print(f"  Saved file    : [{f['format']}] {f['filename']}")
-
-
-def example_factor_21():
-    """Factor N=21.  Expected factors: {3, 7}."""
-    algo = ShorAlgorithm()
-    result = algo.run(
-        N=21,
-        method="matrix",
-        backend="torch",
-        max_retries=20,
-    )
-
-    print("=" * 50)
-    print("Shor Example: N = 21")
-    print("=" * 50)
-    print(f"  Status        : {result['status']}")
-    print(f"  Factors       : {result['factors']}")
-    print(f"  Period        : {result['period']}")
-    print(f"  Selected base : {result['Selected base']}")
-    print(f"  Circuit path  : {result.get('circuit_path')}")
-    for f in result.get('plot', []):
-        print(f"  Saved file    : [{f['format']}] {f['filename']}")
-
-
-if __name__ == "__main__":
-    example_factor_15()
-    example_factor_21()
+print(result['status'])           # 'ok' on success, 'failed' if exhausted
+print(result['factors'])          # List of factors, e.g. [3, 5]; None on failure
+print(result['period'])           # Found period r, or None for classical path
+print(result['Selected base'])    # Random base a used
+print(result['circuit_path'])     # Path to SVG circuit diagram (None for classical path)
+print(result['plot'])             # List of saved output files: [{'format': 'svg'/'txt', 'filename': '...'}]

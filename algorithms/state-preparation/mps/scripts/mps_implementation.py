@@ -1,1052 +1,1117 @@
-"""Prepare quantum states with a Matrix Product State decomposition.
+# -*- coding: utf-8 -*-
 
-The target is normalized and padded, decomposed from right to left into a
-right-canonical MPS, and optionally truncated at each bond.  Each tensor row is
-embedded as an isometry column and QR-completed to a local unitary acting on an
-ordered work register and one system qubit.
+"""
+Matrix Product State (MPS) Preparation
 
-Local unitaries are applied from the first tensor to the last to build both a
-UnitaryLab circuit and a dense system-plus-work evolution.  The all-zero-work
-component of ``full_evolution[:, 0]`` is extracted without normalization and
-bit-reversed once into user amplitude order.  Its norm determines work leakage
-and its phase-aligned distance from the padded target determines total error.
-The returned prepared state is the normalized direction of this projection.
+Implementation of MPS-based quantum state preparation following the decomposition
+described in Eq. (23) of arXiv:2310.18410.
 
-For more than one site, tensor shapes are ``(2, chi_right)``,
-``(chi_left, 2, chi_right)``, and ``(chi_left, 2)``.  A one-site MPS has shape
-``(2, 2)``.  The implementation requires NumPy and ``unitarylab.core.Circuit``.
+Given a matrix product state (MPS) representation of a quantum state, this module
+constructs a quantum circuit that prepares the corresponding state by encoding each
+MPS tensor into a unitary gate via QR decomposition.
+
+The MPS is a list of N tensors [A^{(0)}, ..., A^{(N-1)}] with shapes:
+  - First tensor:  (2, chi_0)          -- (physical, bond)
+  - Intermediate:  (chi_{i-1}, 2, chi_i) -- (bond_left, physical, bond_right)
+  - Last tensor:   (chi_{N-2}, 2)        -- (bond, physical)
+
+All physical dimensions are 2 (qubit), and bond dimensions must be powers of two.
 """
 
 from __future__ import annotations
 
-import math
+import os
 import time
 import warnings
-from typing import Any
-
+from dataclasses import dataclass, field
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
+from typing import Any, Dict, Optional
+
 from unitarylab.core import Circuit
 
+try:
+    from ...algo_base import BaseAlgorithm
+except ImportError:
+    # 单独运行时，将上级目录加入 sys.path，使 base 模块可被找到
+    import sys
+    _algorithms_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if _algorithms_dir not in sys.path:
+        sys.path.insert(0, _algorithms_dir)
+    from unitarylab_algorithms.algo_base import BaseAlgorithm
 
-ComplexArray = NDArray[np.complex128]
 
+class MPSAlgorithm(BaseAlgorithm):
+    """Standalone Matrix Product State preparation algorithm module."""
 
-def mps_state_preparation(
-    Psi: ArrayLike,
-    target_qubits: int,
-    *,
-    target_error: float = 1e-6,
-    mps: list[ArrayLike] | None = None,
-    work_wires: list[int] | None = None,
-    right_canonicalize: bool = False,
-    mps_max_bond_dim: int | None = None,
-    rng_seed: int = 42,
-    backend: str = "torch",
-    device: str = "cpu",
-    dtype: type = np.complex128,
-) -> dict[str, Any]:
-    """Prepare ``Psi`` through an MPS circuit and dense evolution.
+    def __init__(self, text_mode: str = "plain", algo_dir: str = 'circuits'):
+        if algo_dir is None:
+            _this = os.path.abspath(__file__)
+            _directory = os.path.dirname(_this)
+            algo_dir = os.path.join(
+                os.getcwd(),
+                "results",
+                os.path.basename(os.path.dirname(_directory)),
+                os.path.basename(_directory),
+            )
+        os.makedirs(algo_dir, exist_ok=True)
+        super().__init__("MPS State Preparation Algorithm", "MPS", text_mode, algo_dir)
 
-    ``Psi`` is converted to ``complex128``, validated, normalized, and padded
-    with trailing zeros.  If ``mps`` is absent, a right-to-left SVD creates a
-    right-canonical chain with the optional power-of-two bond cap.  Supplied
-    tensors are shape/bond validated but are not automatically normalized;
-    they are right-canonicalized only when ``right_canonicalize=True``.
-
-    ``work_wires`` is an ordered register.  If omitted, it is
-    ``[0, ..., required_work_qubits-1]``.  System wires are the first increasing
-    non-work indices.  Every local matrix acts on
-    ``work_wires + [system_wires[site]]`` in left-to-right tensor order.
-
-    ``backend``, ``device``, and ``dtype`` are compatibility parameters and do
-    not affect the explicit NumPy construction, which uses ``complex128``.
-
-    ``Zero-work projection`` is the unnormalized projection after its single
-    conversion to user order.  ``Work leakage`` and ``Total error`` use this
-    unnormalized vector.  ``Prepared state`` is its normalized direction,
-    obtained as the first column of a completed target-space unitary.
-    """
-    del backend, device, dtype
-    start_time = time.time()
-
-    num_qubits = _validate_nonboolean_integer(
-        target_qubits, "target_qubits", minimum=1
-    )
-    error_threshold = _validate_positive_finite_real(
-        target_error, "target_error"
-    )
-    seed = _validate_nonboolean_integer(rng_seed, "rng_seed")
-    if not isinstance(right_canonicalize, (bool, np.bool_)):
-        raise TypeError("right_canonicalize must be a boolean.")
-    max_bond = _validate_max_bond_dim(mps_max_bond_dim)
-
-    target = _normalize_and_pad_target(Psi, num_qubits, tol=1e-12)
-
-    if mps is None:
-        tensors = _state_vector_to_mps(
-            target,
-            num_qubits,
-            max_bond_dim=max_bond,
-            rng_seed=seed,
+    def run(
+        self,
+        Psi,
+        target_qubits: int,
+        target_error: float = 1e-6,
+        mps: Optional[list[np.ndarray]] = None,
+        work_wires: Optional[list[int]] = None,
+        right_canonicalize: bool = False,
+        mps_max_bond_dim: Optional[int] = None,
+        rng_seed: int = 42,
+        backend='torch',
+        device='cpu',
+        dtype=np.complex128,
+    ) -> Dict[str, Any]:
+        psi = np.asarray(Psi, dtype=np.complex128)
+        self.update_input({
+            "Method": "mps",
+            "Target qubits": target_qubits,
+            "Target error": target_error,
+            "State vector length": int(psi.size),
+            "Right canonicalize": bool(right_canonicalize),
+            "MPS max bond dim": mps_max_bond_dim,
+        })
+        start_time = time.time()
+        self.log("Stage 1: Building or validating MPS tensors")
+        result = MPSAlgorithm.MPS(
+            psi,
+            int(target_qubits),
+            float(target_error),
+            mps=mps,
+            work_wires=work_wires,
+            right_canonicalize=right_canonicalize,
+            mps_max_bond_dim=mps_max_bond_dim,
+            rng_seed=int(rng_seed),
         )
-        _validate_mps_shape(tensors, num_qubits)
-    else:
-        if not isinstance(mps, list):
-            raise TypeError("mps must be a list of tensors or None.")
-        tensors = [np.asarray(tensor, dtype=np.complex128) for tensor in mps]
-        _validate_mps_shape(tensors, num_qubits)
-        supplied_state = _contract_mps_to_state(tensors, num_qubits)
-        if float(np.linalg.norm(supplied_state)) <= 1e-12:
-            raise ValueError("the supplied MPS contracts to a near-zero state.")
-        if bool(right_canonicalize):
-            before = supplied_state
-            tensors = _right_canonicalize_mps(tensors)
-            _validate_mps_shape(tensors, num_qubits)
-            after = _contract_mps_to_state(tensors, num_qubits)
-            if not np.allclose(before, after, atol=1e-10, rtol=1e-10):
-                raise ValueError(
-                    "right canonicalization changed the represented state."
+        self.log("Stage 2: Building MPS preparation circuit")
+        circuit = result.circuit
+        self.log("Stage 3: Computing emitted unitary and preparation error")
+        prepared_state = np.asarray(result.evolution_result, dtype=np.complex128)[:, 0]
+        total_error = float(result.total_error)
+        comp_time = time.time() - start_time
+        is_success = total_error <= max(float(target_error), 1e-10)
+        self.update_output({
+            "Prepared state": prepared_state,
+            "Total error": total_error,
+            "Work leakage": float(result.work_leakage),
+            "MPS tensors": len(result.mps),
+            "Computation time (s)": round(comp_time, 4),
+        })
+        self.status = "success" if is_success else "failed"
+        self.summary = f"MPS state preparation completed with error {total_error:.6e}."
+        self.log("Stage 4: Exporting circuit diagram")
+        circuit_path = self.save_circuit(circuit)
+        filename = self.save_txt()
+        return self._build_return_dict(is_success, circuit_path, filename, circuit)
+
+
+
+    def _normalize_state_vector(state: np.ndarray, tol: float) -> np.ndarray:
+        """Return a normalized complex state vector, rejecting only the zero vector."""
+        psi = np.asarray(state, dtype=np.complex128)
+        if psi.ndim != 1:
+            raise ValueError("Psi must be a one-dimensional state vector.")
+        if psi.size == 0:
+            raise ValueError("Psi must not be empty.")
+        if not np.all(np.isfinite(psi)):
+            raise ValueError("Psi entries must be finite.")
+
+        norm = float(np.linalg.norm(psi))
+        if norm <= tol:
+            raise ValueError("Psi must not be the zero vector.")
+        return np.ascontiguousarray(psi / norm)
+
+
+    @dataclass(slots=True)
+    class StatePreparationResult:
+        """Result container used by the MPS state-preparation implementation."""
+
+        method: str
+        Psi: np.ndarray
+        target_qubits: int
+        target_error: float
+        tol: float = 1e-12
+        dim: int = field(init=False)
+        padded_dim: int = field(init=False)
+        _circuit: Optional[Circuit] = field(init=False, repr=False, default=None)
+        _total_error: Optional[float] = field(init=False, repr=False, default=None)
+        _evolution_result: Optional[np.ndarray] = field(init=False, repr=False, default=None)
+
+        def __post_init__(self) -> None:
+            if self.target_error <= 0:
+                raise ValueError("target_error must be positive.")
+            if self.tol <= 0:
+                raise ValueError("tol must be positive.")
+            if isinstance(self.target_qubits, bool) or not isinstance(self.target_qubits, (int, np.integer)):
+                raise TypeError("target_qubits must be an integer.")
+            if self.target_qubits < 0:
+                raise ValueError("target_qubits must be non-negative.")
+
+            psi = MPSAlgorithm._normalize_state_vector(self.Psi, self.tol)
+            self.dim = int(psi.size)
+            padded_dim = 1 << int(self.target_qubits)
+            if self.dim > padded_dim:
+                raise ValueError(f"State vector length {self.dim} exceeds target Hilbert dimension {padded_dim}.")
+
+            if self.dim < padded_dim:
+                padded_psi = np.zeros(padded_dim, dtype=np.complex128)
+                padded_psi[:self.dim] = psi
+                warnings.warn(
+                    f"State vector length {self.dim} is smaller than 2**target_qubits; padded to {padded_dim}.",
+                    RuntimeWarning,
+                    stacklevel=2,
                 )
+            else:
+                padded_psi = psi
 
-    # Contract once to reject an empty represented state; preparation still
-    # proceeds through the local-unitary evolution below.
-    diagnostic_contraction = _contract_mps_to_state(tensors, num_qubits)
-    if float(np.linalg.norm(diagnostic_contraction)) <= 1e-12:
-        raise ValueError("the used MPS contracts to a near-zero state.")
+            self.padded_dim = padded_dim
+            self.Psi = np.ascontiguousarray(padded_psi)
 
-    required_work = _required_work_qubits(tensors)
-    ordered_work_wires = _validate_or_create_work_wires(
-        work_wires, required_work
-    )
-    system_wires = _system_wires(ordered_work_wires, num_qubits)
-    if set(system_wires) & set(ordered_work_wires):
-        raise ValueError("system_wires and work_wires must not overlap.")
-
-    local_unitaries = _mps_local_unitaries(
-        tensors, len(ordered_work_wires), seed
-    )
-    total_qubits = max(ordered_work_wires + system_wires) + 1
-    circuit = _build_mps_circuit(
-        local_unitaries,
-        system_wires,
-        ordered_work_wires,
-        total_qubits,
-    )
-    full_evolution = _build_evolution_matrix(
-        local_unitaries,
-        system_wires,
-        ordered_work_wires,
-        total_qubits,
-    )
-
-    # Apply the full evolution to the all-zero input state.
-    full_state = np.asarray(full_evolution[:, 0], dtype=np.complex128)
-    internal_projection = _extract_zero_work_system_state(
-        full_state,
-        system_wires,
-        ordered_work_wires,
-        num_qubits,
-        total_qubits,
-    )
-    success_probability = float(np.vdot(internal_projection, internal_projection).real)
-    work_leakage = 1.0 - success_probability
-
-    # Exactly one bit reversal occurs here.  Before conversion, projection bit
-    # position i follows system_wires[i] (tensor/site 0 is the least-significant
-    # extracted bit).  Afterwards, indices match the user's amplitude order.
-    user_projection = _bit_reversed_state_vector(
-        internal_projection, num_qubits
-    )
-
-    total_error = _phase_invariant_error(target, user_projection)
-    target_evolution = _complete_state_preparation_matrix(
-        user_projection, rng_seed=seed, tol=1e-12
-    )
-    prepared_state = np.asarray(target_evolution[:, 0], dtype=np.complex128)
-
-    return {
-        "status": "ok"
-        if total_error <= max(error_threshold, 1e-10)
-        else "failed",
-        "Prepared state": prepared_state,
-        "Zero-work projection": user_projection,
-        "Total error": float(total_error),
-        "Work leakage": float(work_leakage),
-        "MPS tensors": len(tensors),
-        "Local unitaries": local_unitaries,
-        "system_wires": system_wires,
-        "work_wires": ordered_work_wires,
-        "full_evolution": full_evolution,
-        "Computation time (s)": round(time.time() - start_time, 4),
-        "circuit": circuit,
-    }
-
-
-def _validate_nonboolean_integer(
-    value: Any, name: str, minimum: int | None = None
-) -> int:
-    """Validate an integer parameter while rejecting booleans."""
-    if isinstance(value, (bool, np.bool_)) or not isinstance(
-        value, (int, np.integer)
-    ):
-        raise TypeError(f"{name} must be an integer.")
-    result = int(value)
-    if minimum is not None and result < minimum:
-        raise ValueError(f"{name} must be at least {minimum}.")
-    return result
-
-
-def _validate_positive_finite_real(value: Any, name: str) -> float:
-    """Validate a positive finite real parameter, rejecting booleans."""
-    if isinstance(value, (bool, np.bool_)) or not isinstance(
-        value, (int, float, np.integer, np.floating)
-    ):
-        raise TypeError(f"{name} must be a real number.")
-    result = float(value)
-    if not np.isfinite(result) or result <= 0.0:
-        raise ValueError(f"{name} must be positive and finite.")
-    return result
-
-
-def _validate_max_bond_dim(value: int | None) -> int | None:
-    """Validate the optional positive power-of-two automatic-SVD cap."""
-    if value is None:
-        return None
-    result = _validate_nonboolean_integer(value, "mps_max_bond_dim", minimum=1)
-    if not _is_power_of_two(result):
-        raise ValueError("mps_max_bond_dim must be a positive power of two.")
-    return result
-
-
-def _normalize_and_pad_target(
-    state: ArrayLike, num_qubits: int, tol: float
-) -> ComplexArray:
-    """Validate, normalize, and trailing-zero-pad the user target."""
-    target = np.asarray(state, dtype=np.complex128)
-    if target.ndim != 1:
-        raise ValueError("Psi must be a one-dimensional state vector.")
-    if target.size == 0:
-        raise ValueError("Psi must not be empty.")
-    if not np.all(np.isfinite(target)):
-        raise ValueError("Psi entries must be finite.")
-    norm = float(np.linalg.norm(target))
-    if norm <= tol:
-        raise ValueError("Psi must not be the zero vector.")
-    target = np.ascontiguousarray(target / norm)
-
-    dimension = 1 << num_qubits
-    if target.size > dimension:
-        raise ValueError(
-            f"State vector length {target.size} exceeds target Hilbert "
-            f"dimension {dimension}."
-        )
-    if target.size == dimension:
-        return target
-
-    padded = np.zeros(dimension, dtype=np.complex128)
-    padded[: target.size] = target
-    warnings.warn(
-        f"State vector length {target.size} is smaller than "
-        f"2**target_qubits; padded to {dimension}.",
-        RuntimeWarning,
-        stacklevel=3,
-    )
-    return np.ascontiguousarray(padded)
-
-
-def _is_power_of_two(value: int) -> bool:
-    """Return whether ``value`` is a positive power of two."""
-    return value > 0 and value & (value - 1) == 0
-
-
-def _state_vector_to_mps(
-    state: ArrayLike,
-    num_qubits: int,
-    max_bond_dim: int | None = None,
-    rng_seed: int = 42,
-) -> list[ComplexArray]:
-    """Create a right-canonical MPS by a right-to-left SVD.
-
-    At each cut, singular values are absorbed into the left block.  The rows
-    retained from ``Vh`` become the current tensor in
-    ``(bond_left, physical, bond_right)`` order.  The first block is normalized
-    after any truncation.
-    """
-    max_bond_dim = _validate_max_bond_dim(max_bond_dim)
-    seed = _validate_nonboolean_integer(rng_seed, "rng_seed")
-    state = np.asarray(state, dtype=np.complex128)
-    expected = 1 << num_qubits
-    if state.ndim != 1 or state.size != expected:
-        raise ValueError(f"state must have shape ({expected},).")
-    if not np.all(np.isfinite(state)):
-        raise ValueError("state entries must be finite.")
-
-    if num_qubits == 1:
-        return [
-            _complete_columns_to_unitary(
-                state.reshape(2, 1), rng_seed=seed
+        def __repr__(self) -> str:
+            return (
+                f"MPSAlgorithm.StatePreparationResult(method={self.method}, "
+                f"target_error={self.target_error}, qubits={self.target_qubits})"
             )
-        ]
 
-    tensors: list[ComplexArray | None] = [None] * num_qubits
-    right_bond = 1
-    block = state.reshape(1 << (num_qubits - 1), 2)
+        @staticmethod
+        def _circuit_has_blocks(circuit: Optional[Circuit]) -> bool:
+            if circuit is None:
+                return False
+            return any(getattr(gate, 'block_gate_sequence', None) is not None for gate in circuit.data().data())
 
-    for site in range(num_qubits - 1, 0, -1):
-        block = block.reshape(1 << site, 2 * right_bond)
-        left, singular_values, right = np.linalg.svd(
-            block, full_matrices=False
-        )
-        retained = len(singular_values)
-        if max_bond_dim is not None:
-            retained = min(retained, max_bond_dim)
+        def _flatten_circuit(self, circuit: Optional[Circuit], max_depth: int = 64) -> Optional[Circuit]:
+            if circuit is None:
+                return None
 
-        left = left[:, :retained]
-        singular_values = singular_values[:retained]
-        right = right[:retained, :]
-        if site == num_qubits - 1:
-            tensors[site] = right.reshape(retained, 2)
-        else:
-            tensors[site] = right.reshape(retained, 2, right_bond)
+            original_name = getattr(circuit, 'name', None)
+            flattened = circuit
+            depth = 0
+            while self._circuit_has_blocks(flattened):
+                if depth >= max_depth:
+                    raise ValueError(f"Circuit decomposition exceeded max_depth={max_depth}")
+                flattened = flattened.decompose(1)
+                depth += 1
 
-        block = left @ np.diag(singular_values)
-        right_bond = retained
+            if original_name is not None and hasattr(flattened, 'update_name'):
+                flattened.update_name(original_name)
+            return flattened
 
-    represented_norm = float(np.linalg.norm(block))
-    if represented_norm <= 1e-12:
-        raise ValueError("bond truncation removed all state weight.")
-    tensors[0] = block / represented_norm
-    result = [np.asarray(tensor, dtype=np.complex128) for tensor in tensors]
-    _validate_mps_shape(result, num_qubits)
-    return result
+        @property
+        def circuit(self) -> Circuit:
+            if self._circuit is None:
+                self._run()
+            self._circuit = self._flatten_circuit(self._circuit)
+            return self._circuit
+
+        @property
+        def total_error(self) -> float:
+            if self._total_error is None:
+                self._run()
+            return self._total_error
+
+        @property
+        def evolution_result(self) -> np.ndarray:
+            if self._evolution_result is None:
+                self._run()
+            return np.asarray(self._evolution_result, dtype=np.complex128)
+
+    def _bit_reversed_state_vector(state_vector: np.ndarray, num_qubits: int) -> np.ndarray:
+        """Reorder amplitudes so that bit-reversed indices match the project's convention.
+
+        The project uses a wire ordering where the first system qubit maps to
+        the most significant bit (big-endian), whereas our circuit (little-endian)
+        maps wire 0 to the least significant bit.  This function reverses the bits
+        of each state index to convert between the two conventions.
+
+        Args:
+            state_vector: Input state vector of length ``2**num_qubits``.
+            num_qubits: Number of qubits.
+
+        Returns:
+            Bit-reversed copy of the state vector.
+        """
+        state_vector = np.asarray(state_vector, dtype=np.complex128)
+        if num_qubits <= 1:
+            return state_vector.copy()
+
+        reordered = np.empty_like(state_vector)
+        for index, amplitude in enumerate(state_vector):
+            reversed_index = int(format(index, f'0{num_qubits}b')[::-1], 2)
+            reordered[reversed_index] = amplitude
+        return reordered
 
 
-def _validate_mps_shape(
-    tensors: list[ComplexArray], target_qubits: int
-) -> None:
-    """Validate tensor count, values, ranks, physical legs, and bonds."""
-    if len(tensors) != target_qubits:
-        raise ValueError(
-            f"MPS must contain exactly {target_qubits} tensors; "
-            f"got {len(tensors)}."
-        )
-    if not tensors:
-        raise ValueError("MPS tensor list must be non-empty.")
-    for index, tensor in enumerate(tensors):
-        if tensor.size == 0:
-            raise ValueError(f"tensor {index} must be non-empty.")
-        if not np.all(np.isfinite(tensor)):
-            raise ValueError(f"tensor {index} contains non-finite entries.")
+    def _is_power_of_two(value: int) -> bool:
+        """Return whether ``value`` is a positive power of two."""
+        return value > 0 and (value & (value - 1)) == 0
 
-    if target_qubits == 1:
-        if tensors[0].shape != (2, 2):
+
+    def _complete_columns_to_unitary(columns: np.ndarray, rng_seed: int = 42) -> np.ndarray:
+        """Complete orthonormal columns to a deterministic dense unitary."""
+        columns = np.asarray(columns, dtype=np.complex128)
+        if columns.ndim != 2:
+            raise ValueError("columns must be a two-dimensional matrix.")
+
+        d, k = columns.shape
+        if k > d:
+            raise ValueError("columns must not have more columns than rows.")
+
+        if k == d:
+            if not np.allclose(columns.conj().T @ columns, np.eye(d), atol=1e-10):
+                raise ValueError("columns must be unitary when k == d.")
+            return columns
+
+        rng = np.random.RandomState(rng_seed)
+        filler = rng.random((d, d - k)) + 1j * rng.random((d, d - k))
+        augmented = np.hstack([columns, filler])
+        q_matrix, r_matrix = np.linalg.qr(augmented)
+
+        diag = np.diag(r_matrix)
+        phase = np.ones_like(diag, dtype=np.complex128)
+        mask = np.abs(diag) > 1e-14
+        phase[mask] = diag[mask] / np.abs(diag[mask])
+        q_matrix *= phase[np.newaxis, :]
+
+        return np.asarray(q_matrix, dtype=np.complex128)
+
+
+    def _validate_max_bond_dim(max_bond_dim: Optional[int]) -> Optional[int]:
+        """Validate the optional MPS truncation bond dimension."""
+        if max_bond_dim is None:
+            return None
+        if isinstance(max_bond_dim, bool) or not isinstance(max_bond_dim, (int, np.integer)):
+            raise TypeError("mps_max_bond_dim must be an integer.")
+
+        value = int(max_bond_dim)
+        if not MPSAlgorithm._is_power_of_two(value):
+            raise ValueError("mps_max_bond_dim must be a positive power of two.")
+        return value
+
+
+    def state_vector_to_mps(
+        state_vector: np.ndarray,
+        num_qubits: Optional[int] = None,
+        max_bond_dim: Optional[int] = None,
+        rng_seed: int = 42,
+        tol: float = 1e-12,
+    ) -> list[np.ndarray]:
+        """Convert a state vector into a right-canonical MPS with power-of-two bonds."""
+        state_vector = np.asarray(state_vector, dtype=np.complex128)
+        if state_vector.ndim != 1:
+            raise ValueError("state_vector must be one-dimensional.")
+        if state_vector.size == 0 or not MPSAlgorithm._is_power_of_two(int(state_vector.size)):
+            raise ValueError("state_vector length must be a non-zero power of 2.")
+
+        inferred_qubits = int(state_vector.size).bit_length() - 1
+        if num_qubits is None:
+            num_qubits = inferred_qubits
+        if isinstance(num_qubits, bool) or not isinstance(num_qubits, (int, np.integer)):
+            raise TypeError("num_qubits must be an integer.")
+        num_qubits = int(num_qubits)
+        if num_qubits < 0:
+            raise ValueError("num_qubits must be non-negative.")
+        if state_vector.size != (1 << num_qubits):
             raise ValueError(
-                f"one-site MPS must have shape (2, 2); got "
-                f"{tensors[0].shape}."
+                f"state_vector length {state_vector.size} does not match 2**num_qubits."
             )
-        return
 
-    first = tensors[0]
-    if first.ndim != 2 or first.shape[0] != 2:
-        raise ValueError(
-            f"first tensor must have shape (2, chi_right); got {first.shape}."
+        max_bond_dim = MPSAlgorithm._validate_max_bond_dim(max_bond_dim)
+
+        norm = float(np.linalg.norm(state_vector))
+        if norm <= tol:
+            raise ValueError("state_vector must not be the zero vector.")
+        psi = np.asarray(state_vector / norm, dtype=np.complex128)
+
+        if num_qubits == 0:
+            return []
+        if num_qubits == 1:
+            return [MPSAlgorithm._complete_columns_to_unitary(psi.reshape(2, 1), rng_seed)]
+
+        tensors: list[np.ndarray | None] = [None] * num_qubits
+        right_bond = 1
+        block = psi.reshape(1 << (num_qubits - 1), 2)
+
+        for site in range(num_qubits - 1, 0, -1):
+            left_dim = 1 << site
+            block = block.reshape(left_dim, 2 * right_bond)
+            u_matrix, singular_values, vh_matrix = np.linalg.svd(block, full_matrices=False)
+
+            chi = len(singular_values)
+            if max_bond_dim is not None:
+                chi = min(chi, max_bond_dim)
+
+            u_matrix = u_matrix[:, :chi]
+            singular_values = singular_values[:chi]
+            vh_matrix = vh_matrix[:chi, :]
+
+            if site == num_qubits - 1:
+                tensors[site] = vh_matrix.reshape(chi, 2)
+            else:
+                tensors[site] = vh_matrix.reshape(chi, 2, right_bond)
+
+            block = u_matrix @ np.diag(singular_values)
+            right_bond = chi
+
+        represented_norm = float(np.linalg.norm(block))
+        if represented_norm <= tol:
+            raise ValueError("mps_max_bond_dim truncation removed all state weight.")
+        tensors[0] = np.asarray(block / represented_norm, dtype=np.complex128)
+
+        return [np.asarray(tensor, dtype=np.complex128) for tensor in tensors if tensor is not None]
+
+
+    # ──────────────────────────────────────────────────────────────────────
+    #  Validation
+    # ──────────────────────────────────────────────────────────────────────
+
+    def validate_mps_shape(mps: list[np.ndarray]) -> None:
+        """Validate that the MPS tensor dimensions conform to the expected format.
+
+        For a single-qubit state (one tensor), the tensor must have shape (2, 2),
+        serving as both the first and last tensor.
+
+        Args:
+            mps: List of rank-2 and rank-3 tensors.
+
+        Raises:
+            AssertionError: If any dimension constraint is violated.
+        """
+        if not isinstance(mps, (list, tuple)) or not mps:
+            raise ValueError("mps must be a non-empty sequence of tensors.")
+
+        n_sites = len(mps)
+        shape = np.shape(mps[0])
+        assert len(shape) == 2, (
+            f"The first tensor must have exactly 2 dimensions, got {len(shape)}."
         )
-    _validate_explicit_bond(first.shape[1], "first right bond")
-    previous_right = first.shape[1]
+        dj0, dj2 = shape
+        assert dj0 == 2, (
+            f"The first dimension of the first tensor must be exactly 2, got {dj0}."
+        )
+        assert dj2 > 0 and (dj2 & (dj2 - 1)) == 0, (
+            f"The second dimension of the first tensor must be a power of 2, got {dj2}."
+        )
 
-    for site in range(1, target_qubits - 1):
-        tensor = tensors[site]
-        if tensor.ndim != 3 or tensor.shape[1] != 2:
+        if n_sites == 1:
+            # Single tensor is both first and last: physical dim = 2 for both indices.
+            assert shape[1] == 2, (
+                f"A single-tensor MPS must have shape (2, 2), got {shape}."
+            )
+            return
+
+        for i, array in enumerate(mps[1:-1], start=1):
+            shape = np.shape(array)
+            assert len(shape) == 3, (
+                f"Tensor {i} must have exactly 3 dimensions, got {len(shape)}."
+            )
+            ndj0, ndj1, ndj2 = shape
+            assert ndj1 == 2, (
+                f"The second (physical) dimension of tensor {i} must be 2, got {ndj1}."
+            )
+            assert ndj0 > 0 and (ndj0 & (ndj0 - 1)) == 0, (
+                f"The first dimension of tensor {i} must be a power of 2, got {ndj0}."
+            )
+            assert ndj2 > 0 and (ndj2 & (ndj2 - 1)) == 0, (
+                f"The third dimension of tensor {i} must be a power of 2, got {ndj2}."
+            )
+            assert ndj0 == dj2, (
+                f"Dimension mismatch: tensor {i}'s first dim ({ndj0}) does not match "
+                f"previous tensor's third dim ({dj2})."
+            )
+            dj2 = ndj2
+
+        shape = np.shape(mps[-1])
+        assert len(shape) == 2, (
+            f"The last tensor must have exactly 2 dimensions, got {len(shape)}."
+        )
+        ndj0, ndj1 = shape
+        assert ndj1 == 2, (
+            f"The second dimension of the last tensor must be 2, got {ndj1}."
+        )
+        assert ndj0 > 0 and (ndj0 & (ndj0 - 1)) == 0, (
+            f"The first dimension of the last tensor must be a power of 2, got {ndj0}."
+        )
+        assert ndj0 == dj2, (
+            f"Dimension mismatch: last tensor's first dim ({ndj0}) does not match "
+            f"previous tensor's third dim ({dj2})."
+        )
+
+
+    # ──────────────────────────────────────────────────────────────────────
+    #  Right-canonicalization
+    # ──────────────────────────────────────────────────────────────────────
+
+    def right_canonicalize_mps(mps: list[np.ndarray]) -> list[np.ndarray]:
+        """Convert an MPS to right-canonical form via sequential SVD from right to left.
+
+        A right-canonical MPS satisfies the orthonormality condition [Eq. (21) of
+        arXiv:2310.18410]:
+
+            sum_{d_{j,1}, d_{j,2}} A^{(j)}_{d_{j,0}, d_{j,1}, d_{j,2}}
+            (A^{(j)}_{d'_{j,0}, d_{j,1}, d_{j,2}})^* = delta_{d_{j,0}, d'_{j,0}}
+
+        Args:
+            mps: List of MPS tensors.
+
+        Returns:
+            List of MPS tensors in right-canonical form with the same dimensions.
+        """
+        MPSAlgorithm.validate_mps_shape(mps)
+
+        n_sites = len(mps)
+        if n_sites == 1:
+            return [np.copy(mps[0])]
+
+        mps_cpy = [np.copy(A) for A in mps]
+
+        # Quick check: if the MPS is already right-canonical, skip the SVD sweep.
+        already_canonical = True
+        for tensor in mps_cpy[1:]:
+            if tensor.ndim == 2:
+                contraction = tensor @ tensor.conj().T
+            else:
+                contraction = np.tensordot(tensor, tensor.conj(), axes=([1, 2], [1, 2]))
+            if not np.allclose(contraction, np.eye(tensor.shape[0]), atol=1e-12):
+                already_canonical = False
+                break
+        if already_canonical:
+            return mps_cpy
+        mps_cpy[0] = mps_cpy[0].reshape((1, *mps_cpy[0].shape))       # (1, 2, chi_0)
+        mps_cpy[-1] = mps_cpy[-1].reshape((*mps_cpy[-1].shape, 1))    # (chi_{N-2}, 2, 1)
+
+        d_shapes = []
+        for tensor in mps_cpy[1:-1]:
+            d_shapes.extend(tensor.shape)
+        max_bond_dim = max(d_shapes) if d_shapes else None
+
+        n_sites = len(mps_cpy)
+        output_mps: list[np.ndarray | None] = [None] * n_sites
+
+        for i in range(n_sites - 1, 0, -1):
+            chi_left, d, chi_right = mps_cpy[i].shape
+            input_matrix = mps_cpy[i].reshape(chi_left, d * chi_right)
+
+            u_matrix, s_diag, vd_matrix = np.linalg.svd(input_matrix, full_matrices=False)
+
+            chi_new = len(s_diag) if max_bond_dim is None else min(int(max_bond_dim), len(s_diag))
+            u_matrix = u_matrix[:, :chi_new]
+            s_diag = s_diag[:chi_new]
+            vd_matrix = vd_matrix[:chi_new, :]
+
+            output_mps[i] = vd_matrix.reshape(chi_new, d, chi_right)
+            mps_cpy[i - 1] = np.tensordot(
+                mps_cpy[i - 1], u_matrix @ np.diag(s_diag), axes=([2], [0])
+            )
+
+        first: np.ndarray = mps_cpy[0][0]
+        last: np.ndarray = output_mps[-1]  # type: ignore[assignment]
+        last = last[:, :, 0]
+        output_mps[0] = first
+        output_mps[-1] = last
+
+        return output_mps  # type: ignore[return-value]
+
+
+    # ──────────────────────────────────────────────────────────────────────
+    #  Decomposition -- Eq. (23) of arXiv:2310.18410
+    # ──────────────────────────────────────────────────────────────────────
+
+    def _qr_unitary(columns: np.ndarray, rng_seed: int = 42) -> np.ndarray:
+        """Complete a set of column vectors to a unitary via QR decomposition.
+
+        Given a (d x k) matrix with k <= d, this function appends (d - k) random
+        columns, performs QR, and returns the orthogonal Q matrix. The phase of each
+        diagonal of R is absorbed into Q to enforce uniqueness (handles complex
+        MPS tensors correctly).
+
+        Args:
+            columns: Initial columns of shape (d, k).
+            rng_seed: Seed for the random column filler.
+
+        Returns:
+            A unitary matrix of shape (d, d).
+        """
+        return MPSAlgorithm._complete_columns_to_unitary(columns, rng_seed)
+
+
+    def mps_preparation_decomposition(
+        mps: list[np.ndarray],
+        work_wires: Optional[list[int]] = None,
+        right_canonicalize: bool = False,
+        rng_seed: int = 42,
+    ) -> list[np.ndarray]:
+        """Decompose an MPS into a sequence of unitary gates per Eq. (23) of arXiv:2310.18410.
+
+        Each site tensor is encoded into a unitary matrix that acts on the site's system
+        qubit plus a set of auxiliary ``work_wires``. The number of work wires must be
+        sufficient to accommodate the largest bond dimension: if the max bond dimension
+        is ``2^k``, then at least ``k`` work wires are required.
+
+        Args:
+            mps: List of MPS tensors.
+            work_wires: Auxiliary qubit indices.
+            right_canonicalize: Whether to convert the MPS to right-canonical form first.
+            rng_seed: Seed for the QR filler (deterministic by default).
+
+        Returns:
+            List of unitary matrices, one per MPS site.  Each matrix has size
+            ``2**(len(work_wires) + 1)``.
+
+        Raises:
+            ValueError: If ``work_wires`` is ``None`` or insufficient.
+        """
+        MPSAlgorithm.validate_mps_shape(mps)
+
+        if work_wires is None:
             raise ValueError(
-                f"interior tensor {site} must have shape "
-                f"(chi_left, 2, chi_right); got {tensor.shape}."
+                "MPS preparation decomposition requires `work_wires` to be specified."
             )
-        if tensor.shape[0] != previous_right:
+
+        max_bond_dim = max(t.shape[-1] for t in mps[:-1]) if len(mps) > 1 else 0
+        if max_bond_dim > (1 << len(work_wires)):
             raise ValueError(
-                f"bond mismatch before tensor {site}: expected "
-                f"{previous_right}, got {tensor.shape[0]}."
-            )
-        _validate_explicit_bond(tensor.shape[0], f"tensor {site} left bond")
-        _validate_explicit_bond(tensor.shape[2], f"tensor {site} right bond")
-        previous_right = tensor.shape[2]
-
-    last = tensors[-1]
-    if last.ndim != 2 or last.shape[1] != 2:
-        raise ValueError(
-            f"last tensor must have shape (chi_left, 2); got {last.shape}."
-        )
-    if last.shape[0] != previous_right:
-        raise ValueError(
-            f"bond mismatch before last tensor: expected {previous_right}, "
-            f"got {last.shape[0]}."
-        )
-    _validate_explicit_bond(last.shape[0], "last left bond")
-
-
-def _validate_explicit_bond(bond: int, name: str) -> None:
-    """Require an explicit bond to be a positive power of two."""
-    if not _is_power_of_two(int(bond)):
-        raise ValueError(f"{name}={bond} must be a positive power of two.")
-
-
-def _contract_mps_to_state(
-    tensors: list[ComplexArray], num_qubits: int
-) -> ComplexArray:
-    """Contract an MPS in user amplitude order for validation checks."""
-    if len(tensors) != num_qubits:
-        raise ValueError("tensor count does not match num_qubits.")
-    if num_qubits == 1:
-        return np.asarray(tensors[0][:, 0], dtype=np.complex128).copy()
-
-    contracted = np.asarray(tensors[0], dtype=np.complex128)
-    for tensor in tensors[1:-1]:
-        contracted = np.tensordot(contracted, tensor, axes=([-1], [0]))
-    contracted = np.tensordot(contracted, tensors[-1], axes=([-1], [0]))
-    return np.asarray(contracted.reshape(1 << num_qubits), dtype=np.complex128)
-
-
-def _right_canonicalize_mps(
-    tensors: list[ComplexArray],
-) -> list[ComplexArray]:
-    """Right-canonicalize right-to-left without changing the MPS state.
-
-    For site ``i``, ``M`` has shape
-    ``(chi_left, physical * chi_right)``.  QR of ``M.T`` gives
-    ``M = R.T @ Q.T``.  ``Q.T`` replaces the right tensor and has orthonormal
-    rows; ``R.T`` is absorbed into the right-bond leg of the tensor to its
-    left.  Thus ``Q.T`` satisfies the required row-isometry condition.
-
-    A one-site tensor is copied unchanged and its first column is validated
-    during local-unitary construction.
-    """
-    if len(tensors) == 1:
-        return [np.array(tensors[0], dtype=np.complex128, copy=True)]
-
-    result = [np.array(tensor, dtype=np.complex128, copy=True) for tensor in tensors]
-    for site in range(len(result) - 1, 0, -1):
-        right_tensor = result[site]
-        left_bond = right_tensor.shape[0]
-        matrix = right_tensor.reshape(left_bond, -1)
-        if left_bond > matrix.shape[1]:
-            raise ValueError(
-                f"tensor {site} cannot be right-canonical: left bond "
-                f"{left_bond} exceeds physical-right dimension "
-                f"{matrix.shape[1]}."
+                f"Insufficient number of `work_wires`. Need at least "
+                f"{int(np.ceil(np.log2(max_bond_dim)))} work wires, "
+                f"got {len(work_wires)}."
             )
 
-        q_matrix, r_matrix = np.linalg.qr(matrix.T, mode="reduced")
-        canonical_matrix = q_matrix.T
-        gauge = r_matrix.T
-        result[site] = canonical_matrix.reshape(right_tensor.shape)
+        mps_cpy = [np.copy(A) for A in mps]
+        n_work = len(work_wires)
+        n_total = n_work + 1
 
-        left_tensor = result[site - 1]
-        if site - 1 == 0:
-            result[site - 1] = left_tensor @ gauge
-        else:
-            result[site - 1] = np.tensordot(
-                left_tensor, gauge, axes=([2], [0])
-            )
+        if right_canonicalize:
+            mps_cpy = MPSAlgorithm.right_canonicalize_mps(mps_cpy)
 
-    return [np.asarray(tensor, dtype=np.complex128) for tensor in result]
+        if len(mps_cpy) == 1:
+            # Single-site MPS.
+            Ai = mps_cpy[0].reshape((1, *mps_cpy[0].shape))  # (1, 2, 2)
+            if n_work == 0:
+                # No work wires: build a 2x2 unitary directly.
+                # The first column is Ai[:, 0], we QR-complete to a 2x2 unitary.
+                init_col = Ai[0, :, 0]  # [A₀[0,0], A₀[1,0]], length 2
+                filler = np.random.RandomState(rng_seed).random((2, 1))
+                augmented = np.hstack([init_col.reshape(-1, 1), filler])
+                Q, R = np.linalg.qr(augmented)
+                diag = np.diag(R)
+                phase = np.ones_like(diag, dtype=np.complex128)
+                mask = np.abs(diag) > 1e-14
+                phase[mask] = diag[mask] / np.abs(diag[mask])
+                Q *= phase[np.newaxis, :]
+                return [Q]
+            columns = []
+            half = 1 << n_work
+            for col_data in Ai:
+                vec = np.zeros(1 << n_total, dtype=np.complex128)
+                block_size = col_data.shape[1]
+                vec[:block_size] = col_data[0]
+                vec[half:half + block_size] = col_data[1]
+                columns.append(vec)
+            vec_matrix = np.column_stack(columns)
+            return [MPSAlgorithm._qr_unitary(vec_matrix, rng_seed)]
 
+        mps_cpy[0] = mps_cpy[0].reshape((1, *mps_cpy[0].shape))       # (1, 2, chi_0)
+        mps_cpy[-1] = mps_cpy[-1].reshape((*mps_cpy[-1].shape, 1))    # (chi_{N-2}, 2, 1)
 
-def _required_work_qubits(tensors: list[ComplexArray]) -> int:
-    """Return ``ceil(log2(max explicit bond))``, or zero for one tensor."""
-    if len(tensors) == 1:
-        return 0
-    largest_bond = max(tensor.shape[-1] for tensor in tensors[:-1])
-    return int(math.ceil(math.log2(largest_bond)))
+        unitaries: list[np.ndarray] = []
+        half = 1 << n_work
 
+        for Ai in mps_cpy:
+            columns = []
+            for col_data in Ai:  # col_data has shape (2, chi_i)
+                vec = np.zeros(1 << n_total, dtype=np.complex128)
+                block_size = col_data.shape[1]
+                vec[:block_size] = col_data[0]
+                vec[half:half + block_size] = col_data[1]
+                columns.append(vec)
 
-def _validate_or_create_work_wires(
-    work_wires: list[int] | None, required: int
-) -> list[int]:
-    """Validate the ordered work register or create the default register."""
-    if work_wires is None:
-        return list(range(required))
-    if not isinstance(work_wires, list):
-        raise TypeError("work_wires must be a list of integers or None.")
-    validated = [
-        _validate_nonboolean_integer(wire, f"work_wires[{index}]", minimum=0)
-        for index, wire in enumerate(work_wires)
-    ]
-    if len(set(validated)) != len(validated):
-        raise ValueError("work_wires must be unique.")
-    if len(validated) < required:
-        raise ValueError(
-            f"work_wires provides {len(validated)} wires, but {required} "
-            "are required by the largest MPS bond."
-        )
-    return validated
+            vec_matrix = np.column_stack(columns)
+            unitary = MPSAlgorithm._qr_unitary(vec_matrix, rng_seed)
+            unitaries.append(unitary)
 
-
-def _system_wires(work_wires: list[int], target_qubits: int) -> list[int]:
-    """Return the first increasing indices not occupied by work wires."""
-    occupied = set(work_wires)
-    result: list[int] = []
-    candidate = 0
-    while len(result) < target_qubits:
-        if candidate not in occupied:
-            result.append(candidate)
-        candidate += 1
-    return result
+        return unitaries
 
 
-def _mps_local_unitaries(
-    tensors: list[ComplexArray], work_qubits: int, rng_seed: int
-) -> list[ComplexArray]:
-    """Map tensor rows to isometry columns and QR-complete each matrix."""
-    if len(tensors) == 1:
-        first_column = tensors[0][:, 0].reshape(2, 1)
-        return [_complete_columns_to_unitary(first_column, rng_seed)]
+    # ──────────────────────────────────────────────────────────────────────
+    #  Circuit builder
+    # ──────────────────────────────────────────────────────────────────────
 
-    ranked = [np.array(tensor, copy=True) for tensor in tensors]
-    ranked[0] = ranked[0].reshape(1, *ranked[0].shape)
-    ranked[-1] = ranked[-1].reshape(*ranked[-1].shape, 1)
-
-    local_dimension = 1 << (work_qubits + 1)
-    physical_one_offset = 1 << work_qubits
-    unitaries: list[ComplexArray] = []
-    for site, tensor in enumerate(ranked):
-        columns: list[ComplexArray] = []
-        for left_bond_slice in tensor:
-            if left_bond_slice.shape[0] != 2:
-                raise ValueError(
-                    f"tensor {site} physical dimension must equal 2."
-                )
-            right_bond = left_bond_slice.shape[1]
-            if right_bond > 1 << work_qubits:
-                raise ValueError(
-                    f"tensor {site} right bond {right_bond} exceeds work "
-                    f"capacity {1 << work_qubits}."
-                )
-            column = np.zeros(local_dimension, dtype=np.complex128)
-            column[:right_bond] = left_bond_slice[0]
-            column[
-                physical_one_offset : physical_one_offset + right_bond
-            ] = left_bond_slice[1]
-            columns.append(column)
-
-        isometry = np.column_stack(columns)
-        expected = np.eye(isometry.shape[1], dtype=np.complex128)
-        if not np.allclose(
-            isometry.conj().T @ isometry, expected, atol=1e-10
-        ):
-            raise ValueError(
-                f"tensor {site} does not define orthonormal isometry columns."
-            )
-        unitaries.append(_complete_columns_to_unitary(isometry, rng_seed))
-    return unitaries
-
-
-def _complete_columns_to_unitary(
-    columns: ArrayLike, rng_seed: int
-) -> ComplexArray:
-    """Preserve verified isometry columns and complete them by seeded QR."""
-    columns = np.asarray(columns, dtype=np.complex128)
-    if columns.ndim != 2 or columns.size == 0:
-        raise ValueError("isometry columns must be a non-empty matrix.")
-    if not np.all(np.isfinite(columns)):
-        raise ValueError("isometry columns must be finite.")
-    rows, count = columns.shape
-    if count > rows:
-        raise ValueError("an isometry cannot have more columns than rows.")
-    if not np.allclose(
-        columns.conj().T @ columns,
-        np.eye(count, dtype=np.complex128),
-        atol=1e-10,
-    ):
-        raise ValueError("MPS tensor does not define orthonormal columns.")
-    if count == rows:
-        return np.asarray(columns, dtype=np.complex128)
-
-    # Seeded filler makes the orthogonal complement deterministic.  Absorbing
-    # QR diagonal phases preserves the supplied leading columns.
-    rng = np.random.RandomState(rng_seed)
-    filler = rng.random((rows, rows - count))
-    filler = filler + 1j * rng.random((rows, rows - count))
-    q_matrix, r_matrix = np.linalg.qr(np.hstack([columns, filler]))
-    diagonal = np.diag(r_matrix)
-    phase = np.ones(rows, dtype=np.complex128)
-    nonzero = np.abs(diagonal) > 1e-14
-    phase[nonzero] = diagonal[nonzero] / np.abs(diagonal[nonzero])
-    unitary = np.asarray(
-        q_matrix * phase[np.newaxis, :], dtype=np.complex128
-    )
-    if not np.allclose(unitary[:, :count], columns, atol=1e-10):
-        raise ValueError("QR completion failed to preserve isometry columns.")
-    if not np.allclose(
-        unitary.conj().T @ unitary,
-        np.eye(rows, dtype=np.complex128),
-        atol=1e-10,
-    ):
-        raise ValueError("QR completion did not produce a unitary matrix.")
-    return unitary
-
-
-def _build_mps_circuit(
-    local_unitaries: list[ComplexArray],
-    system_wires: list[int],
-    work_wires: list[int],
-    total_qubits: int,
-) -> Circuit:
-    """Build the real UnitaryLab circuit in left-to-right tensor order."""
-    circuit = Circuit(total_qubits, name="MPS State Preparation")
-    for site, unitary in enumerate(local_unitaries):
-        # Work wires first gives the local matrix (system, work) big-endian
-        # order after UnitaryLab reverses the target list internally.
-        circuit.unitary(unitary, work_wires + [system_wires[site]])
-    return circuit
-
-
-def _build_evolution_matrix(
-    local_unitaries: list[ComplexArray],
-    system_wires: list[int],
-    work_wires: list[int],
-    total_qubits: int,
-) -> ComplexArray:
-    """Build full evolution from the same matrices, wires, and order as circuit."""
-    dimension = 1 << total_qubits
-    evolution = np.eye(dimension, dtype=np.complex128)
-    for site, unitary in enumerate(local_unitaries):
-        local_wires = work_wires + [system_wires[site]]
-        expanded = _expand_unitary(unitary, local_wires, total_qubits)
-        evolution = expanded @ evolution
-    return evolution
-
-
-def _expand_unitary(
-    local_unitary: ArrayLike,
-    local_wires: list[int],
-    total_qubits: int,
-) -> ComplexArray:
-    """Expand a local matrix whose index bits follow ``local_wires`` order."""
-    local_unitary = np.asarray(local_unitary, dtype=np.complex128)
-    expected_local = 1 << len(local_wires)
-    if local_unitary.shape != (expected_local, expected_local):
-        raise ValueError(
-            f"local unitary must have shape ({expected_local}, "
-            f"{expected_local}); got {local_unitary.shape}."
-        )
-    if len(set(local_wires)) != len(local_wires):
-        raise ValueError("local_wires must be unique.")
-    for index, wire in enumerate(local_wires):
-        _validate_nonboolean_integer(
-            wire, f"local_wires[{index}]", minimum=0
-        )
-        if wire >= total_qubits:
-            raise ValueError("local wire exceeds total circuit width.")
-
-    dimension = 1 << total_qubits
-    result = np.zeros((dimension, dimension), dtype=np.complex128)
-    other_wires = [
-        wire for wire in range(total_qubits) if wire not in set(local_wires)
-    ]
-    for local_row in range(expected_local):
-        global_row_part = _spread_bits(local_row, local_wires)
-        for local_column in range(expected_local):
-            amplitude = local_unitary[local_row, local_column]
-            if amplitude == 0:
-                continue
-            global_column_part = _spread_bits(local_column, local_wires)
-            for other_index in range(1 << len(other_wires)):
-                other_part = _spread_bits(other_index, other_wires)
-                result[
-                    global_row_part | other_part,
-                    global_column_part | other_part,
-                ] = amplitude
-    return result
-
-
-def _spread_bits(value: int, wires: list[int]) -> int:
-    """Place bit position ``i`` of ``value`` on ``wires[i]``."""
-    result = 0
-    for position, wire in enumerate(wires):
-        if (value >> position) & 1:
-            result |= 1 << wire
-    return result
-
-
-def _extract_zero_work_system_state(
-    full_state: ArrayLike,
-    system_wires: list[int],
-    work_wires: list[int],
-    target_qubits: int,
-    total_qubits: int,
-) -> ComplexArray:
-    """Return the unnormalized internal-order all-zero-work projection.
-
-    Sparse labels can leave physical wire positions that are neither system nor
-    work wires.  The emitted circuit never acts on them, so from ``|0...0>``
-    they remain zero.  Extraction therefore addresses the unique basis index
-    with the requested system bits and every non-system position equal to zero.
-    """
-    full_state = np.asarray(full_state, dtype=np.complex128)
-    if full_state.shape != (1 << total_qubits,):
-        raise ValueError("full_state has the wrong dimension.")
-    if set(system_wires) & set(work_wires):
-        raise ValueError("system_wires and work_wires must not overlap.")
-    result = np.zeros(1 << target_qubits, dtype=np.complex128)
-    for system_index in range(1 << target_qubits):
-        full_index = _spread_bits(system_index, system_wires)
-        result[system_index] = full_state[full_index]
-    return result
-
-
-def _bit_reversed_state_vector(
-    state: ArrayLike, num_qubits: int
-) -> ComplexArray:
-    """Convert internal system-bit order to user amplitude order exactly once."""
-    state = np.asarray(state, dtype=np.complex128)
-    dimension = 1 << num_qubits
-    if state.shape != (dimension,):
-        raise ValueError(f"state must have shape ({dimension},).")
-    result = np.empty_like(state)
-    for index, amplitude in enumerate(state):
-        reversed_index = int(format(index, f"0{num_qubits}b")[::-1], 2)
-        result[reversed_index] = amplitude
-    return result
-
-
-def _complete_state_preparation_matrix(
-    state: ArrayLike, rng_seed: int = 42, tol: float = 1e-12
-) -> ComplexArray:
-    """Complete the normalized direction of a nonzero projection to a unitary."""
-    state = np.asarray(state, dtype=np.complex128)
-    norm_squared = float(np.vdot(state, state).real)
-    if norm_squared <= tol:
-        raise ValueError("zero-work projection has near-zero norm.")
-    first_column = (state / np.sqrt(norm_squared)).reshape(-1, 1)
-    return _complete_columns_to_unitary(first_column, rng_seed)
-
-
-def _phase_invariant_error(reference: ArrayLike, candidate: ArrayLike) -> float:
-    """Phase-align the unnormalized candidate without changing its norm."""
-    reference = np.asarray(reference, dtype=np.complex128)
-    candidate = np.asarray(candidate, dtype=np.complex128)
-    if reference.shape != candidate.shape:
-        raise ValueError("reference and candidate shapes must match.")
-    overlap = np.vdot(reference, candidate)
-    if abs(overlap) > 1e-12:
-        candidate = candidate * np.conj(overlap / abs(overlap))
-    return float(np.linalg.norm(reference - candidate))
-
-
-def _assert_raises(expected: type[BaseException], function: Any) -> None:
-    """Assert that ``function`` raises ``expected``."""
-    try:
-        function()
-    except expected:
-        return
-    except Exception as error:
-        raise AssertionError(
-            f"expected {expected.__name__}, got "
-            f"{type(error).__name__}: {error}"
-        ) from error
-    raise AssertionError(f"expected {expected.__name__}, but none was raised")
-
-
-def _run_tests() -> None:
-    """Run deterministic validation of the preparation pipeline."""
-    test_count = 0
-    max_error = 0.0
-
-    def run_case(
-        state: ArrayLike,
+    def build_mps_circuit(
+        unitaries: list[np.ndarray],
+        system_wires: list[int],
+        work_wires: list[int],
         num_qubits: int,
-        **kwargs: Any,
-    ) -> dict[str, Any]:
-        nonlocal test_count, max_error
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", RuntimeWarning)
-            result = mps_state_preparation(state, num_qubits, **kwargs)
+    ) -> Circuit:
+        """Construct the full MPS-preparation circuit from the unitary list.
 
-        for unitary in result["Local unitaries"]:
-            identity = np.eye(unitary.shape[0], dtype=np.complex128)
-            local_gram = np.einsum("ki,kj->ij", unitary.conj(), unitary)
-            assert np.allclose(local_gram, identity, atol=2e-10)
+        Each unitary is applied as a custom gate on ``work_wires + [system_wire[i]]``.
+        The Circuit uses little-endian convention (wire 0 = LSB of the state index),
+        and the gate target list is reversed internally, so we supply the work wire
+        first to obtain the intended action on (system, work) internally.
 
-        full_evolution = result["full_evolution"]
-        full_identity = np.eye(full_evolution.shape[0], dtype=np.complex128)
-        gram = np.einsum(
-            "ki,kj->ij", full_evolution.conj(), full_evolution
-        )
-        assert np.allclose(gram, full_identity, atol=2e-10)
-        full_state = np.einsum(
-            "ij,j->i", full_evolution, full_identity[:, 0]
-        )
-        assert np.allclose(full_state, full_evolution[:, 0], atol=1e-12)
+        Args:
+            unitaries: List of unitary matrices from ``mps_preparation_decomposition``.
+            system_wires: Target system qubit indices (one per site).
+            work_wires: Auxiliary qubit indices.
+            num_qubits: Total number of qubits in the circuit (system + work).
 
-        total_qubits = full_evolution.shape[0].bit_length() - 1
-        internal_projection = _extract_zero_work_system_state(
-            full_state,
-            result["system_wires"],
-            result["work_wires"],
-            num_qubits,
-            total_qubits,
-        )
-        expected_user_projection = _bit_reversed_state_vector(
-            internal_projection, num_qubits
-        )
-        assert np.allclose(
-            result["Zero-work projection"], expected_user_projection, atol=1e-12
-        )
-        expected_leakage = 1.0 - float(
-            np.vdot(internal_projection, internal_projection).real
-        )
-        assert abs(result["Work leakage"] - expected_leakage) <= 1e-12
+        Returns:
+            A ``Circuit`` instance implementing the MPS preparation.
+        """
+        qc = Circuit(num_qubits)
+        for i, U in enumerate(unitaries):
+            # little-endian: target list is reversed internally.
+            # Supplying [work, system] so that internally it acts on [system, work].
+            qc.unitary(U, work_wires + [system_wires[i]])
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", RuntimeWarning)
-            target = _normalize_and_pad_target(state, num_qubits, tol=1e-12)
-        expected_error = _phase_invariant_error(
-            target, result["Zero-work projection"]
-        )
-        assert abs(result["Total error"] - expected_error) <= 1e-12
-        threshold = float(kwargs.get("target_error", 1e-6))
-        expected_status = (
-            "ok" if expected_error <= max(threshold, 1e-10) else "failed"
-        )
-        assert result["status"] == expected_status
+        return qc
 
-        projection = result["Zero-work projection"]
-        projection_norm = float(np.linalg.norm(projection))
-        assert projection_norm > 1e-12
-        assert np.allclose(
-            result["Prepared state"],
-            projection / projection_norm,
-            atol=2e-10,
-        )
-        assert set(result["system_wires"]).isdisjoint(result["work_wires"])
-        assert isinstance(result["circuit"], Circuit)
 
-        # Replay the left-to-right local-unitary schedule and compare states.
-        sequential_state = np.zeros(full_evolution.shape[0], dtype=np.complex128)
-        sequential_state[0] = 1.0
-        for site, unitary in enumerate(result["Local unitaries"]):
-            expanded = _expand_unitary(
-                unitary,
-                result["work_wires"] + [result["system_wires"][site]],
-                total_qubits,
-            )
-            sequential_state = np.einsum(
-                "ij,j->i", expanded, sequential_state
-            )
-        assert np.allclose(sequential_state, full_state, atol=1e-12)
+    # ──────────────────────────────────────────────────────────────────────
+    #  Evolution matrix (manual, avoiding Circuit.get_matrix() overhead)
+    # ──────────────────────────────────────────────────────────────────────
 
-        test_count += 1
-        max_error = max(max_error, float(result["Total error"]))
+    def _apply_gate(
+        state: np.ndarray,
+        unitary: np.ndarray,
+        affected_wires: list[int],
+        num_qubits: int,
+    ) -> np.ndarray:
+        """Apply a unitary gate on a subset of wires to a state vector.
+
+        The state index uses little-endian convention: wire ``k`` is bit ``k``.
+        The unitary's row/column index uses big-endian encoding within the
+        gate's subspace: ``affected_wires[0]`` is the most significant bit.
+
+        Args:
+            state: Input state vector of length ``2**num_qubits``.
+            unitary: Unitary matrix of size ``2**len(affected_wires)``.
+            affected_wires: Wires the gate acts on (order matters).
+            num_qubits: Total qubit count.
+
+        Returns:
+            Transformed state vector.
+        """
+        result = np.copy(state)
+        n_affected = len(affected_wires)
+        u_dim = 1 << n_affected
+
+        # Precompute the mapping from U-index (big-endian) to global bit set.
+        # u_idx = sum w_k * 2^{n_affected-1-k}  where w_k = value of affected_wires[k]
+        # global_bits[u_idx] = set of bits (OR of 1<<affected_wires[k] for each k with w_k=1)
+        all_qubits = list(range(num_qubits))
+        unaffected = [q for q in all_qubits if q not in affected_wires]
+        global_bits = np.zeros(u_dim, dtype=np.intp)
+        for u_idx in range(u_dim):
+            bits = 0
+            for k in range(n_affected):
+                if (u_idx >> (n_affected - 1 - k)) & 1:
+                    bits |= 1 << affected_wires[k]
+            global_bits[u_idx] = bits
+
+        for prefix in range(1 << len(unaffected)):
+            offset = 0
+            for bit_pos, q in enumerate(unaffected):
+                if (prefix >> bit_pos) & 1:
+                    offset |= 1 << q
+
+            subspace = np.empty(u_dim, dtype=np.complex128)
+            for u_idx in range(u_dim):
+                subspace[u_idx] = state[offset | global_bits[u_idx]]
+
+            subspace = unitary @ subspace
+
+            for u_idx in range(u_dim):
+                result[offset | global_bits[u_idx]] = subspace[u_idx]
+
         return result
 
-    # One qubit, product, GHZ, W, random real, and random complex states.
-    one_qubit = run_case(np.array([1.0, 1.0j]), 1)
-    assert one_qubit["work_wires"] == []
 
-    # Every computational basis state through four qubits verifies the single
-    # post-projection bit reversal and the returned user amplitude order.
-    for num_qubits in range(1, 5):
-        for basis_index in range(1 << num_qubits):
-            basis_state = np.zeros(1 << num_qubits, dtype=np.complex128)
-            basis_state[basis_index] = 1.0
-            basis_result = run_case(basis_state, num_qubits)
-            assert int(np.argmax(np.abs(basis_result["Prepared state"]))) == basis_index
+    def _build_evolution_matrix(
+        unitaries: list[np.ndarray],
+        system_wires: list[int],
+        work_wires: list[int],
+        num_qubits: int,
+    ) -> np.ndarray:
+        """Accumulate the full unitary of the MPS preparation circuit.
 
-    run_case(np.ones(8), 3, mps_max_bond_dim=2)
-    ghz = np.zeros(8, dtype=np.complex128)
-    ghz[[0, 7]] = 1.0
-    ghz_result = run_case(ghz, 3, mps_max_bond_dim=2)
-    assert ghz_result["MPS tensors"] == 3
-    assert ghz_result["work_wires"] == [0]
-    assert ghz_result["system_wires"] == [1, 2, 3]
-    ghz_mps = _state_vector_to_mps(ghz / np.linalg.norm(ghz), 3, 2)
-    for tensor in ghz_mps[1:]:
-        matrix = tensor.reshape(tensor.shape[0], -1)
-        assert np.allclose(
-            matrix @ matrix.conj().T,
-            np.eye(matrix.shape[0]),
-            atol=1e-10,
-        )
-    ghz_diagnostic = _contract_mps_to_state(ghz_mps, 3)
-    assert _phase_invariant_error(
-        ghz_diagnostic, ghz_result["Zero-work projection"]
-    ) <= 1e-10
-    w_state = np.zeros(8, dtype=np.complex128)
-    w_state[[1, 2, 4]] = 1.0
-    run_case(w_state, 3, mps_max_bond_dim=4)
+        The overall unitary is U_{N-1} ... U_1 U_0 (right-to-left: earlier gates
+        are applied first, so later gates multiply on the left).
 
-    rng = np.random.default_rng(20260715)
-    for num_qubits in range(1, 5):
-        dimension = 1 << num_qubits
-        run_case(rng.normal(size=dimension), num_qubits)
-        run_case(
-            rng.normal(size=dimension) + 1j * rng.normal(size=dimension),
-            num_qubits,
-        )
+        Args:
+            unitaries: List of unitaries from ``mps_preparation_decomposition``.
+            system_wires: System qubit indices.
+            work_wires: Auxiliary qubit indices.
+            num_qubits: Total qubit count.
 
-    # Supplied MPS with unit bonds for |000>.
-    supplied = [
-        np.array([[1.0], [0.0]], dtype=np.complex128),
-        np.array([[[1.0], [0.0]]], dtype=np.complex128),
-        np.array([[1.0, 0.0]], dtype=np.complex128),
-    ]
-    supplied_result = run_case(
-        np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-        3,
-        mps=supplied,
-    )
-    assert supplied_result["work_wires"] == []
-    mismatched_supplied = run_case(
-        np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]),
-        3,
-        mps=supplied,
-        target_error=1e-6,
-    )
-    assert mismatched_supplied["status"] == "failed"
-    assert int(np.argmax(np.abs(mismatched_supplied["Prepared state"]))) == 0
+        Returns:
+            Full ``2**num_qubits x 2**num_qubits`` unitary.
+        """
+        dim = 1 << num_qubits
+        evolution = np.eye(dim, dtype=np.complex128)
 
-    # Right canonicalization preserves a deliberately gauged MPS state.
-    canonical_source = _state_vector_to_mps(ghz / np.linalg.norm(ghz), 3, 2)
-    gauge = np.array([[1.2, 0.3j], [0.1, 0.9]], dtype=np.complex128)
-    gauged = [np.array(tensor, copy=True) for tensor in canonical_source]
-    gauged[0] = gauged[0] @ gauge
-    gauged[1] = np.tensordot(np.linalg.inv(gauge), gauged[1], axes=([1], [0]))
-    before = _contract_mps_to_state(gauged, 3)
-    recanonicalized = _right_canonicalize_mps(gauged)
-    after = _contract_mps_to_state(recanonicalized, 3)
-    assert np.allclose(before, after, atol=1e-10)
-    for tensor in recanonicalized[1:]:
-        matrix = tensor.reshape(tensor.shape[0], -1)
-        assert np.allclose(
-            matrix @ matrix.conj().T,
-            np.eye(matrix.shape[0]),
-            atol=1e-10,
-        )
-    run_case(ghz, 3, mps=gauged, right_canonicalize=True)
-    _assert_raises(
-        ValueError,
-        lambda: mps_state_preparation(
-            ghz, 3, mps=gauged, right_canonicalize=False
-        ),
-    )
+        for i, U in enumerate(unitaries):
+            # Wire order must match the U-matrix encoding: system wire is MSB,
+            # work wires are LSBs.  This is the convention used in
+            # mps_preparation_decomposition.
+            affected = [system_wires[i]] + list(work_wires)
+            new_evolution = np.zeros_like(evolution)
+            for col in range(dim):
+                new_evolution[:, col] = MPSAlgorithm._apply_gate(
+                    evolution[:, col], U, affected, num_qubits
+                )
+            evolution = new_evolution
 
-    # Bond truncation is a target approximation, not work leakage.
-    entangled = rng.normal(size=16) + 1j * rng.normal(size=16)
-    truncated_mps = _state_vector_to_mps(
-        entangled / np.linalg.norm(entangled), 4, max_bond_dim=2
-    )
-    assert max(tensor.shape[-1] for tensor in truncated_mps[:-1]) <= 2
-    truncated = run_case(
-        entangled, 4, mps_max_bond_dim=2, target_error=1e-12
-    )
-    assert np.isfinite(truncated["Total error"])
+        return evolution
 
-    # Sparse custom work placement controls system wires and circuit width.
-    sparse = run_case(ghz, 3, mps_max_bond_dim=2, work_wires=[4])
-    assert sparse["work_wires"] == [4]
-    assert sparse["system_wires"] == [0, 1, 2]
-    assert sparse["full_evolution"].shape == (32, 32)
 
-    # Padding, zero amplitudes, and global phase use user amplitude order.
-    padded = run_case(np.array([1.0, 0.0, 2.0j]), 3)
-    assert np.sum(np.abs(padded["Prepared state"][3:]) ** 2) <= 1e-20
-    phased_target = np.exp(0.713j) * np.array([1.0, 2.0j, 0.0, -1.0])
-    run_case(phased_target, 2)
+    # ──────────────────────────────────────────────────────────────────────
+    #  Error computation
+    # ──────────────────────────────────────────────────────────────────────
 
-    # Verify leakage using a state with nonzero work-register probability.
-    leaky_column = np.array(
-        [np.sqrt(0.75), 0.5, 0.0, 0.0], dtype=np.complex128
-    ).reshape(4, 1)
-    leaky_local = _complete_columns_to_unitary(leaky_column, 42)
-    leaky_evolution = _build_evolution_matrix(
-        [leaky_local], [1], [0], total_qubits=2
-    )
-    synthetic_full = leaky_evolution[:, 0]
-    synthetic_projection = _extract_zero_work_system_state(
-        synthetic_full, [1], [0], 1, 2
-    )
-    assert abs(
-        (1.0 - float(np.vdot(synthetic_projection, synthetic_projection).real))
-        - 0.25
-    ) <= 1e-12
+    def _phase_invariant_error(reference: np.ndarray, candidate: np.ndarray) -> float:
+        """Return a global-phase-invariant state-vector error."""
+        reference = np.asarray(reference, dtype=np.complex128)
+        candidate = np.asarray(candidate, dtype=np.complex128)
+        overlap = np.vdot(reference, candidate)
+        if abs(overlap) > 1e-12:
+            candidate = candidate * np.conj(overlap / abs(overlap))
+        return float(np.linalg.norm(reference - candidate))
 
-    # Insufficient/illegal work wires and public integer/real validation.
-    invalid_calls: list[tuple[type[BaseException], Any]] = [
-        (ValueError, lambda: mps_state_preparation(ghz, 3, work_wires=[])),
-        (ValueError, lambda: mps_state_preparation(ghz, 3, work_wires=[0, 0])),
-        (ValueError, lambda: mps_state_preparation(ghz, 3, work_wires=[-1])),
-        (TypeError, lambda: mps_state_preparation(ghz, 3, work_wires=[True])),
-        (TypeError, lambda: mps_state_preparation(ghz, 3, work_wires=(0,))),
-        (TypeError, lambda: mps_state_preparation([1, 0], True)),
-        (TypeError, lambda: mps_state_preparation([1, 0], 1.0)),
-        (ValueError, lambda: mps_state_preparation([1, 0], 0)),
-        (ValueError, lambda: mps_state_preparation([1, 0], 1, target_error=np.inf)),
-        (ValueError, lambda: mps_state_preparation([1, 0], 1, target_error=np.nan)),
-        (TypeError, lambda: mps_state_preparation([1, 0], 1, target_error=True)),
-        (TypeError, lambda: mps_state_preparation([1, 0], 1, mps_max_bond_dim=True)),
-        (ValueError, lambda: mps_state_preparation([1, 0], 1, mps_max_bond_dim=3)),
-        (TypeError, lambda: mps_state_preparation([1, 0], 1, rng_seed=True)),
-        (ValueError, lambda: mps_state_preparation([], 1)),
-        (ValueError, lambda: mps_state_preparation(np.eye(2), 1)),
-        (ValueError, lambda: mps_state_preparation([np.nan, 1], 1)),
-        (ValueError, lambda: mps_state_preparation([0, 0], 1)),
-        (ValueError, lambda: mps_state_preparation(np.ones(5), 2)),
-    ]
-    for expected, function in invalid_calls:
-        _assert_raises(expected, function)
 
-    # Invalid supplied tensor count, shape, physical leg, bonds, and values.
-    bad_shape = [np.ones((2, 1)), np.ones((1, 2, 1)), np.ones((1, 2, 1))]
-    bad_physical = [np.ones((2, 1)), np.ones((1, 3, 1)), np.ones((1, 2))]
-    bad_bond = [np.ones((2, 2)), np.ones((1, 2, 1)), np.ones((1, 2))]
-    bad_power = [np.ones((2, 3)), np.ones((3, 2, 1)), np.ones((1, 2))]
-    bad_finite = [tensor.copy() for tensor in supplied]
-    bad_finite[1][0, 0, 0] = np.nan
-    empty_tensor = [tensor.copy() for tensor in supplied]
-    empty_tensor[1] = np.empty((1, 2, 0), dtype=np.complex128)
-    zero_chain = [np.zeros_like(tensor) for tensor in supplied]
-    for tensors in [
-        supplied[:2],
-        bad_shape,
-        bad_physical,
-        bad_bond,
-        bad_power,
-        bad_finite,
-        empty_tensor,
-        zero_chain,
-    ]:
-        _assert_raises(
-            ValueError,
-            lambda tensors=tensors: mps_state_preparation(
-                np.r_[1.0, np.zeros(7)], 3, mps=tensors
-            ),
-        )
+    def _required_work_qubits(mps: list[np.ndarray]) -> int:
+        """Return how many work qubits are needed for the largest MPS bond."""
+        MPSAlgorithm.validate_mps_shape(mps)
+        if len(mps) <= 1:
+            return 0
 
-    # QR must reject a non-isometry instead of silently changing it.
-    _assert_raises(
-        ValueError,
-        lambda: _complete_columns_to_unitary(
-            np.array([[1.0], [1.0]], dtype=np.complex128), 42
-        ),
-    )
-    _assert_raises(
-        ValueError,
-        lambda: _complete_state_preparation_matrix(
-            np.zeros(4, dtype=np.complex128), rng_seed=42
-        ),
-    )
-    preserved_columns = np.array(
-        [[1.0, 0.0], [0.0, 1.0], [0.0, 0.0], [0.0, 0.0]],
-        dtype=np.complex128,
-    )
-    completed = _complete_columns_to_unitary(preserved_columns, 42)
-    assert np.allclose(completed[:, :2], preserved_columns, atol=1e-10)
+        max_bond_dim = max(int(tensor.shape[-1]) for tensor in mps[:-1])
+        return int(np.ceil(np.log2(max_bond_dim)))
 
-    print(
-        f"{test_count} preparation cases passed; "
-        f"maximum Total error = {max_error:.3e}"
-    )
+
+    def _extract_zero_work_system_state(
+        full_state: np.ndarray,
+        system_wires: list[int],
+        work_wires: list[int],
+        target_qubits: int,
+        total_qubits: int,
+    ) -> np.ndarray:
+        """Extract the system state from the subspace where all work qubits are zero."""
+        full_state = np.asarray(full_state, dtype=np.complex128)
+        if not work_wires:
+            return full_state.copy()
+
+        work_mask = sum(1 << wire for wire in work_wires)
+        system_state = np.zeros(1 << target_qubits, dtype=np.complex128)
+        for global_index in range(1 << total_qubits):
+            if (global_index & work_mask) != 0:
+                continue
+
+            system_index = 0
+            for system_position, wire in enumerate(system_wires):
+                if (global_index >> wire) & 1:
+                    system_index |= 1 << system_position
+            system_state[system_index] = full_state[global_index]
+
+        return system_state
+
+
+    def _complete_state_preparation_matrix(
+        prepared_state: np.ndarray,
+        rng_seed: int = 42,
+        tol: float = 1e-12,
+    ) -> np.ndarray:
+        """Return a target-space unitary whose first column is ``prepared_state``."""
+        prepared_state = np.asarray(prepared_state, dtype=np.complex128)
+        norm = float(np.linalg.norm(prepared_state))
+        if norm <= tol:
+            raise ValueError("prepared_state must not be the zero vector.")
+
+        first_column = np.asarray(prepared_state / norm, dtype=np.complex128).reshape(-1, 1)
+        return MPSAlgorithm._complete_columns_to_unitary(first_column, rng_seed)
+
+
+    # ──────────────────────────────────────────────────────────────────────
+    #  Main algorithm class
+    # ──────────────────────────────────────────────────────────────────────
+
+    class MPS(StatePreparationResult):
+        """State preparation via Matrix Product State decomposition.
+
+        Implements the MPS-based state-preparation algorithm described in
+        arXiv:2310.18410.  The MPS tensors are converted into a quantum circuit
+        using the QR-based technique from Eq. (23), yielding one unitary gate
+        per site acting on the system qubit and a shared set of auxiliary
+        ``work_wires``.
+
+        The class can either decompose ``Psi`` into an exact MPS automatically, or
+        use pre-computed tensors supplied via the ``mps`` argument. The MPS must be
+        a list of :math:`n` tensors with shapes:
+          - First:  ``(2, chi_0)``
+          - Intermediate (if any): ``(chi_{i-1}, 2, chi_i)``
+          - Last: ``(chi_{n-2}, 2)``
+        where all bond dimensions are powers of two.
+
+        Args:
+            Psi: Target state vector (used for error computation).
+            target_qubits: Number of qubits.
+            target_error: Precision target (for bookkeeping).
+            mps: Optional list of MPS tensors.
+            work_wires: Auxiliary qubit indices for the gate decomposition.
+                If the maximum bond dimension is :math:`2^k`, at least ``k``
+                work wires are needed.  If ``None`` (default), the lowest
+                indices are used.
+            right_canonicalize: Whether to right-canonicalize the MPS first.
+            mps_max_bond_dim: Optional power-of-two cap for the automatic
+                state-vector-to-MPS decomposition. ``None`` keeps the exact MPS.
+            rng_seed: Seed used for deterministic QR completion.
+        """
+
+        def __init__(
+            self,
+            Psi: np.ndarray,
+            target_qubits: int,
+            target_error: float,
+            mps: Optional[list[np.ndarray]] = None,
+            work_wires: Optional[list[int]] = None,
+            right_canonicalize: bool = False,
+            mps_max_bond_dim: Optional[int] = None,
+            rng_seed: int = 42,
+        ) -> None:
+            super().__init__("mps", Psi, target_qubits, target_error)
+
+            self._rng_seed = int(rng_seed)
+            if mps is None and target_qubits > 0:
+                mps = MPSAlgorithm.state_vector_to_mps(
+                    self.Psi,
+                    num_qubits=target_qubits,
+                    max_bond_dim=mps_max_bond_dim,
+                    rng_seed=self._rng_seed,
+                    tol=self.tol,
+                )
+                right_canonicalize = False
+            elif mps is None:
+                mps = []
+            else:
+                mps = [np.asarray(tensor, dtype=np.complex128) for tensor in mps]
+
+            if target_qubits > 0:
+                MPSAlgorithm.validate_mps_shape(mps)
+                if len(mps) != target_qubits:
+                    raise ValueError(
+                        f"mps must contain {target_qubits} tensors for target_qubits={target_qubits}."
+                    )
+
+            self._mps = mps
+            self._right_canonicalize = right_canonicalize
+            self._unitaries: Optional[list[np.ndarray]] = None
+            self._full_evolution_result: Optional[np.ndarray] = None
+            self._work_leakage = 0.0
+
+            if work_wires is not None:
+                self._work_wires = list(work_wires)
+                if len(set(self._work_wires)) != len(self._work_wires):
+                    raise ValueError("work_wires must be unique.")
+                if any(wire < 0 for wire in self._work_wires):
+                    raise ValueError("work_wires must be non-negative.")
+                if len(self._work_wires) < MPSAlgorithm._required_work_qubits(self._mps):
+                    raise ValueError("work_wires does not contain enough auxiliary qubits.")
+                used = set(self._work_wires)
+                sys_wires: list[int] = []
+                next_wire = 0
+                while len(sys_wires) < target_qubits:
+                    if next_wire not in used:
+                        sys_wires.append(next_wire)
+                    next_wire += 1
+                self._system_wires = sys_wires
+                active_wires = self._work_wires + self._system_wires
+                self._total_qubits = max(active_wires) + 1 if active_wires else 0
+            elif target_qubits > 0:
+                n_work = MPSAlgorithm._required_work_qubits(self._mps)
+                self._work_wires = list(range(n_work))
+                self._system_wires = list(range(n_work, n_work + target_qubits))
+                self._total_qubits = n_work + target_qubits
+            else:
+                self._work_wires = []
+                self._system_wires = []
+                self._total_qubits = 0
+
+            self._run()
+
+        def _run(self) -> None:
+            """Build the MPS preparation circuit and compute the emitted unitary."""
+            if self.target_qubits == 0:
+                self._circuit = Circuit(0)
+                self._evolution_result = np.eye(1, dtype=np.complex128)
+                self._full_evolution_result = np.eye(1, dtype=np.complex128)
+                self._total_error = 0.0
+                self._work_leakage = 0.0
+                return
+
+            # -- Decompose MPS -> unitaries ----------------------------------------
+            self._unitaries = MPSAlgorithm.mps_preparation_decomposition(
+                self._mps,
+                work_wires=self._work_wires,
+                right_canonicalize=self._right_canonicalize,
+                rng_seed=self._rng_seed,
+            )
+
+            # -- Build the circuit -------------------------------------------------
+            self._circuit = self._flatten_circuit(
+                MPSAlgorithm.build_mps_circuit(
+                    self._unitaries,
+                    self._system_wires,
+                    self._work_wires,
+                    self._total_qubits,
+                )
+            )
+
+            # -- Compute the evolution matrix --------------------------------------
+            self._full_evolution_result = MPSAlgorithm._build_evolution_matrix(
+                self._unitaries,
+                self._system_wires,
+                self._work_wires,
+                self._total_qubits,
+            )
+
+            # -- Error: compare prepared system state to target --------------------
+            prepared_all = np.asarray(self._full_evolution_result, dtype=np.complex128)[:, 0]
+
+            n_sys = self.target_qubits
+            n_work = len(self._work_wires)
+
+            if n_work == 0:
+                system_state = prepared_all
+            else:
+                system_state = MPSAlgorithm._extract_zero_work_system_state(
+                    prepared_all,
+                    self._system_wires,
+                    self._work_wires,
+                    n_sys,
+                    self._total_qubits,
+                )
+
+            # Report work-wire leakage: probability that work qubits are not all |0⟩.
+            work_zero_prob = float(np.vdot(system_state, system_state).real)
+            self._work_leakage = 1.0 - work_zero_prob
+
+            system_state = MPSAlgorithm._bit_reversed_state_vector(system_state, n_sys)
+            target = self.Psi[: 1 << n_sys]
+            self._total_error = MPSAlgorithm._phase_invariant_error(target, system_state)
+            self._evolution_result = MPSAlgorithm._complete_state_preparation_matrix(
+                system_state,
+                rng_seed=self._rng_seed,
+                tol=self.tol,
+            )
+
+        @property
+        def unitaries(self) -> Optional[list[np.ndarray]]:
+            """The per-site unitary matrices from the MPS decomposition."""
+            return self._unitaries
+
+        @property
+        def mps(self) -> list[np.ndarray]:
+            """The MPS tensors used."""
+            return self._mps
+
+        @property
+        def work_leakage(self) -> float:
+            """Probability that the work (auxiliary) qubits are not all in ``|0⟩``.
+
+            A correctly prepared state should have all work qubits in ``|0⟩``
+            after the circuit, so this value should be near zero.  Non-zero
+            leakage indicates incorrect wire ordering, missing canonicalization,
+            or an error in the MPS decomposition.
+            """
+            return self._work_leakage
+
+        @property
+        def full_evolution_result(self) -> np.ndarray:
+            """Return the full emitted unitary on system plus work qubits."""
+            if self._full_evolution_result is None:
+                self._run()
+            return np.asarray(self._full_evolution_result, dtype=np.complex128)
+
+
+    # ──────────────────────────────────────────────────────────────────────
+    #  Convenience functions
+    # ──────────────────────────────────────────────────────────────────────
+
+    def mps_preparation_circuit(
+        mps: list[np.ndarray],
+        system_wires: Optional[list[int]] = None,
+        work_wires: Optional[list[int]] = None,
+        right_canonicalize: bool = False,
+    ) -> Circuit:
+        """Construct a quantum circuit that prepares the state given by MPS tensors.
+
+        Args:
+            mps: List of MPS tensors.
+            system_wires: System qubit indices.  Defaults to ``[0, ..., N-1]``.
+            work_wires: Auxiliary qubit indices.  Required for gate-based decomposition.
+            right_canonicalize: Whether to right-canonicalize the MPS first.
+
+        Returns:
+            A ``Circuit`` preparing the target state.
+        """
+        n_sites = len(mps)
+        if system_wires is None:
+            system_wires = list(range(n_sites))
+        if work_wires is None:
+            raise ValueError("`work_wires` must be provided for gate-based decomposition.")
+
+        unitaries = MPSAlgorithm.mps_preparation_decomposition(mps, work_wires, right_canonicalize)
+        active_wires = list(system_wires) + list(work_wires)
+        total_qubits = max(active_wires) + 1 if active_wires else 0
+        return MPSAlgorithm.build_mps_circuit(unitaries, system_wires, work_wires, total_qubits)
+
+
+    def mps_preparation_matrix(
+        mps: list[np.ndarray],
+        system_wires: Optional[list[int]] = None,
+        work_wires: Optional[list[int]] = None,
+        right_canonicalize: bool = False,
+    ) -> np.ndarray:
+        """Return the exact unitary emitted by the MPS preparation circuit.
+
+        Args:
+            mps: List of MPS tensors.
+            system_wires: System qubit indices.  Defaults to ``[0, ..., N-1]``.
+            work_wires: Auxiliary qubit indices.
+            right_canonicalize: Whether to right-canonicalize the MPS first.
+
+        Returns:
+            The full ``2**num_qubits x 2**num_qubits`` unitary.
+        """
+        n_sites = len(mps)
+        if system_wires is None:
+            system_wires = list(range(n_sites))
+        if work_wires is None:
+            raise ValueError("`work_wires` must be provided for gate-based decomposition.")
+
+        unitaries = MPSAlgorithm.mps_preparation_decomposition(mps, work_wires, right_canonicalize)
+        active_wires = list(system_wires) + list(work_wires)
+        total_qubits = max(active_wires) + 1 if active_wires else 0
+        return MPSAlgorithm._build_evolution_matrix(unitaries, system_wires, work_wires, total_qubits)
+
+
+def test(Psi=None, target_qubits: int = 2, target_error: float = 1e-6):
+    """Test MPS state preparation with a default Bell-like state."""
+    if Psi is None:
+        Psi = np.array([1, 0, 0, 1], dtype=np.complex128) / np.sqrt(2)
+    algo = MPSAlgorithm(text_mode="legacy")
+    return algo.run(Psi=Psi, target_qubits=int(target_qubits), target_error=float(target_error))
 
 
 if __name__ == "__main__":
-    _run_tests()
+    Psi = [1, 0, 0, 1]  # [PARAM]
+    target_qubits = 2  # [PARAM]
+    target_error = 1e-6  # [PARAM]
+    test(Psi=Psi, target_qubits=target_qubits, target_error=target_error)

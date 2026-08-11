@@ -1,15 +1,17 @@
 ---
 name: hhl
-description: A statevector-simulated implementation of the HHL quantum linear systems algorithm. HHL can offer exponential dimension advantages only under restrictive assumptions such as efficient state preparation, sparse/block-encoded matrix access, bounded condition number, efficient Hamiltonian simulation, and partial readout of observables rather than full classical-vector recovery.
+description: "HHL quantum linear-system solver for Hermitian A and power-of-two dimension N. This implementation accepts user-provided A and b, auto-computes the evolution time t, uses QPE with U = exp(i2πAt), and reconstructs an approximate classical solution from post-selection in a statevector simulation; exponential speedup claims require sparse/block-encoded access, efficient state preparation, bounded condition number, efficient Hamiltonian simulation, and partial readout rather than full classical-vector recovery."
 ---
 
 # HHL Algorithm (Harrow-Hassidim-Lloyd)
 
-## Purpose
+## How to Use This Skill
 
-HHL solves a linear system $Ax = b$ where $A$ is Hermitian, producing a quantum state $|x\rangle \propto A^{-1}|b\rangle$. The implementation here runs a statevector simulation and reconstructs a classical vector for inspection; on real quantum hardware, HHL naturally outputs a quantum state, not all $N$ entries of $x$.
+Use this skill when the user asks to explain, run, debug, modify, or reimplement HHL Algorithm (Harrow-Hassidim-Lloyd).
 
-The often-cited exponential advantage is meaningful only when all of these hold:
+HHL solves a linear system $Ax = b$ where $A$ is Hermitian, producing a quantum state $|x\rangle \propto A^{-1}|b\rangle$. This implementation runs a statevector simulation and reconstructs a classical vector for inspection; on real quantum hardware, HHL naturally outputs a quantum state, not all $N$ entries of $x$.
+
+The often-cited exponential advantage is meaningful only when all of these conditions hold:
 - $A$ is sparse or can be efficiently block-encoded / queried.
 - $|b\rangle$ can be prepared efficiently, ideally in $\operatorname{poly}(\log N)$ time.
 - The task needs only a few observables or global properties of $|x\rangle$, not the full classical vector.
@@ -22,6 +24,14 @@ Use this skill when you need to:
 - Demonstrate or inspect HHL on a small Hermitian matrix $A$ of size $N = 2^n$.
 - Use HHL as a subroutine prototype in quantum simulation or optimization.
 - Compare the statevector-reconstructed HHL result with `np.linalg.solve` for validation.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -38,7 +48,7 @@ HHL proceeds in five steps:
 - Matrix eigenvalues, Hermitian matrices, condition number.
 - Python: `numpy`, `Circuit`, and `QPE` (from `unitarylab.library`).
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab import Circuit
@@ -173,7 +183,7 @@ $$|x\rangle \propto \sum_j \frac{b_j}{\lambda_j}|u_j\rangle = A^{-1}|b\rangle$$
 
 **Notes on encapsulation:** The QPE sub-circuit is sourced from `QPE(U_circ, d, return_circuit=True)` (imported from `unitarylab.library`) rather than rebuilt inline — this is the primary example of algorithm reuse in this codebase. The controlled reciprocal rotation is built without any classical oracle: it exhaustively creates one `mcry` gate per eigenvalue bin (total $2^d$ gates), which is the dominant circuit cost. The post-selection extraction is done via statevector array slicing rather than hardware-style sampling and measurement.
 
-## Mathematical Deep Dive, $|b\rangle = \sum_j b_j |u_j\rangle$.
+## Mathematical Deep Dive
 
 **QPE encoding:** $U|u_j\rangle = e^{i 2\pi \lambda_j t}|u_j\rangle$. QPE reads off $\phi_j = \lambda_j t$ (in cycles) into the phase register, producing phase bin $k_j \approx \phi_j \cdot 2^d = \lambda_j t \cdot 2^d$.
 
@@ -207,7 +217,7 @@ print(f"Classical solution: {result['Exact solution (classical)'].real.round(4)}
 print(f"Post-selection prob: {result['Post-selection probability']:.4f}")
 ```
 
-## Implementing Your Own Version
+## Minimal Manual Implementation
 
 The following Python skeleton reconstructs the five structural stages of the HHL algorithm using the key building blocks.
 
@@ -248,16 +258,14 @@ def encode_eigenphases(U_circ: Circuit, d: int) -> Circuit:
 ```python
 # Simplified reconstruction — mirrors HHLAlgorithm._controlled_reciprocal_rotation()
 
-def controlled_reciprocal_rotation(d: int, k_start: int, signed_phase: bool = False, backend: str = 'torch') -> Circuit:
-    """For each valid eigenvalue bin k, rotate ancilla by 2*arcsin(k_start/k)."""
+def controlled_reciprocal_rotation(d: int, k_start: int, backend: str = 'torch') -> Circuit:
+    """For each eigenvalue bin k, rotate ancilla by 2*arcsin(k_start/k)."""
     qc = Circuit(d + 1)   # d phase qubits + 1 ancilla
     ancilla = 0
     phase_qubits = list(range(1, d + 1))
     grid = 2 ** d
-    k_iter = range(1, grid) if signed_phase else range(k_start, grid)
-    for k in k_iter:
-        val = float(np.clip(k_start / k, -1.0, 1.0))
-        angle = 2 * np.arcsin(val)
+    for k in range(1, grid):
+        angle = 2 * np.arcsin(k_start / k)
         # Select phase bin |k> by X-flipping bits where k_bit = 0
         k_bits = format(k, f'0{d}b')
         controls = []
@@ -317,7 +325,7 @@ def hhl_minimal(A, b, d, backend='torch'):
     pass  # full assembly in HHLAlgorithm.run()
 ```
 
-## Troubleshooting
+## Debugging Tips
 
 1. **`A` not Hermitian**: Add `A = (A + A.conj().T) / 2` to symmetrize before calling.
 2. **`N` not a power of 2**: Pad `A` and `b` to the next power of 2 with zeros.

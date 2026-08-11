@@ -1,16 +1,27 @@
 ---
 name: shor
-description: Use this skill when the user asks for Shor integer factorization, quantum order-finding, period estimation, or implementing/running/debugging ShorAlgorithm in this repository (especially matrix/operator methods, IQFT-based phase post-processing, and continued-fraction period recovery). Relevant keywords include shor, factor N, order finding, period finding, modular exponentiation, continued fraction, quantum factoring, and ShorAlgorithm.
+description: "Use this skill when the user asks for Shor integer factorization, quantum order-finding, period estimation, or implementing/running/debugging ShorAlgorithm in this repository (especially matrix/operator methods, IQFT-based phase post-processing, and continued-fraction period recovery). Keywords: shor, factor N, order finding, period finding, modular exponentiation, continued fraction, quantum factoring, ShorAlgorithm. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
+
 # Shor's Algorithm
 
-## Purpose
+## How to Use This Skill
 
-Shor's algorithm factors an integer $N$ in polynomial time, e.g. $O((\log N)^3)$ with textbook arithmetic; the exact exponent depends on the modular multiplication/arithmetic implementation and the chosen cost model. This improves over the best known classical sub-exponential factoring algorithms by reducing integer factorization to quantum period-finding via the Quantum Fourier Transform.
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Shor's Algorithm.
+
+Shor's algorithm factors an integer $N$ in polynomial time $O((\log N)^3)$, compared to the best known classical sub-exponential algorithms. It achieves this by reducing integer factorization to quantum period-finding via the Quantum Fourier Transform.
 
 Use this skill when you need to:
 - Factor a composite integer using a quantum simulator.
 - Understand the quantum period-finding subroutine.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -31,7 +42,7 @@ Two circuit methods are supported:
 - Continued fractions algorithm.
 - Python: `numpy`, `Circuit`, `unitarylab.library.QFT`, `unitarylab.library.IQFT`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab_algorithms import ShorAlgorithm
@@ -118,6 +129,7 @@ print(result['plot'])             # List of saved output files: [{'format': 'svg
 **Data flow:** `N` → random `a` → circuit method dispatch → `Circuit` → `execute()` → `result.measure()` → continued fractions → `gcd()` → factors → `_build_return()`.
 
 ## Understanding the Key Quantum Components
+
 The $n_{\text{count}} = 2 \cdot \lfloor\log_2 N\rfloor$ counting qubits are placed in uniform superposition via Hadamard:
 $$\frac{1}{\sqrt{2^{n_{\text{count}}}}}\sum_{x=0}^{2^{n_{\text{count}}}-1}|x\rangle|1\rangle_{\text{work}}$$
 
@@ -154,13 +166,13 @@ yields non-trivial factors of $N$.
 
 **Notes on method differences:** The `'matrix'` method builds an explicit permutation matrix for each controlled power, making it circuit-efficient but memory-intensive for large $N$. The `'operator'` method uses QFT-domain phase additions and is more gate-intensive but architecturally general. Both append the same `IQFT` from `unitarylab.library`. The retry loop is necessary because the continued fractions step can fail for unlucky choices of `a` or measurement outcomes.
 
-## Mathematical Deep Dive (the multiplicative order of $a$ modulo $N$), i.e., $a^r \equiv 1 \pmod{N}$.
+## Mathematical Deep Dive
 
 **Factoring step:** Since $a^r - 1 = (a^{r/2}-1)(a^{r/2}+1) \equiv 0 \pmod{N}$, and $N$ divides the product but not (with high probability) either factor individually, $\gcd(a^{r/2} \pm 1, N)$ yields non-trivial factors.
 
 **Success probability:** At least $50\%$ of bases $a$ produce a useful period. Multiple attempts are needed with probability exponentially small to fail.
 
-**Complexity:** Polynomial in $\log N$; a common textbook estimate is $O((\log N)^3)$ quantum gates, but the exact exponent depends on the modular multiplication/arithmetic implementation and cost model. Classical best: sub-exponential $e^{O((\log N)^{1/3}(\log\log N)^{2/3})}$.
+**Complexity:** $O((\log N)^3)$ quantum gates — polynomial in $\log N$. Classical best: sub-exponential $e^{O((\log N)^{1/3}(\log\log N)^{2/3})}$.
 
 ## Hands-On Example
 
@@ -178,56 +190,7 @@ for f in result['plot']:                               # saved output files
     print(f["format"], f["filename"])
 ```
 
-
-## Reference Implementation (Classiq)
-
-Classiq can be used as a reference implementation for Shor-style period finding. It describes the modular multiplication based QPE workflow through high-level QMOD functions, automatic synthesis, and built-in modular arithmetic primitives.
-
-### Example A: Minimal Classiq Shor Period-Finding Run
-
-```python
-from classiq import *
-
-
-@qfunc
-def period_finding(n: CInt, a: CInt, x: QNum, phase_var: QNum):
-    x ^= 1
-    qpe_flexible(
-        lambda p: modular_multiply_constant_inplace(n, a**p, x),
-        phase_var,
-    )
-
-
-modulo_num = 21
-a_num = 11
-x_len = modulo_num.bit_length()
-phase_len = 2 * x_len
-
-
-@qfunc
-def main(phase_var: Output[QNum[phase_len, UNSIGNED, phase_len]]):
-    x = QNum()
-    allocate(x_len, x)
-    allocate(phase_var)
-
-    period_finding(modulo_num, a_num, x, phase_var)
-
-    drop(x)
-
-
-qprog = synthesize(
-    main,
-    preferences=Preferences(qasm3=True, optimization_level=1),
-    constraints=Constraints(optimization_parameter="width"),
-)
-
-sample_result = execute(qprog).get_sample_result()
-df = sample_result.dataframe
-print(df)
-```
-
-
-## Minimal Manual Implementation (UnitaryLab) 
+## Minimal Manual Implementation
 
 Below is a skeleton that reconstructs Shor's algorithm at the component level, matching the `ShorAlgorithm` structure in `algorithm.py`.
 
@@ -310,9 +273,6 @@ def shor_factor(N: int, max_retries: int = 15, backend: str = 'torch'):
 - `build_shor_circuit` — assembles $H^{\otimes n_{\text{count}}}$ + controlled-$U^{2^j}$ gates + IQFT, the three-stage quantum phase estimation structure.
 - `shor_factor` — the outer retry loop: picks random $a$, builds + measures the circuit, applies continued fractions to extract period $r$, then computes $\gcd(a^{r/2}\pm 1, N)$.
 
-
-
-
 ## Debugging Tips
 
 1. **Simulation is slow for large N**: Qubit count scales as $O(\log N)$, but the state vector grows as $2^{O(\log N)} = N^O$. Keep $N$ small (e.g., 15, 21, 35) for feasible simulation.
@@ -320,3 +280,50 @@ def shor_factor(N: int, max_retries: int = 15, backend: str = 'torch'):
 3. **`period` is odd**: Odd periods are discarded; the loop retries. This is expected for some $a$.
 4. **`factors = [1, N]`**: Trivial factors — the period-finding step gave an $a^{r/2} \equiv \pm 1 \pmod N$ case; retries automatically.
 5. **`method='operator'` vs `'matrix'`**: `'matrix'` uses dense matrix multiplication; `'operator'` uses a modular multiplication operator circuit. Both are correct; `'matrix'` is simpler.
+
+## Reference Implementation
+
+Classiq can be used as a reference implementation for Shor-style period finding. It describes the modular multiplication based QPE workflow through high-level QMOD functions, automatic synthesis, and built-in modular arithmetic primitives.
+
+### Example A: Minimal Classiq Shor Period-Finding Run
+
+```python
+from classiq import *
+
+
+@qfunc
+def period_finding(n: CInt, a: CInt, x: QNum, phase_var: QNum):
+    x ^= 1
+    qpe_flexible(
+        lambda p: modular_multiply_constant_inplace(n, a**p, x),
+        phase_var,
+    )
+
+
+modulo_num = 21
+a_num = 11
+x_len = modulo_num.bit_length()
+phase_len = 2 * x_len
+
+
+@qfunc
+def main(phase_var: Output[QNum[phase_len, UNSIGNED, phase_len]]):
+    x = QNum()
+    allocate(x_len, x)
+    allocate(phase_var)
+
+    period_finding(modulo_num, a_num, x, phase_var)
+
+    drop(x)
+
+
+qprog = synthesize(
+    main,
+    preferences=Preferences(qasm3=True, optimization_level=1),
+    constraints=Constraints(optimization_parameter="width"),
+)
+
+sample_result = execute(qprog).get_sample_result()
+df = sample_result.dataframe
+print(df)
+```

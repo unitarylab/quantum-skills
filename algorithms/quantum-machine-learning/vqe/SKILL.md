@@ -1,17 +1,27 @@
 ---
 name: vqe
-description: Skill for understanding, using, and implementing the Variational Quantum Eigensolver (VQE) for finding the ground state energy of any user-supplied or randomly generated Hermitian Hamiltonian via the VQEAlgorithm class.
+description: "Skill for understanding, using, and implementing the Variational Quantum Eigensolver (VQE) for finding the ground state energy of any user-supplied or randomly generated Hermitian Hamiltonian via the VQEAlgorithm class. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Variational Quantum Eigensolver (VQE)
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Variational Quantum Eigensolver (VQE).
 
 VQE is a hybrid quantum-classical algorithm that finds the ground-state energy of a Hamiltonian by variationally optimizing a parameterized quantum circuit (ansatz). This implementation accepts any user-supplied Hermitian matrix or generates a random one for benchmarking.
 
 Use this skill when you need to:
 - Find ground-state energies of arbitrary small quantum systems.
 - Learn the variational quantum eigensolver workflow: ansatz → expectation → optimize.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -26,7 +36,7 @@ Use this skill when you need to:
 - Pauli operator measurement; COBYLA gradient-free optimization.
 - `torch`, `numpy`, `scipy.optimize`, `Circuit`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab_algorithms.quantum_machine_learning.vqe.algorithm import VQEAlgorithm
@@ -111,6 +121,7 @@ Returned by `_build_return_dict(success, circuit_path, filepath, circuit)` merge
 **Data flow:** `(n, layers)` → `_validate_hamiltonian` / `_random_hermitian` → `initial_theta` → COBYLA(`_expectation`) → `opt_res` → `save_circuit` + convergence plot → `_build_return_dict`.
 
 ## Understanding the Key Quantum Components
+
 The ansatz consists of alternating layers:
 ```
 Layer l: Ry(θ[l,0,0]) Rz(θ[l,0,1]) ⊗ Ry(θ[l,1,0]) Rz(θ[l,1,1]) ⊗ ... → CX(0→1) → CX(1→2) → ... → CX(n-1→0)
@@ -151,7 +162,7 @@ The variational principle guarantees $E(\theta) \geq E_0$ for all $\theta$. As o
 
 **Convergence:** With sufficient `layers` and `max_iter`, the ansatz can reach the exact ground energy for small Hamiltonians. Increase `layers` if the error remains large.
 
-## Hands-On Example (UnitaryLab)
+## Hands-On Example
 
 ```python
 from unitarylab_algorithms.quantum_machine_learning.vqe.algorithm import VQEAlgorithm
@@ -167,7 +178,92 @@ print(f"Circuit SVG:  {result['circuit_path']}")
 print(f"Plot files:   {result['plot']}")
 ```
 
-## Reference Implementation (Qiskit)
+## Minimal Manual Implementation
+
+The following Python skeleton mirrors the core methods of `VQEAlgorithm`: `_random_hermitian`, `_build_ansatz`, `_build_circuit`, `_expectation`, and the COBYLA loop in `run`.
+
+```python
+# Mirrors VQEAlgorithm._random_hermitian, _build_ansatz, _build_circuit, _expectation, run()
+import numpy as np
+from scipy.optimize import minimize
+from unitarylab import Circuit
+
+def random_hermitian(num_qubits: int, seed: int = 7, normalize: bool = True) -> np.ndarray:
+    """Random Hermitian via (A + A†)/2, optionally normalized by spectral norm."""
+    dim = 2 ** num_qubits
+    rng = np.random.default_rng(seed)
+    a = rng.normal(size=(dim, dim)) + 1j * rng.normal(size=(dim, dim))
+    h = (a + a.conj().T) / 2.0
+    if normalize:
+        spec_norm = np.linalg.norm(h, ord=2)
+        if spec_norm > 0:
+            h = h / spec_norm
+    return h
+
+def build_ansatz(layer_parameters: np.ndarray, num_qubits: int) -> Circuit:
+    """One ansatz layer: Ry+Rz per qubit, then ring CX entanglement."""
+    ansatz = Circuit(num_qubits)
+    for q in range(num_qubits):
+        ansatz.ry(float(layer_parameters[q, 0]), q)
+        ansatz.rz(float(layer_parameters[q, 1]), q)
+    for q in range(num_qubits - 1):
+        ansatz.cx(q, q + 1)
+    if num_qubits > 1:
+        ansatz.cx(num_qubits - 1, 0)
+    return ansatz
+
+def build_circuit(parameters_flat: np.ndarray, num_qubits: int, layers: int) -> Circuit:
+    """Stack `layers` ansatz sub-circuits into one Circuit."""
+    parameters = np.asarray(parameters_flat, dtype=float).reshape(layers, num_qubits, 2)
+    qc = Circuit(num_qubits)
+    for layer in range(layers):
+        layer_qc = build_ansatz(parameters[layer], num_qubits)
+        qc.append(layer_qc, range(num_qubits))
+    return qc
+
+def expectation(parameters_flat: np.ndarray, hamiltonian: np.ndarray,
+                num_qubits: int, layers: int, history: list) -> float:
+    """Compute ⟨ψ(θ)|H|ψ(θ)⟩ via statevector simulation."""
+    state = build_circuit(parameters_flat, num_qubits, layers).execute(
+        backend='torch', device='cpu', dtype=np.complex128
+    ).state
+    energy = float(np.real((state.conj().T @ hamiltonian @ state).item()))
+    history.append(energy)
+    return energy
+
+def run_vqe(n: int = 2, layers: int = 2, max_iter: int = 150, seed: int = 7):
+    """Full VQE hybrid loop matching VQEAlgorithm.run()."""
+    hamiltonian = random_hermitian(n, seed=seed, normalize=True)
+    exact_energy = float(np.min(np.real(np.linalg.eigvalsh(hamiltonian))))
+    rng = np.random.default_rng(seed)
+    initial_theta = rng.uniform(-np.pi, np.pi, size=2 * n * layers)
+    history = []
+
+    opt_res = minimize(
+        fun=expectation,
+        x0=initial_theta,
+        args=(hamiltonian, n, layers, history),
+        method='COBYLA',
+        options={'maxiter': max_iter},
+    )
+    return {
+        'VQE Energy': float(opt_res.fun),
+        'Exact Energy': exact_energy,
+        'Absolute Error': abs(float(opt_res.fun) - exact_energy),
+        'history': history,
+    }
+```
+
+## Debugging Tips
+
+1. **VQE energy above exact**: Insufficient `layers` or `max_iter`. Increase both — with `layers=2` the ansatz has $2 \times n \times 2$ parameters; more layers improve expressibility.
+2. **Local minima**: COBYLA may converge to a local minimum. Re-run with a different `seed` to get different initial parameters.
+3. **Invalid Hamiltonian**: `_validate_hamiltonian` raises `ValueError` if the matrix is not square, not a power-of-2 dimension, or not Hermitian. Verify with `np.allclose(H, H.conj().T)`.
+4. **Slow convergence**: COBYLA can be slow for large parameter counts ($2 \times n \times \text{layers}$). For $\geq 20$ parameters, consider gradient-based methods with the Parameter Shift Rule.
+5. **Loss not decreasing**: Check that `max_iter` is large enough. For 8 parameters (n=2, layers=2), 150 iterations is usually sufficient; scale up proportionally.
+
+## Reference Implementation
+
 The main implementation in this skill is based on the project’s own VQEAlgorithm.
 Qiskit is included here only as a concise reference example showing the standard VQE workflow with its estimator + ansatz + optimizer abstraction.
 ### Minimal Qiskit Example
@@ -260,96 +356,12 @@ print("Optimal point:", result.optimal_point)
 Qiskit also includes several VQE-related variants beyond the standard
 `VQE` workflow:
 
-- **`AdaptVQE`**  
+- **`AdaptVQE`**
   An adaptive VQE variant that iteratively builds a compact ansatz from a pool of
   candidate operators. In each iteration, it selects the operator associated with
   the largest gradient and appends the corresponding evolution block, making the
   ansatz increasingly tailored to the target Hamiltonian. It relies on an internal
   `VQE` solver and is commonly used with operator pools such as excitation-based
-  ansätze in quantum chemistry.  
-  Official reference:  
+  ansätze in quantum chemistry.
+  Official reference:
   `https://qiskit-community.github.io/qiskit-algorithms/stubs/qiskit_algorithms.AdaptVQE.html#qiskit_algorithms.AdaptVQE`
-  
-## Minimal Manual Implementation (UnitaryLab)
-
-The following Python skeleton mirrors the core methods of `VQEAlgorithm`: `_random_hermitian`, `_build_ansatz`, `_build_circuit`, `_expectation`, and the COBYLA loop in `run`.
-
-```python
-# Mirrors VQEAlgorithm._random_hermitian, _build_ansatz, _build_circuit, _expectation, run()
-import numpy as np
-from scipy.optimize import minimize
-from unitarylab import Circuit
-
-def random_hermitian(num_qubits: int, seed: int = 7, normalize: bool = True) -> np.ndarray:
-    """Random Hermitian via (A + A†)/2, optionally normalized by spectral norm."""
-    dim = 2 ** num_qubits
-    rng = np.random.default_rng(seed)
-    a = rng.normal(size=(dim, dim)) + 1j * rng.normal(size=(dim, dim))
-    h = (a + a.conj().T) / 2.0
-    if normalize:
-        spec_norm = np.linalg.norm(h, ord=2)
-        if spec_norm > 0:
-            h = h / spec_norm
-    return h
-
-def build_ansatz(layer_parameters: np.ndarray, num_qubits: int) -> Circuit:
-    """One ansatz layer: Ry+Rz per qubit, then ring CX entanglement."""
-    ansatz = Circuit(num_qubits)
-    for q in range(num_qubits):
-        ansatz.ry(float(layer_parameters[q, 0]), q)
-        ansatz.rz(float(layer_parameters[q, 1]), q)
-    for q in range(num_qubits - 1):
-        ansatz.cx(q, q + 1)
-    if num_qubits > 1:
-        ansatz.cx(num_qubits - 1, 0)
-    return ansatz
-
-def build_circuit(parameters_flat: np.ndarray, num_qubits: int, layers: int) -> Circuit:
-    """Stack `layers` ansatz sub-circuits into one Circuit."""
-    parameters = np.asarray(parameters_flat, dtype=float).reshape(layers, num_qubits, 2)
-    qc = Circuit(num_qubits)
-    for layer in range(layers):
-        layer_qc = build_ansatz(parameters[layer], num_qubits)
-        qc.append(layer_qc, range(num_qubits))
-    return qc
-
-def expectation(parameters_flat: np.ndarray, hamiltonian: np.ndarray,
-                num_qubits: int, layers: int, history: list) -> float:
-    """Compute ⟨ψ(θ)|H|ψ(θ)⟩ via statevector simulation."""
-    state = build_circuit(parameters_flat, num_qubits, layers).execute(
-        backend='torch', device='cpu', dtype=np.complex128
-    ).state
-    energy = float(np.real((state.conj().T @ hamiltonian @ state).item()))
-    history.append(energy)
-    return energy
-
-def run_vqe(n: int = 2, layers: int = 2, max_iter: int = 150, seed: int = 7):
-    """Full VQE hybrid loop matching VQEAlgorithm.run()."""
-    hamiltonian = random_hermitian(n, seed=seed, normalize=True)
-    exact_energy = float(np.min(np.real(np.linalg.eigvalsh(hamiltonian))))
-    rng = np.random.default_rng(seed)
-    initial_theta = rng.uniform(-np.pi, np.pi, size=2 * n * layers)
-    history = []
-
-    opt_res = minimize(
-        fun=expectation,
-        x0=initial_theta,
-        args=(hamiltonian, n, layers, history),
-        method='COBYLA',
-        options={'maxiter': max_iter},
-    )
-    return {
-        'VQE Energy': float(opt_res.fun),
-        'Exact Energy': exact_energy,
-        'Absolute Error': abs(float(opt_res.fun) - exact_energy),
-        'history': history,
-    }
-```
-
-## Debugging Tips
-
-1. **VQE energy above exact**: Insufficient `layers` or `max_iter`. Increase both — with `layers=2` the ansatz has $2 \times n \times 2$ parameters; more layers improve expressibility.
-2. **Local minima**: COBYLA may converge to a local minimum. Re-run with a different `seed` to get different initial parameters.
-3. **Invalid Hamiltonian**: `_validate_hamiltonian` raises `ValueError` if the matrix is not square, not a power-of-2 dimension, or not Hermitian. Verify with `np.allclose(H, H.conj().T)`.
-4. **Slow convergence**: COBYLA can be slow for large parameter counts ($2 \times n \times \text{layers}$). For $\geq 20$ parameters, consider gradient-based methods with the Parameter Shift Rule.
-5. **Loss not decreasing**: Check that `max_iter` is large enough. For 8 parameters (n=2, layers=2), 150 iterations is usually sufficient; scale up proportionally.

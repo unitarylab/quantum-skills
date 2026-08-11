@@ -1,821 +1,586 @@
-"""Sparse superposition state preparation.
-
-The target is normalized and trailing-zero padded, then amplitudes with
-``abs(amplitude) > 1e-12`` are retained.  Their coefficients are prepared on
-compact prefix basis states by a QR-completed unitary.  A full permutation
-maps those prefixes to the retained MSB-first computational-basis tuples.
-The target-space evolution is ``permutation_stage @ coefficient_stage``.
-
-The returned prepared state is the first column of that dense target-space
-evolution.  The returned circuit separately represents the coefficient gate
-and prefix-to-support exchanges on the system register plus one clean work
-wire; its Hilbert-space dimension is therefore larger than that of the
-returned state.
-"""
-
+# -*- coding: utf-8 -*-
 from __future__ import annotations
-
 import math
+import os
 import time
 import warnings
-from numbers import Real
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Dict, Optional
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
 from unitarylab.core import Circuit
 
-
-SUPPORT_THRESHOLD = 1e-12
-PHASE_TOLERANCE = 1e-12
-
-ComplexVector = NDArray[np.complex128]
-BasisState = tuple[int, ...]
-
-
-def superposition_state_preparation(
-    Psi: ArrayLike,
-    target_qubits: int,
-    *,
-    target_error: float = 1e-6,
-    backend: str = "torch",
-    device: str = "cpu",
-    dtype: type = np.complex128,
-) -> dict[str, Any]:
-    """Prepare a normalized sparse-support target state.
-
-    Parameters
-    ----------
-    Psi:
-        Non-empty, finite, one-dimensional amplitudes.  The vector is
-        normalized before trailing-zero padding.
-    target_qubits:
-        Number of system qubits; a non-boolean integer of at least one.
-    target_error:
-        Positive finite success threshold.  It affects only ``status`` and
-        never changes the fixed support threshold.
-    backend, device, dtype:
-        Accepted compatibility parameters.  The dense calculation always
-        uses NumPy ``complex128``.
-
-    Returns
-    -------
-    dict
-        ``status``, ``Prepared state``, ``Total error``, ``Support size``,
-        ``Index register qubits``, ``Computation time (s)``, and ``circuit``.
-        The circuit uses system wires ``0..target_qubits-1`` and the default
-        clean work wire ``target_qubits``.
-    """
-    del backend, device, dtype
-    started = time.perf_counter()
-
-    num_qubits = _validate_target_qubits(target_qubits)
-    error_threshold = _validate_target_error(target_error)
-    target = _normalize_and_pad(Psi, num_qubits)
-
-    coefficients, basis_states = _extract_sparse_support(target)
-    state_map = _order_states(basis_states)
-    ordered_coefficients = _ordered_coefficients_for_prefix_basis(
-        coefficients,
-        basis_states,
-        state_map,
-    )
-    coefficient_stage, index_qubits = _build_coefficient_stage_matrix(
-        ordered_coefficients,
-        num_qubits,
-    )
-    permutation_stage = _build_prefix_to_support_permutation(
-        basis_states,
-        state_map,
-    )
-    # Some BLAS/LAPACK combinations leave floating-point status flags set
-    # after QR even though the following finite product is valid.
-    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
-        evolution = np.asarray(
-            permutation_stage @ coefficient_stage,
-            dtype=np.complex128,
-        )
-    prepared_state = np.asarray(evolution[:, 0], dtype=np.complex128)
-    total_error = _state_vector_error(target, prepared_state)
-    circuit = _build_superposition_circuit(
-        coefficient_stage,
-        basis_states,
-        state_map,
-        num_qubits,
-        index_qubits,
-        work_wire=num_qubits,
-    )
-
-    return {
-        "status": (
-            "ok"
-            if total_error <= max(error_threshold, 1e-10)
-            else "failed"
-        ),
-        "Prepared state": prepared_state,
-        "Total error": float(total_error),
-        "Support size": int(coefficients.size),
-        "Index register qubits": int(index_qubits),
-        "Computation time (s)": round(time.perf_counter() - started, 4),
-        "circuit": circuit,
-    }
+try:
+    from ...algo_base import BaseAlgorithm
+except ImportError:
+    # 单独运行时，将上级目录加入 sys.path，使 base 模块可被找到
+    import sys
+    _algorithms_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if _algorithms_dir not in sys.path:
+        sys.path.insert(0, _algorithms_dir)
+    from unitarylab_algorithms.algo_base import BaseAlgorithm
 
 
-def _validate_target_qubits(target_qubits: int) -> int:
-    if isinstance(target_qubits, (bool, np.bool_)) or not isinstance(
-        target_qubits, (int, np.integer)
-    ):
-        raise TypeError("target_qubits must be a non-boolean integer")
-    value = int(target_qubits)
-    if value < 1:
-        raise ValueError("target_qubits must be at least 1")
-    return value
 
+class SuperpositionAlgorithm(BaseAlgorithm):
+    """Standalone sparse-superposition state-preparation algorithm module."""
 
-def _validate_target_error(target_error: float) -> float:
-    if isinstance(target_error, (bool, np.bool_)) or not isinstance(
-        target_error, Real
-    ):
-        raise TypeError("target_error must be a non-boolean real number")
-    value = float(target_error)
-    if not math.isfinite(value) or value <= 0.0:
-        raise ValueError("target_error must be a positive finite number")
-    return value
-
-
-def _normalize_and_pad(Psi: ArrayLike, target_qubits: int) -> ComplexVector:
-    psi = np.asarray(Psi, dtype=np.complex128)
-    if psi.ndim != 1 or psi.size == 0:
-        raise ValueError("Psi must be a non-empty one-dimensional vector")
-    if not np.all(np.isfinite(psi)):
-        raise ValueError("Psi entries must be finite")
-
-    norm = float(np.linalg.norm(psi))
-    if norm <= SUPPORT_THRESHOLD:
-        raise ValueError("Psi norm must exceed 1e-12")
-    psi = psi / norm
-
-    dimension = 1 << target_qubits
-    if psi.size > dimension:
-        raise ValueError("Psi exceeds the target Hilbert-space dimension")
-    if psi.size < dimension:
-        warnings.warn(
-            f"Psi length {psi.size} is smaller than 2**target_qubits="
-            f"{dimension}; trailing zeros were appended.",
-            RuntimeWarning,
-            stacklevel=2,
-        )
-    target = np.zeros(dimension, dtype=np.complex128)
-    target[: psi.size] = psi
-    return target
-
-
-def _index_to_bits(index: int, num_qubits: int) -> BasisState:
-    """Convert an integer index to an MSB-first computational-basis tuple."""
-    if isinstance(index, (bool, np.bool_)) or not isinstance(
-        index, (int, np.integer)
-    ):
-        raise TypeError("index must be a non-boolean integer")
-    if isinstance(num_qubits, (bool, np.bool_)) or not isinstance(
-        num_qubits, (int, np.integer)
-    ):
-        raise TypeError("num_qubits must be a non-boolean integer")
-    width = int(num_qubits)
-    value = int(index)
-    if width < 1:
-        raise ValueError("num_qubits must be at least 1")
-    if value < 0 or value >= 1 << width:
-        raise ValueError("index is outside the computational-basis range")
-    return tuple(int(bit) for bit in format(value, f"0{width}b"))
-
-
-def _bits_to_index(bits: BasisState) -> int:
-    """Convert a non-empty MSB-first binary tuple to its integer index."""
-    state = tuple(bits)
-    if not state:
-        raise ValueError("basis state must be non-empty")
-    if any(
-        isinstance(bit, (bool, np.bool_))
-        or not isinstance(bit, (int, np.integer))
-        or int(bit) not in (0, 1)
-        for bit in state
-    ):
-        raise ValueError("basis-state entries must be integer zeros or ones")
-    return int("".join(str(int(bit)) for bit in state), 2)
-
-
-def _extract_sparse_support(
-    state: ComplexVector,
-    threshold: float = SUPPORT_THRESHOLD,
-) -> tuple[ComplexVector, list[BasisState]]:
-    """Retain amplitudes satisfying the strict post-normalization threshold."""
-    vector = np.asarray(state, dtype=np.complex128)
-    if vector.ndim != 1 or vector.size == 0:
-        raise ValueError("state must be a non-empty one-dimensional vector")
-    if not np.all(np.isfinite(vector)):
-        raise ValueError("state entries must be finite")
-    if vector.size & (vector.size - 1):
-        raise ValueError("state length must be a power of two")
-    if isinstance(threshold, (bool, np.bool_)) or not isinstance(threshold, Real):
-        raise TypeError("threshold must be a non-boolean real number")
-    threshold_value = float(threshold)
-    if not math.isfinite(threshold_value) or threshold_value < 0.0:
-        raise ValueError("threshold must be finite and non-negative")
-
-    num_qubits = vector.size.bit_length() - 1
-    indices = [
-        index
-        for index, amplitude in enumerate(vector)
-        if abs(amplitude) > threshold_value
-    ]
-    if not indices:
-        raise ValueError("state must contain at least one retained amplitude")
-    coefficients = np.asarray(
-        [vector[index] for index in indices],
-        dtype=np.complex128,
-    )
-    basis_states = [_index_to_bits(index, num_qubits) for index in indices]
-    return coefficients, basis_states
-
-
-def _validate_basis_states(basis_states: list[BasisState]) -> list[BasisState]:
-    try:
-        states = [tuple(state) for state in basis_states]
-    except TypeError as error:
-        raise TypeError("each basis state must be an iterable of bits") from error
-    if not states:
-        raise ValueError("basis_states must be non-empty")
-    width = len(states[0])
-    if width < 1 or any(len(state) != width for state in states):
-        raise ValueError("basis states must have one common positive width")
-    for state in states:
-        _bits_to_index(state)
-    if len(set(states)) != len(states):
-        raise ValueError("basis states must be unique")
-    return states
-
-
-def _order_states(basis_states: list[BasisState]) -> dict[BasisState, BasisState]:
-    """Map each retained support tuple to one prefix basis tuple."""
-    states = _validate_basis_states(basis_states)
-    support_size = len(states)
-    num_qubits = len(states[0])
-    if support_size > 1 << num_qubits:
-        raise ValueError("support exceeds the basis-state dimension")
-
-    state_map: dict[BasisState, BasisState] = {}
-    outside_prefix: list[BasisState] = []
-    unused_prefixes = {index: None for index in range(support_size)}
-
-    for state in states:
-        state_index = _bits_to_index(state)
-        if state_index < support_size:
-            state_map[state] = state
-            unused_prefixes.pop(state_index, None)
-        else:
-            outside_prefix.append(state)
-
-    for state, prefix_index in zip(outside_prefix, unused_prefixes):
-        state_map[state] = _index_to_bits(prefix_index, num_qubits)
-    if len(state_map) != support_size:
-        raise ValueError("could not assign every support state to a prefix")
-    return state_map
-
-
-def _ordered_coefficients_for_prefix_basis(
-    coefficients: ComplexVector,
-    basis_states: list[BasisState],
-    state_map: dict[BasisState, BasisState],
-) -> ComplexVector:
-    """Place each retained coefficient at its assigned prefix index."""
-    states = _validate_basis_states(basis_states)
-    coeffs = np.asarray(coefficients, dtype=np.complex128)
-    if coeffs.ndim != 1 or coeffs.size != len(states):
-        raise ValueError("coefficients and basis_states must have equal lengths")
-    if not np.all(np.isfinite(coeffs)):
-        raise ValueError("coefficients must be finite")
-    if set(state_map) != set(states):
-        raise ValueError("state_map must map every basis state exactly once")
-
-    ordered = np.zeros_like(coeffs)
-    used_prefixes: set[int] = set()
-    for coefficient, state in zip(coeffs, states):
-        prefix = tuple(state_map[state])
-        if len(prefix) != len(state):
-            raise ValueError("mapped prefixes must match the basis-state width")
-        prefix_index = _bits_to_index(prefix)
-        if prefix_index >= coeffs.size or prefix_index in used_prefixes:
-            raise ValueError("state_map must assign distinct prefix basis states")
-        ordered[prefix_index] = coefficient
-        used_prefixes.add(prefix_index)
-    return ordered
-
-
-def _coefficient_register_qubits(support_size: int) -> int:
-    if isinstance(support_size, (bool, np.bool_)) or not isinstance(
-        support_size, (int, np.integer)
-    ):
-        raise TypeError("support_size must be a non-boolean integer")
-    size = int(support_size)
-    if size < 1:
-        raise ValueError("support_size must be at least 1")
-    return 0 if size == 1 else math.ceil(math.log2(size))
-
-
-def _build_coefficient_stage_matrix(
-    ordered_coefficients: ComplexVector,
-    num_qubits: int,
-) -> tuple[NDArray[np.complex128], int]:
-    """QR-complete compact coefficients and embed them on low-order wires."""
-    width = _validate_target_qubits(num_qubits)
-    coefficients = np.asarray(ordered_coefficients, dtype=np.complex128)
-    if coefficients.ndim != 1 or coefficients.size == 0:
-        raise ValueError("ordered_coefficients must be a non-empty vector")
-    if not np.all(np.isfinite(coefficients)):
-        raise ValueError("ordered_coefficients must be finite")
-    if coefficients.size > 1 << width:
-        raise ValueError("coefficient support exceeds the target dimension")
-
-    register_qubits = _coefficient_register_qubits(coefficients.size)
-    full_dimension = 1 << width
-    if register_qubits == 0:
-        return np.eye(full_dimension, dtype=np.complex128), 0
-
-    local_dimension = 1 << register_qubits
-    coefficient_state = np.zeros(local_dimension, dtype=np.complex128)
-    coefficient_state[: coefficients.size] = coefficients
-    local_unitary = _qr_complete_first_column(coefficient_state)
-
-    remaining_qubits = width - register_qubits
-    embedded = np.kron(
-        np.eye(1 << remaining_qubits, dtype=np.complex128),
-        local_unitary,
-    )
-    return np.asarray(embedded, dtype=np.complex128), register_qubits
-
-
-def _qr_complete_first_column(column: ComplexVector) -> NDArray[np.complex128]:
-    """QR-complete a nonzero vector and restore its first-column phase."""
-    vector = np.asarray(column, dtype=np.complex128)
-    if vector.ndim != 1 or vector.size == 0:
-        raise ValueError("column must be a non-empty vector")
-    if not np.all(np.isfinite(vector)):
-        raise ValueError("column must be finite")
-    if float(np.linalg.norm(vector)) <= SUPPORT_THRESHOLD:
-        raise ValueError("column norm must exceed 1e-12")
-
-    qr_input = np.eye(vector.size, dtype=np.complex128)
-    qr_input[:, 0] = vector
-    unitary, _ = np.linalg.qr(qr_input)
-    overlap = np.vdot(vector, unitary[:, 0])
-    if abs(overlap) > PHASE_TOLERANCE:
-        unitary[:, 0] *= np.conj(overlap / abs(overlap))
-    return np.asarray(unitary, dtype=np.complex128)
-
-
-def _build_prefix_to_support_permutation(
-    basis_states: list[BasisState],
-    state_map: dict[BasisState, BasisState],
-) -> NDArray[np.complex128]:
-    """Build ``P[output,input]=1`` so prefixes map to support states."""
-    states = _validate_basis_states(basis_states)
-    num_qubits = len(states[0])
-    dimension = 1 << num_qubits
-    support_size = len(states)
-    if set(state_map) != set(states):
-        raise ValueError("state_map must map every basis state exactly once")
-
-    inverse_map: dict[BasisState, BasisState] = {}
-    for support_state, prefix_state_raw in state_map.items():
-        prefix_state = tuple(prefix_state_raw)
-        if len(prefix_state) != num_qubits:
-            raise ValueError("mapped prefixes must match the basis-state width")
-        prefix_index = _bits_to_index(prefix_state)
-        if prefix_index >= support_size:
-            raise ValueError("mapped state is outside the prefix range")
-        if prefix_state in inverse_map:
-            raise ValueError("mapped prefix states must be unique")
-        inverse_map[prefix_state] = support_state
-
-    permutation = list(range(dimension))
-    for prefix_index in range(support_size):
-        prefix_state = _index_to_bits(prefix_index, num_qubits)
-        if prefix_state not in inverse_map:
-            raise ValueError("state_map does not cover every prefix state")
-        permutation[prefix_index] = _bits_to_index(inverse_map[prefix_state])
-
-    for support_state in states:
-        support_index = _bits_to_index(support_state)
-        if support_index >= support_size:
-            permutation[support_index] = _bits_to_index(state_map[support_state])
-
-    if sorted(permutation) != list(range(dimension)):
-        raise ValueError("prefix-to-support mapping is not a permutation")
-    matrix = np.zeros((dimension, dimension), dtype=np.complex128)
-    for input_index, output_index in enumerate(permutation):
-        matrix[output_index, input_index] = 1.0
-    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
-        gram = matrix.conj().T @ matrix
-    if not np.allclose(gram, np.eye(dimension, dtype=np.complex128)):
-        raise ValueError("prefix-to-support matrix is not unitary")
-    return matrix
-
-
-def _append_support_exchange(
-    circuit: Circuit,
-    prefix_state: BasisState,
-    support_state: BasisState,
-    system_wires: list[int],
-    work_wire: int,
-) -> None:
-    """Exchange one prefix/support pair through a clean work wire."""
-    # Support tuples are MSB-first, while ascending system wires address the
-    # tuple from its least-significant end. Reverse only at the circuit-wire
-    # boundary; dense target-space indices remain MSB-first.
-    prefix_wire_bits = tuple(reversed(prefix_state))
-    support_wire_bits = tuple(reversed(support_state))
-    circuit.mcx(
-        system_wires,
-        work_wire,
-        control_state=list(prefix_wire_bits),
-    )
-    for wire, prefix_bit, support_bit in zip(
-        system_wires,
-        prefix_wire_bits,
-        support_wire_bits,
-    ):
-        if prefix_bit != support_bit:
-            circuit.cx(work_wire, wire)
-    circuit.mcx(
-        system_wires,
-        work_wire,
-        control_state=list(support_wire_bits),
-    )
-
-
-def _build_superposition_circuit(
-    coefficient_stage: NDArray[np.complex128],
-    basis_states: list[BasisState],
-    state_map: dict[BasisState, BasisState],
-    num_qubits: int,
-    index_qubits: int,
-    *,
-    work_wire: int,
-) -> Circuit:
-    """Build the coefficient gate and support exchanges on one work wire."""
-    width = _validate_target_qubits(num_qubits)
-    if isinstance(index_qubits, (bool, np.bool_)) or not isinstance(
-        index_qubits, (int, np.integer)
-    ):
-        raise TypeError("index_qubits must be a non-boolean integer")
-    compact_width = int(index_qubits)
-    if compact_width < 0 or compact_width > width:
-        raise ValueError("index_qubits must lie between zero and num_qubits")
-    if isinstance(work_wire, (bool, np.bool_)) or not isinstance(
-        work_wire, (int, np.integer)
-    ):
-        raise TypeError("work_wire must be a non-boolean integer")
-    work = int(work_wire)
-    if work < 0 or work < width:
-        raise ValueError("work_wire must be non-negative and not overlap system wires")
-
-    matrix = np.asarray(coefficient_stage, dtype=np.complex128)
-    dimension = 1 << width
-    if matrix.shape != (dimension, dimension) or not np.all(np.isfinite(matrix)):
-        raise ValueError("coefficient_stage has an invalid shape or entries")
-    states = _validate_basis_states(basis_states)
-    if len(states[0]) != width:
-        raise ValueError("basis-state width must equal num_qubits")
-
-    system_wires = list(range(width))
-    circuit = Circuit(
-        max(width, work + 1),
-        name="Sparse Superposition State Preparation",
-    )
-    if compact_width > 0:
-        circuit.unitary(matrix, system_wires)
-    for support_state, prefix_state in state_map.items():
-        if support_state != prefix_state:
-            _append_support_exchange(
-                circuit,
-                tuple(prefix_state),
-                tuple(support_state),
-                system_wires,
-                work,
+    def __init__(self, text_mode: str = "plain", algo_dir: str = 'circuits'):
+        if algo_dir is None:
+            _this = os.path.abspath(__file__)
+            _directory = os.path.dirname(_this)
+            algo_dir = os.path.join(
+                os.getcwd(),
+                "results",
+                os.path.basename(os.path.dirname(_directory)),
+                os.path.basename(_directory),
             )
-    return circuit
+        os.makedirs(algo_dir, exist_ok=True)
+        super().__init__("Superposition State Preparation Algorithm", "SUP", text_mode, algo_dir)
 
-
-def _state_vector_error(
-    reference: ComplexVector,
-    candidate: ComplexVector,
-    tolerance: float = PHASE_TOLERANCE,
-) -> float:
-    """Return overlap-aligned, global-phase-invariant L2 error."""
-    target = np.asarray(reference, dtype=np.complex128)
-    prepared = np.asarray(candidate, dtype=np.complex128)
-    if target.shape != prepared.shape or target.ndim != 1:
-        raise ValueError("reference and candidate must be equal-length vectors")
-    if not np.all(np.isfinite(target)) or not np.all(np.isfinite(prepared)):
-        raise ValueError("reference and candidate must be finite")
-    if isinstance(tolerance, (bool, np.bool_)) or not isinstance(tolerance, Real):
-        raise TypeError("tolerance must be a non-boolean real number")
-    tolerance_value = float(tolerance)
-    if not math.isfinite(tolerance_value) or tolerance_value < 0.0:
-        raise ValueError("tolerance must be finite and non-negative")
-    overlap = np.vdot(target, prepared)
-    if abs(overlap) > tolerance_value:
-        prepared = prepared * np.conj(overlap / abs(overlap))
-    return float(np.linalg.norm(target - prepared))
-
-
-def _run_tests() -> None:
-    """Execute returned circuits and validate them against independent targets."""
-    passed = 0
-    total = 0
-    maximum_phase_error = 0.0
-    minimum_fidelity = 1.0
-    maximum_work_leakage = 0.0
-
-    # SKILL.md gives 1e-12 as its overlap/numerical tolerance but does not
-    # define a separate work-wire leakage tolerance. This test uses the
-    # documented numerical tolerance without changing the public algorithm.
-    work_leakage_tolerance = PHASE_TOLERANCE
-
-    def check(name: str, condition: bool, detail: str = "") -> None:
-        nonlocal passed, total
-        total += 1
-        if condition:
-            passed += 1
-        else:
-            print(f"FAIL: {name}: {detail}")
-
-    def expect(name: str, exception: type[Exception], function: Any) -> None:
-        try:
-            function()
-        except exception:
-            check(name, True)
-        except Exception as error:
-            check(name, False, f"raised {type(error).__name__}: {error}")
-        else:
-            check(name, False, "did not raise")
-
-    def independent_expected(Psi: ArrayLike, num_qubits: int):
-        """Build the test oracle without implementation-side helper calls."""
-        raw = np.asarray(Psi, dtype=np.complex128)
-        normalized = raw / np.linalg.norm(raw)
-        target = np.zeros(1 << num_qubits, dtype=np.complex128)
-        target[: normalized.size] = normalized
-        retained_mask = np.abs(target) > SUPPORT_THRESHOLD
-        expected = np.zeros_like(target)
-        expected[retained_mask] = target[retained_mask]
-        expected /= np.linalg.norm(expected)
-        support_size = int(np.count_nonzero(retained_mask))
-        index_qubits = (
-            0 if support_size == 1 else math.ceil(math.log2(support_size))
-        )
-        return target, expected, support_size, index_qubits
-
-    def independent_phase_metrics(reference, candidate):
-        """Compute phase error and fidelity without _state_vector_error."""
-        overlap = np.vdot(reference, candidate)
-        aligned = np.asarray(candidate, dtype=np.complex128).copy()
-        if abs(overlap) > PHASE_TOLERANCE:
-            aligned *= np.conj(overlap / abs(overlap))
-        return (
-            float(np.linalg.norm(reference - aligned)),
-            float(abs(overlap) ** 2),
-        )
-
-    def validate_circuit_case(
-        name: str,
-        Psi: ArrayLike,
-        num_qubits: int,
-        *,
+    def run(
+        self,
+        Psi,
+        target_qubits: int,
         target_error: float = 1e-6,
-        expect_padding_warning: bool = False,
-        expected_support_size: int | None = None,
-    ) -> None:
-        nonlocal maximum_phase_error, minimum_fidelity, maximum_work_leakage
-        try:
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always")
-                result = superposition_state_preparation(
-                    Psi,
-                    num_qubits,
-                    target_error=target_error,
+        backend='torch',
+        device='cpu',
+        dtype=np.complex128,
+    ) -> Dict[str, Any]:
+        psi = np.asarray(Psi, dtype=np.complex128)
+        self.update_input({
+            "Method": "superposition",
+            "Target qubits": target_qubits,
+            "Target error": target_error,
+            "State vector length": int(psi.size),
+        })
+        start_time = time.time()
+        self.log("Stage 1: Extracting sparse support")
+        result = SuperpositionAlgorithm.Superposition(psi, int(target_qubits), float(target_error))
+        self.log("Stage 2: Building sparse-superposition circuit")
+        circuit = result.circuit
+        self.log("Stage 3: Computing emitted unitary and preparation error")
+        prepared_state = np.asarray(result.evolution_result, dtype=np.complex128)[:, 0]
+        total_error = float(result.total_error)
+        comp_time = time.time() - start_time
+        is_success = total_error <= max(float(target_error), 1e-10)
+        self.update_output({
+            "Prepared state": prepared_state,
+            "Total error": total_error,
+            "Support size": len(result.basis_states),
+            "Index register qubits": result.index_register_qubits,
+            "Computation time (s)": round(comp_time, 4),
+        })
+        self.status = "success" if is_success else "failed"
+        self.summary = f"Superposition state preparation completed with error {total_error:.6e}."
+        self.log("Stage 4: Exporting circuit diagram")
+        circuit_path = self.save_circuit(circuit)
+        filename = self.save_txt()
+        return self._build_return_dict(is_success, circuit_path, filename, circuit)
+
+
+
+    def _state_vector_error(reference: np.ndarray, candidate: np.ndarray, tol: float) -> float:
+        """Return a global-phase-invariant state-vector error."""
+        reference = np.asarray(reference, dtype=np.complex128)
+        candidate = np.asarray(candidate, dtype=np.complex128)
+        overlap = np.vdot(reference, candidate)
+        if abs(overlap) > tol:
+            candidate = candidate * np.conj(overlap / abs(overlap))
+        return float(np.linalg.norm(reference - candidate))
+
+
+    def _normalize_state_vector(state: np.ndarray, tol: float) -> np.ndarray:
+        """Return a normalized complex state vector, rejecting only the zero vector."""
+        psi = np.asarray(state, dtype=np.complex128)
+        if psi.ndim != 1:
+            raise ValueError("Psi must be a one-dimensional state vector.")
+        if psi.size == 0:
+            raise ValueError("Psi must not be empty.")
+        if not np.all(np.isfinite(psi)):
+            raise ValueError("Psi entries must be finite.")
+
+        norm = float(np.linalg.norm(psi))
+        if norm <= tol:
+            raise ValueError("Psi must not be the zero vector.")
+        return np.ascontiguousarray(psi / norm)
+
+
+    @dataclass(slots=True)
+    class StatePreparationResult:
+        """Result container used by the sparse-superposition implementation."""
+
+        method: str
+        Psi: np.ndarray
+        target_qubits: int
+        target_error: float
+        tol: float = 1e-12
+        dim: int = field(init=False)
+        padded_dim: int = field(init=False)
+        _circuit: Optional[Circuit] = field(init=False, repr=False, default=None)
+        _total_error: Optional[float] = field(init=False, repr=False, default=None)
+        _evolution_result: Optional[np.ndarray] = field(init=False, repr=False, default=None)
+
+        def __post_init__(self) -> None:
+            if self.target_error <= 0:
+                raise ValueError("target_error must be positive.")
+            if self.tol <= 0:
+                raise ValueError("tol must be positive.")
+            if isinstance(self.target_qubits, bool) or not isinstance(self.target_qubits, (int, np.integer)):
+                raise TypeError("target_qubits must be an integer.")
+            if self.target_qubits < 0:
+                raise ValueError("target_qubits must be non-negative.")
+
+            psi = SuperpositionAlgorithm._normalize_state_vector(self.Psi, self.tol)
+            self.dim = int(psi.size)
+            padded_dim = 1 << int(self.target_qubits)
+            if self.dim > padded_dim:
+                raise ValueError(f"State vector length {self.dim} exceeds target Hilbert dimension {padded_dim}.")
+
+            if self.dim < padded_dim:
+                padded_psi = np.zeros(padded_dim, dtype=np.complex128)
+                padded_psi[:self.dim] = psi
+                warnings.warn(
+                    f"State vector length {self.dim} is smaller than 2**target_qubits; padded to {padded_dim}.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+            else:
+                padded_psi = psi
+
+            self.padded_dim = padded_dim
+            self.Psi = np.ascontiguousarray(padded_psi)
+
+        def __repr__(self) -> str:
+            return (
+                f"SuperpositionAlgorithm.StatePreparationResult(method={self.method}, "
+                f"target_error={self.target_error}, qubits={self.target_qubits})"
+            )
+
+        @staticmethod
+        def _circuit_has_blocks(circuit: Optional[Circuit]) -> bool:
+            if circuit is None:
+                return False
+            return any(getattr(gate, 'block_gate_sequence', None) is not None for gate in circuit.data().data())
+
+        def _flatten_circuit(self, circuit: Optional[Circuit], max_depth: int = 64) -> Optional[Circuit]:
+            if circuit is None:
+                return None
+
+            original_name = getattr(circuit, 'name', None)
+            flattened = circuit
+            depth = 0
+            while self._circuit_has_blocks(flattened):
+                if depth >= max_depth:
+                    raise ValueError(f"Circuit decomposition exceeded max_depth={max_depth}")
+                flattened = flattened.decompose(1)
+                depth += 1
+
+            if original_name is not None and hasattr(flattened, 'update_name'):
+                flattened.update_name(original_name)
+            return flattened
+
+        @property
+        def circuit(self) -> Circuit:
+            if self._circuit is None:
+                self._run()
+            self._circuit = self._flatten_circuit(self._circuit)
+            return self._circuit
+
+        @property
+        def total_error(self) -> float:
+            if self._total_error is None:
+                if self._evolution_result is None:
+                    self._run()
+                prepared_state = np.asarray(self._evolution_result, dtype=np.complex128)[:, 0]
+                self._total_error = SuperpositionAlgorithm._state_vector_error(self.Psi, prepared_state, self.tol)
+            return self._total_error
+
+        @property
+        def evolution_result(self) -> np.ndarray:
+            if self._evolution_result is None:
+                self._run()
+            return np.asarray(self._evolution_result, dtype=np.complex128)
+
+    def order_states(basis_states: list[list[int]]) -> dict[tuple[int, ...], tuple[int, ...]]:
+        """
+        Map a support basis set onto the first m computational basis states.
+
+        This mirrors the high-level idea used by PennyLane's Superposition template
+        while keeping the implementation local to this repository.
+        """
+        if not basis_states:
+            return {}
+
+        lengths = {len(state) for state in basis_states}
+        if len(lengths) != 1:
+            raise ValueError('All basis states must have the same length.')
+
+        seen: set[tuple[int, ...]] = set()
+        normalized_states: list[tuple[int, ...]] = []
+        for state in basis_states:
+            tuple_state = tuple(int(bit) for bit in state)
+            if any(bit not in (0, 1) for bit in tuple_state):
+                raise ValueError('Basis-state entries must be binary.')
+            if tuple_state in seen:
+                raise ValueError('Basis states must be unique.')
+            seen.add(tuple_state)
+            normalized_states.append(tuple_state)
+
+        m = len(normalized_states)
+        length = len(normalized_states[0])
+        basis_ints = [int(''.join(str(bit) for bit in state), 2) for state in normalized_states]
+
+        state_map: dict[tuple[int, ...], tuple[int, ...]] = {}
+        unmapped_states: list[tuple[int, ...]] = []
+        unmapped_ints = {index: None for index in range(m)}
+
+        for basis_int, state in zip(basis_ints, normalized_states):
+            if basis_int < m:
+                state_map[state] = state
+                unmapped_ints.pop(basis_int, None)
+            else:
+                unmapped_states.append(state)
+
+        for state, mapped_int in zip(unmapped_states, unmapped_ints):
+            state_map[state] = tuple(int(bit) for bit in f'{mapped_int:0{length}b}')
+
+        return state_map
+
+
+    def _index_to_bits(index: int, num_qubits: int) -> tuple[int, ...]:
+        """Return one computational basis index as an n-bit tuple."""
+        return tuple(int(bit) for bit in format(index, f'0{num_qubits}b'))
+
+
+    def _bits_to_index(bits: tuple[int, ...]) -> int:
+        """Convert one computational basis bit string into its integer index."""
+        return int(''.join(str(bit) for bit in bits), 2)
+
+
+    def _extract_sparse_superposition(
+        state_vector: np.ndarray,
+        tol: float = 1e-12,
+    ) -> tuple[np.ndarray, list[tuple[int, ...]]]:
+        """Extract non-zero coefficients and their computational basis states."""
+        state_vector = np.asarray(state_vector, dtype=np.complex128)
+        if state_vector.ndim != 1:
+            raise ValueError('state_vector must be one-dimensional.')
+        if state_vector.size == 0 or state_vector.size & (state_vector.size - 1):
+            raise ValueError('state_vector length must be a non-zero power of 2.')
+
+        num_qubits = state_vector.size.bit_length() - 1
+        support_indices = [index for index, amplitude in enumerate(state_vector) if abs(amplitude) > tol]
+        if not support_indices:
+            raise ValueError('state_vector must contain at least one non-zero amplitude.')
+
+        coeffs = np.asarray([state_vector[index] for index in support_indices], dtype=np.complex128)
+        bases = [SuperpositionAlgorithm._index_to_bits(index, num_qubits) for index in support_indices]
+        return coeffs, bases
+
+
+    def _coefficient_register_qubits(num_terms: int) -> int:
+        """Return the number of qubits needed to index the support terms."""
+        if num_terms <= 0:
+            raise ValueError('num_terms must be positive.')
+        return int(math.ceil(math.log2(num_terms))) if num_terms > 1 else 0
+
+
+    def _pad_coefficients(coeffs: np.ndarray, register_qubits: int) -> np.ndarray:
+        """Pad the coefficient vector to the full coefficient-register dimension."""
+        coeffs = np.asarray(coeffs, dtype=np.complex128)
+        dim = 1 << register_qubits
+        padded = np.zeros(dim, dtype=np.complex128)
+        padded[:coeffs.size] = coeffs
+        return padded
+
+
+    def _build_coefficient_stage_matrix(
+        coeffs: np.ndarray,
+        num_qubits: int,
+        target_error: float,
+    ) -> np.ndarray:
+        """
+        Build the exact first-stage unitary for the compact coefficient register.
+
+        The first stage prepares ``sum_i c_i |i>`` on the smallest possible register and
+        leaves the remaining wires in ``|0>``.
+        """
+        del target_error  # QR completion is exact; the public result still stores this value.
+
+        register_qubits = SuperpositionAlgorithm._coefficient_register_qubits(int(coeffs.size))
+        if register_qubits == 0:
+            return np.eye(1 << num_qubits, dtype=np.complex128)
+
+        coefficient_state = SuperpositionAlgorithm._pad_coefficients(coeffs, register_qubits)
+        dim = int(coefficient_state.size)
+        basis = np.eye(dim, dtype=np.complex128)
+        basis[:, 0] = coefficient_state
+        local_unitary, _ = np.linalg.qr(basis)
+
+        overlap = np.vdot(coefficient_state, local_unitary[:, 0])
+        if abs(overlap) > 1e-12:
+            local_unitary[:, 0] = local_unitary[:, 0] * np.conj(overlap / abs(overlap))
+
+        remaining_qubits = num_qubits - register_qubits
+        return np.kron(np.eye(1 << remaining_qubits, dtype=np.complex128), local_unitary)
+
+
+    def _build_prefix_to_support_permutation(
+        basis_states: list[tuple[int, ...]],
+    ) -> np.ndarray:
+        """
+        Build a full-system permutation that sends |j> to the j-th support basis state.
+
+        The permutation acts non-trivially only on the union of the support set and the
+        first ``m`` computational basis states.
+        """
+        if not basis_states:
+            raise ValueError('basis_states must not be empty.')
+
+        state_map = SuperpositionAlgorithm.order_states([list(state) for state in basis_states])
+        num_qubits = len(basis_states[0])
+        dim = 1 << num_qubits
+        m = len(basis_states)
+        support_set = set(basis_states)
+        inverse_map = {mapped: source for source, mapped in state_map.items()}
+
+        permutation = list(range(dim))
+        for prefix_index in range(m):
+            prefix_state = SuperpositionAlgorithm._index_to_bits(prefix_index, num_qubits)
+            source_state = inverse_map[prefix_state]
+            permutation[prefix_index] = SuperpositionAlgorithm._bits_to_index(source_state)
+
+        for state in support_set:
+            state_index = SuperpositionAlgorithm._bits_to_index(state)
+            if state_index < m:
+                continue
+            permutation[state_index] = SuperpositionAlgorithm._bits_to_index(state_map[state])
+
+        matrix = np.zeros((dim, dim), dtype=np.complex128)
+        for input_index, output_index in enumerate(permutation):
+            matrix[output_index, input_index] = 1.0
+
+        return matrix
+
+
+    def _permutation_operator(
+        basis1: tuple[int, ...] | list[int],
+        basis2: tuple[int, ...] | list[int],
+        wires: list[int],
+        work_wire: int,
+    ) -> list[dict[str, object]]:
+        """
+        Return a basic-gate sequence that maps ``basis1`` to ``basis2``.
+
+        The work wire is flagged when the system matches ``basis1``. Controlled-NOT
+        gates then flip the differing target bits, and a final multi-controlled X
+        uncomputes the work wire on ``basis2``.
+        """
+        basis1 = tuple(int(bit) for bit in basis1)
+        basis2 = tuple(int(bit) for bit in basis2)
+
+        if len(basis1) != len(basis2):
+            raise ValueError('basis1 and basis2 must have the same length.')
+        if len(basis1) != len(wires):
+            raise ValueError('Basis-state length must match the number of wires.')
+        if any(bit not in (0, 1) for bit in basis1 + basis2):
+            raise ValueError('Basis-state entries must be binary.')
+        if work_wire in wires:
+            raise ValueError('work_wire must be different from the target wires.')
+
+        gates: list[dict[str, object]] = [
+            {
+                'name': 'mcx',
+                'controls': list(wires),
+                'target': int(work_wire),
+                'control_state': list(basis1),
+            }
+        ]
+
+        for wire, bit1, bit2 in zip(wires, basis1, basis2):
+            if bit1 != bit2:
+                gates.append(
+                    {
+                        'name': 'cx',
+                        'control': int(work_wire),
+                        'target': int(wire),
+                    }
                 )
 
-            target, expected, support_size, index_qubits = independent_expected(
-                Psi,
-                num_qubits,
-            )
-            full_state = np.asarray(
-                result["circuit"].execute(
-                    backend="torch",
-                    device="cpu",
-                    dtype=np.complex128,
-                ).state,
-                dtype=np.complex128,
-            ).reshape(-1)
-
-            target_dimension = 1 << num_qubits
-            if full_state.shape != (2 * target_dimension,):
-                raise AssertionError(
-                    f"unexpected circuit state shape {full_state.shape}"
-                )
-
-            # SKILL.md specifies system wires 0..n-1 and appended work wire n,
-            # but does not separately document the flattened n+1-wire state
-            # axis order. This extraction follows the documented appended-wire
-            # construction: work=0 precedes work=1 in the full statevector.
-            circuit_system_state = full_state[:target_dimension]
-            work_one_state = full_state[target_dimension:]
-            work_leakage = float(np.vdot(work_one_state, work_one_state).real)
-
-            circuit_error, fidelity = independent_phase_metrics(
-                expected,
-                circuit_system_state,
-            )
-            dense_error, _ = independent_phase_metrics(
-                expected,
-                np.asarray(result["Prepared state"], dtype=np.complex128),
-            )
-            circuit_dense_error, _ = independent_phase_metrics(
-                np.asarray(result["Prepared state"], dtype=np.complex128),
-                circuit_system_state,
-            )
-            expected_total_error, _ = independent_phase_metrics(target, expected)
-            expected_status = (
-                "ok"
-                if expected_total_error <= max(target_error, 1e-10)
-                else "failed"
-            )
-
-            maximum_phase_error = max(maximum_phase_error, circuit_error)
-            minimum_fidelity = min(minimum_fidelity, fidelity)
-            maximum_work_leakage = max(maximum_work_leakage, work_leakage)
-
-            failures = []
-            if circuit_error > PHASE_TOLERANCE:
-                failures.append(f"circuit phase error={circuit_error:.3e}")
-            if dense_error > PHASE_TOLERANCE:
-                failures.append(f"dense phase error={dense_error:.3e}")
-            if circuit_dense_error > PHASE_TOLERANCE:
-                failures.append(
-                    f"circuit/dense disagreement={circuit_dense_error:.3e}"
-                )
-            if work_leakage > work_leakage_tolerance:
-                failures.append(f"work leakage={work_leakage:.3e}")
-            if result["Support size"] != support_size:
-                failures.append("support size mismatch")
-            if result["Index register qubits"] != index_qubits:
-                failures.append("index-register width mismatch")
-            if result["status"] != expected_status:
-                failures.append("status mismatch")
-            if abs(result["Total error"] - expected_total_error) > PHASE_TOLERANCE:
-                failures.append("reported Total error mismatch")
-            if expected_support_size is not None and support_size != expected_support_size:
-                failures.append(
-                    f"expected support {expected_support_size}, got {support_size}"
-                )
-            saw_padding_warning = any(
-                item.category is RuntimeWarning
-                and "trailing zeros were appended" in str(item.message)
-                for item in caught
-            )
-            if saw_padding_warning != expect_padding_warning:
-                failures.append("padding warning behavior mismatch")
-            if not isinstance(result["circuit"], Circuit):
-                failures.append("returned circuit has the wrong type")
-
-            check(name, not failures, "; ".join(failures))
-        except Exception as error:
-            check(name, False, f"raised {type(error).__name__}: {error}")
-
-    # Execute basis and deterministic sparse complex cases for every width
-    # from one through five qubits, including non-contiguous support and
-    # ordering-sensitive states outside the prefix range.
-    rng = np.random.default_rng(2718)
-    for num_qubits in range(1, 6):
-        dimension = 1 << num_qubits
-        for index in sorted({0, dimension // 2, dimension - 1}):
-            basis = np.zeros(dimension, dtype=np.complex128)
-            basis[index] = np.exp(0.37j)
-            validate_circuit_case(
-                f"basis-{num_qubits}-{index}",
-                basis,
-                num_qubits,
-                expected_support_size=1,
-            )
-
-        support = sorted({0, dimension // 2, dimension - 1})
-        sparse = np.zeros(dimension, dtype=np.complex128)
-        sparse_values = rng.normal(size=len(support)) + 1j * rng.normal(
-            size=len(support)
+        gates.append(
+            {
+                'name': 'mcx',
+                'controls': list(wires),
+                'target': int(work_wire),
+                'control_state': list(basis2),
+            }
         )
-        sparse[support] = sparse_values
-        validate_circuit_case(
-            f"sparse-complex-{num_qubits}",
-            sparse,
+
+        return gates
+
+
+    def _ordered_coefficients_for_prefix_basis(
+        coeffs: np.ndarray,
+        basis_states: list[tuple[int, ...]],
+    ) -> np.ndarray:
+        """Reorder support coefficients so entry j corresponds to prefix basis state |j>."""
+        coeffs = np.asarray(coeffs, dtype=np.complex128)
+        if coeffs.ndim != 1 or coeffs.size != len(basis_states):
+            raise ValueError('coeffs must align one-to-one with basis_states.')
+
+        state_map = SuperpositionAlgorithm.order_states([list(state) for state in basis_states])
+        ordered = np.zeros_like(coeffs)
+        for coeff, state in zip(coeffs, basis_states):
+            prefix_state = state_map[state]
+            prefix_index = SuperpositionAlgorithm._bits_to_index(prefix_state)
+            ordered[prefix_index] = coeff
+        return ordered
+
+
+    def _build_superposition_unitary(
+        state_vector: np.ndarray,
+        num_qubits: int,
+        target_error: float,
+    ) -> np.ndarray:
+        """Build the full emitted superposition unitary from the two decomposition stages."""
+        coeffs, basis_states = SuperpositionAlgorithm._extract_sparse_superposition(state_vector)
+        ordered_coeffs = SuperpositionAlgorithm._ordered_coefficients_for_prefix_basis(coeffs, basis_states)
+        coefficient_stage = SuperpositionAlgorithm._build_coefficient_stage_matrix(
+            ordered_coeffs,
             num_qubits,
-            expected_support_size=len(support),
+            target_error,
         )
+        permutation_stage = SuperpositionAlgorithm._build_prefix_to_support_permutation(basis_states)
+        return np.asarray(permutation_stage @ coefficient_stage, dtype=np.complex128)
 
-    validate_circuit_case(
-        "non-contiguous-support",
-        np.array([1.0, 0.0, 0.0, 2.0j, 0.0, 0.0, -0.5, 0.0]),
-        3,
-        expected_support_size=3,
-    )
-    validate_circuit_case(
-        "padding",
-        np.array([1.0, 1.0j]),
-        3,
-        expect_padding_warning=True,
-        expected_support_size=2,
-    )
-    validate_circuit_case(
-        "endianness",
-        np.array([0.0, 1.0, 0.0, 0.0, -2.0j, 0.0, 0.0, 0.0]),
-        3,
-        expected_support_size=2,
-    )
 
-    # The strict threshold is applied after normalization. A clearly greater
-    # value is used instead of nextafter because normalization could move a
-    # one-ULP difference back onto the boundary.
-    at_boundary = np.array(
-        [np.sqrt(1.0 - SUPPORT_THRESHOLD**2), SUPPORT_THRESHOLD, 0.0, 0.0],
-        dtype=np.complex128,
-    )
-    above_boundary = np.array(
-        [
-            np.sqrt(1.0 - (2.0 * SUPPORT_THRESHOLD) ** 2),
-            2.0 * SUPPORT_THRESHOLD,
-            0.0,
-            0.0,
-        ],
-        dtype=np.complex128,
-    )
-    validate_circuit_case(
-        "threshold-equality",
-        at_boundary,
-        2,
-        target_error=1e-14,
-        expected_support_size=1,
-    )
-    validate_circuit_case(
-        "threshold-greater",
-        above_boundary,
-        2,
-        target_error=1e-14,
-        expected_support_size=2,
-    )
+    def superposition_state_preparation_circuit(
+        state_vector: np.ndarray,
+        num_qubits: int,
+        target_error: float = 1e-9,
+        work_wire: int | None = None,
+    ) -> Circuit:
+        """
+        Build a sparse-superposition circuit using a coefficient stage plus one permutation stage.
 
-    invalid_cases = [
-        ("bool qubits", TypeError, lambda: superposition_state_preparation([1], True)),
-        ("zero qubits", ValueError, lambda: superposition_state_preparation([1], 0)),
-        ("bool error", TypeError, lambda: superposition_state_preparation([1, 0], 1, target_error=True)),
-        ("nan error", ValueError, lambda: superposition_state_preparation([1, 0], 1, target_error=np.nan)),
-        ("inf error", ValueError, lambda: superposition_state_preparation([1, 0], 1, target_error=np.inf)),
-        ("empty", ValueError, lambda: superposition_state_preparation([], 1)),
-        ("matrix", ValueError, lambda: superposition_state_preparation(np.eye(2), 1)),
-        ("zero state", ValueError, lambda: superposition_state_preparation([0, 0], 1)),
-        ("nan state", ValueError, lambda: superposition_state_preparation([1, np.nan], 1)),
-        ("inf state", ValueError, lambda: superposition_state_preparation([1, np.inf], 1)),
-        ("oversized", ValueError, lambda: superposition_state_preparation([1, 0, 0], 1)),
-        ("bool index", TypeError, lambda: _index_to_bits(True, 2)),
-        ("bad bits", ValueError, lambda: _bits_to_index((0, 2))),
-        ("duplicate support", ValueError, lambda: _order_states([(0, 0), (0, 0)])),
-        (
-            "overlapping work wire",
-            ValueError,
-            lambda: _build_superposition_circuit(
-                np.eye(2, dtype=np.complex128),
-                [(0,), (1,)],
-                {(0,): (0,), (1,): (1,)},
-                1,
-                1,
-                work_wire=0,
-            ),
-        ),
-    ]
-    for name, exception, function in invalid_cases:
-        expect(f"invalid-{name}", exception, function)
+        The coefficient stage is prepared on the smallest possible index register, then a
+        full-system permutation maps those prefix basis states onto the true support basis.
+        """
+        state_vector = np.asarray(state_vector, dtype=np.complex128)
+        expected_dim = 1 << num_qubits
+        if state_vector.ndim != 1 or state_vector.size != expected_dim:
+            raise ValueError(f'state_vector must have shape ({expected_dim},).')
+        if work_wire is None:
+            work_wire = num_qubits
+        if work_wire < 0:
+            raise ValueError('work_wire must be non-negative.')
+        if work_wire < num_qubits:
+            raise ValueError('work_wire must not overlap with the state-preparation wires.')
 
-    print(f"Total tests: {total}")
-    print(f"Passed tests: {passed}")
-    print(f"Maximum phase-invariant error: {maximum_phase_error:.6e}")
-    print(f"Minimum fidelity: {minimum_fidelity:.12f}")
-    print(f"Maximum work-qubit leakage: {maximum_work_leakage:.6e}")
-    print(
-        "SKILL.md 未说明：工作比特泄漏的独立专用容差；"
-        "测试采用其明确的 1e-12 数值容差。"
-    )
-    if passed != total:
-        raise AssertionError(f"self-tests failed: {total - passed} of {total}")
+        coeffs, basis_states = SuperpositionAlgorithm._extract_sparse_superposition(state_vector)
+        ordered_coeffs = SuperpositionAlgorithm._ordered_coefficients_for_prefix_basis(coeffs, basis_states)
+        register_qubits = SuperpositionAlgorithm._coefficient_register_qubits(coeffs.size)
+        coefficient_stage = SuperpositionAlgorithm._build_coefficient_stage_matrix(
+            ordered_coeffs,
+            num_qubits,
+            target_error,
+        )
+        state_map = SuperpositionAlgorithm.order_states([list(state) for state in basis_states])
+        wires = list(range(num_qubits))
+
+        qc = Circuit(max(num_qubits, work_wire + 1), name='Quantum circuit for Superposition State Preparation')
+        if register_qubits > 0:
+            qc.unitary(
+                coefficient_stage,
+                list(range(num_qubits)),
+            )
+
+        for basis_state, prefix_state in state_map.items():
+            if basis_state == prefix_state:
+                continue
+
+            for gate in SuperpositionAlgorithm._permutation_operator(prefix_state, basis_state, wires, work_wire):
+                name = str(gate['name'])
+                if name == 'mcx':
+                    qc.mcx(
+                        gate['controls'],
+                        gate['target'],
+                        control_state=gate['control_state'],
+                    )
+                elif name == 'cx':
+                    qc.cx(gate['control'], gate['target'])
+                else:
+                    raise ValueError(f'Unsupported permutation gate {name!r}.')
+
+        return qc
+
+
+    def superposition_state_preparation_matrix(
+        state_vector: np.ndarray,
+        num_qubits: int,
+        target_error: float = 1e-9,
+    ) -> np.ndarray:
+        """Return the exact dense unitary emitted by the custom superposition decomposition."""
+        state_vector = np.asarray(state_vector, dtype=np.complex128)
+        expected_dim = 1 << num_qubits
+        if state_vector.ndim != 1 or state_vector.size != expected_dim:
+            raise ValueError(f'state_vector must have shape ({expected_dim},).')
+        return SuperpositionAlgorithm._build_superposition_unitary(state_vector, num_qubits, target_error)
+
+
+    class Superposition(StatePreparationResult):
+        """
+        Sparse-support superposition preparation inspired by PennyLane's high-level idea.
+
+        Unlike direct state initialization, this implementation first prepares a compact
+        coefficient register and then permutes the occupied basis states onto the target
+        support. This makes the algorithm structurally different from the exact generic
+        initialization used by the default base class.
+        """
+
+        def __init__(self, Psi: np.ndarray, target_qubits: int, target_error: float) -> None:
+            self.coeffs = np.zeros(0, dtype=np.complex128)
+            self.basis_states: tuple[tuple[int, ...], ...] = tuple()
+            self.index_register_qubits = 0
+            super().__init__('superposition', Psi, target_qubits, target_error)
+            self._run()
+
+        def _run(self) -> None:
+            """Build the custom sparse-superposition circuit and cache its emitted unitary."""
+            self.coeffs, basis_states = SuperpositionAlgorithm._extract_sparse_superposition(self.Psi, self.tol)
+            self.basis_states = tuple(basis_states)
+            self.index_register_qubits = SuperpositionAlgorithm._coefficient_register_qubits(self.coeffs.size)
+
+            self._circuit = self._flatten_circuit(
+                SuperpositionAlgorithm.superposition_state_preparation_circuit(
+                    self.Psi,
+                    self.target_qubits,
+                    target_error=self.target_error,
+                    work_wire=self.target_qubits,
+                )
+            )
+            self._evolution_result = SuperpositionAlgorithm.superposition_state_preparation_matrix(
+                self.Psi,
+                self.target_qubits,
+                target_error=self.target_error,
+            )
+            prepared_state = self._evolution_result[:, 0]
+            self._total_error = SuperpositionAlgorithm._state_vector_error(self.Psi, prepared_state, self.tol)
+
+
+def test(Psi=None, target_qubits: int = 3, target_error: float = 1e-6):
+    """Test sparse-superposition state preparation with a default sparse state."""
+    if Psi is None:
+        Psi = np.zeros(1 << target_qubits, dtype=np.complex128)
+        Psi[1] = 1 / np.sqrt(2)
+        Psi[6] = 1j / np.sqrt(2)
+    algo = SuperpositionAlgorithm(text_mode="legacy")
+    return algo.run(Psi=Psi, target_qubits=int(target_qubits), target_error=float(target_error))
 
 
 if __name__ == "__main__":
-    _run_tests()
+    target_qubits = 3  # [PARAM]
+    Psi = None  # [PARAM]
+    target_error = 1e-6  # [PARAM]
+    test(Psi=Psi, target_qubits=target_qubits, target_error=target_error)

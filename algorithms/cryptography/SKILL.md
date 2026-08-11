@@ -1,6 +1,6 @@
 ---
 name: cryptography
-description: Quantum algorithms that attack classical cryptographic protocols, including Shor's integer factorization, Shor-style discrete logarithm solving with two-register Fourier sampling, and Simon's hidden subgroup problem.
+description: "Quantum algorithms that attack classical cryptographic protocols, including Shor's integer factorization, Shor-style discrete logarithm solving with two-register Fourier sampling, and Simon's hidden subgroup problem. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Quantum Cryptography Algorithms

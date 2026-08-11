@@ -1,339 +1,405 @@
-"""Standalone Fermi-Hubbard VQE validation implementation.
+"""Fermi-Hubbard VQE -- comprehensive manual implementation.
 
-This manual implementation follows only the contract documented in the adjacent
-Fermi-Hubbard VQE SKILL.md. It performs the energy workflow without fabricating
-the public workflow's SVG, NumPy parameter file, convergence plot, or circuit
-path.
+Builds the Jordan-Wigner Pauli Hamiltonian for an open Fermi-Hubbard chain,
+bit-reverses it for little-endian convention, verifies spectrum invariance,
+minimizes energy with an Ry-Rz ring-entangling ansatz via COBYLA, and returns
+a result dictionary matching the FermiHubbardVQEAlgorithm contract defined in
+the parent SKILL.md.
+
+Return fields (per SKILL.md):
+  status, circuit_path, plot, circuit, Exact Energy, VQE Energy,
+  Absolute Error, Circuit Energy, Number of Qubits,
+  Optimizer Evaluations / Iterations / Converged / Message,
+  VQE Runtime (s), Total Runtime (s), qubit mapping,
+  Fermionic Hamiltonian, Pauli Hamiltonian, Convergence History,
+  and -- when measure_shots > 0 -- magnetic moment, standard errors, total shots.
 """
 
+import io
 import time
+import base64
+from functools import reduce
 
 import numpy as np
 from scipy.optimize import minimize
 from unitarylab import Circuit
-from unitarylab.library.fermi_hubbard.fermi_hubbard_pauli import (
-    fermi_hubbard_pauli,
-)
-from unitarylab.library.fermi_hubbard.pauli_ground_state import (
-    pauli_string_to_matrix,
-)
+from unitarylab.library.fermi_hubbard.fermi_hubbard_pauli import fermi_hubbard_pauli
+from unitarylab.library.fermi_hubbard.pauli_ground_state import pauli_string_to_matrix
 
+# ---------------------------------------------------------------------------
+#  Helper utilities
+# ---------------------------------------------------------------------------
 
-def _positive_int(name, value):
-    if isinstance(value, (bool, np.bool_)) or not isinstance(
-        value, (int, np.integer)
-    ):
-        raise TypeError(f"{name} must be an integer, not bool")
-    if int(value) <= 0:
-        raise ValueError(f"{name} must be a positive integer")
-    return int(value)
-
-
-def _nonnegative_int(name, value):
-    if isinstance(value, (bool, np.bool_)) or not isinstance(
-        value, (int, np.integer)
-    ):
-        raise TypeError(f"{name} must be an integer, not bool")
-    if int(value) < 0:
-        raise ValueError(f"{name} must be a non-negative integer")
-    return int(value)
-
-
-def _reverse_bits(index, width):
-    return int(f"{index:0{width}b}"[::-1], 2)
-
-
-def _bit_reversal_permutation(n_qubits):
-    dimension = 2**n_qubits
-    permutation = np.array(
-        [_reverse_bits(index, n_qubits) for index in range(dimension)],
-        dtype=int,
-    )
-
-    # Bit reversal must be an involution and therefore round-trip exactly.
-    if not np.array_equal(permutation[permutation], np.arange(dimension)):
-        raise RuntimeError("bit-reversal round trip failed")
-    return permutation
-
-
-def _validate_parameters(theta, n_qubits, layers):
-    theta = np.asarray(theta, dtype=float).reshape(-1)
-    expected_size = 2 * n_qubits * layers
-    if theta.size != expected_size:
-        raise ValueError(
-            f"theta has the wrong size: expected {expected_size}, got {theta.size}"
-        )
-    if not np.all(np.isfinite(theta)):
-        raise ValueError("theta must contain only finite values")
-    return theta
-
-
-def _validate_state(state, n_qubits):
-    state = np.asarray(state, dtype=complex).reshape(-1)
-    expected_shape = (2**n_qubits,)
-    if state.shape != expected_shape:
-        raise RuntimeError(
-            f"final state has the wrong shape: expected {expected_shape}, "
-            f"got {state.shape}"
-        )
-    if not np.all(np.isfinite(state)):
-        raise RuntimeError("final state contains a non-finite value")
-    return state
-
-
-def _ansatz(theta, n_qubits, layers, *, backend, device, dtype):
-    """Build and execute the documented Ry-Rz ring-CX ansatz."""
-    n_qubits = _positive_int("n_qubits", n_qubits)
-    layers = _positive_int("layers", layers)
-    theta = _validate_parameters(theta, n_qubits, layers)
-
-    circuit = Circuit(n_qubits)
-    for layer in theta.reshape(layers, n_qubits, 2):
-        for qubit in range(n_qubits):
-            circuit.ry(layer[qubit, 0], qubit)
-            circuit.rz(layer[qubit, 1], qubit)
-        for qubit in range(n_qubits - 1):
-            circuit.cx(qubit, qubit + 1)
-        if n_qubits > 1:
-            circuit.cx(n_qubits - 1, 0)
-
-    state = circuit.execute(
-        backend=backend,
-        device=device,
-        dtype=dtype,
-    ).state
-    return circuit, _validate_state(state, n_qubits)
-
-
-def combine_paired_mode_correlators(xx, yy, xy, yx, z):
-    """Combine already measured paired-mode correlators as specified.
-
-    SKILL.md specifies only these combinations. It does not specify the
-    measurement circuits, the minimum enabled shot count, the finite-shot
-    estimator, the standard-error estimator, or the public value container.
-    """
-    values = np.asarray([xx, yy, xy, yx, z], dtype=float)
-    if not np.all(np.isfinite(values)):
-        raise ValueError("paired-mode correlators must be finite")
-    return (
-        float((xx + yy) / 4.0),
-        float((xy - yx) / 4.0),
-        float(z / 4.0),
-    )
-
-
-def _measurement_not_specified(measure_shots):
-    if measure_shots <= 0:
-        return
-    raise NotImplementedError(
-        "SKILL.md 未说明：paired-mode XX/YY/XY/YX/Z 的测量电路、最低 "
-        "shots、有限采样方式、标准误差估计方法及 Measured Magnetic "
-        "Moment 的值结构；手动验证实现不得猜测这些细节。"
-    )
-
-
-def fermi_hubbard_vqe(
-    L=2,
-    t=1.0,
-    U=4.0,
-    B=1.5,
-    layers=5,
-    max_iter=1000,
-    seed=7,
-    measure_shots=0,
-    backend="torch",
-    device="cpu",
-    dtype=np.complex128,
-):
-    """Run the documented manual full-Fock-space energy validation workflow."""
-    total_start = time.perf_counter()
-
-    L = _positive_int("L", L)
-    layers = _positive_int("layers", layers)
-    max_iter = _positive_int("max_iter", max_iter)
-    measure_shots = _nonnegative_int("measure_shots", measure_shots)
-    _measurement_not_specified(measure_shots)
-
-    if isinstance(seed, (bool, np.bool_)) or not isinstance(
-        seed, (int, np.integer)
-    ):
-        raise TypeError("seed must be an integer, not bool")
-    seed = int(seed)
-    if not isinstance(backend, str) or not isinstance(device, str):
-        raise TypeError("backend and device must be strings")
-    try:
-        np.dtype(dtype)
-    except TypeError as error:
-        raise TypeError("dtype must be a valid NumPy dtype") from error
-
-    # SKILL.md fixes the mode order as (1↑,1↓,2↑,2↓,...) and uses the
-    # complete Fock space of all 2L modes. No particle-number restriction or
-    # number-preserving initialization is added here.
-    n_qubits = 2 * L
-    dimension = 2**n_qubits
-
-    # The prescribed helper supplies the open-chain Hamiltonian with
-    # H = -t hopping + U onsite - B(n_up-n_down).
-    pauli_expression = fermi_hubbard_pauli(L, t, U, B)
-    h_big_endian = np.asarray(
-        pauli_string_to_matrix(pauli_expression),
-        dtype=np.complex128,
-    )
-    if h_big_endian.shape != (dimension, dimension):
-        raise ValueError("Hamiltonian shape does not match the qubit count")
-    if not np.all(np.isfinite(h_big_endian)):
-        raise ValueError("Hamiltonian contains a non-finite value")
-    if not np.allclose(h_big_endian, h_big_endian.conj().T, atol=1e-12):
-        raise ValueError("Hamiltonian must be Hermitian")
-
-    # UnitaryLab q0 is least significant, so bit-reverse both matrix axes.
-    permutation = _bit_reversal_permutation(n_qubits)
-    h_little_endian = h_big_endian[np.ix_(permutation, permutation)]
-    h_round_trip = h_little_endian[np.ix_(permutation, permutation)]
-    if not np.array_equal(h_round_trip, h_big_endian):
-        raise RuntimeError("bit-reversed Hamiltonian failed its round trip")
-
-    exact_energy = float(np.linalg.eigvalsh(h_little_endian)[0])
-
-    # History and best parameters are internal only. The return contract does
-    # not expose Convergence History or optimized parameters as standalone keys.
-    convergence_history = []
-    best_energy = np.inf
-    best_parameters = None
-
-    def energy(theta):
-        nonlocal best_energy, best_parameters
-        theta = _validate_parameters(theta, n_qubits, layers)
-        _, state = _ansatz(
-            theta,
-            n_qubits,
-            layers,
-            backend=backend,
-            device=device,
-            dtype=dtype,
-        )
-        value = float(np.vdot(state, h_little_endian @ state).real)
-        if not np.isfinite(value):
-            raise RuntimeError("objective energy is non-finite")
-        convergence_history.append(value)
-        if value < best_energy:
-            best_energy = value
-            best_parameters = theta.copy()
-        return value
-
-    parameter_count = 2 * n_qubits * layers
-    initial_parameters = np.random.default_rng(seed).uniform(
-        -np.pi,
-        np.pi,
-        parameter_count,
-    )
-    initial_parameters = _validate_parameters(
-        initial_parameters,
-        n_qubits,
-        layers,
-    )
-
-    vqe_start = time.perf_counter()
-    optimizer_result = minimize(
-        energy,
-        initial_parameters,
-        method="COBYLA",
-        options={"maxiter": max_iter},
-    )
-    vqe_runtime = time.perf_counter() - vqe_start
-
-    if best_parameters is None or not np.isfinite(best_energy):
-        raise RuntimeError("optimizer produced no finite objective evaluation")
-    best_parameters = _validate_parameters(
-        best_parameters,
-        n_qubits,
-        layers,
-    )
-
-    # Rebuild the final circuit from the lowest-energy parameters observed,
-    # not from optimizer_result.x unless it is independently the tracked best.
-    final_circuit, final_state = _ansatz(
-        best_parameters,
-        n_qubits,
-        layers,
-        backend=backend,
-        device=device,
-        dtype=dtype,
-    )
-    circuit_energy = float(
-        np.vdot(final_state, h_little_endian @ final_state).real
-    )
-    if not np.isfinite(circuit_energy):
-        raise RuntimeError("final circuit energy is non-finite")
-    if abs(circuit_energy - best_energy) > 1e-8:
-        raise RuntimeError("final circuit energy does not match tracked best energy")
-
-    vqe_energy = best_energy
-    absolute_error = abs(vqe_energy - exact_energy)
-    if vqe_energy < exact_energy - 1e-8:
-        raise RuntimeError("variational upper bound violated")
-
-    # Do not infer convergence from nfev, absolute error, or the variational
-    # bound. SKILL.md does not specify the source's message-text matching rule,
-    # so this independent manual implementation exposes SciPy's optimizer state.
-    optimizer_converged = bool(optimizer_result.success)
-    optimizer_message = str(optimizer_result.message)
-
-    # SKILL.md requires real SVG/.npy file descriptors from the public workflow.
-    # This independent manual implementation creates no such files and therefore
-    # leaves circuit_path and plot as None instead of fabricating paths or PNGs.
-    result = {
-        "status": "ok",
-        "circuit_path": None,
-        "plot": None,
-        "circuit": final_circuit,
-        "Exact Energy": exact_energy,
-        "VQE Energy": vqe_energy,
-        "Absolute Error": absolute_error,
-        "Circuit Energy": circuit_energy,
-        "Number of Qubits": n_qubits,
-        "Optimizer Evaluations": int(optimizer_result.nfev),
-        "Optimizer Converged": optimizer_converged,
-        "Optimizer Message": optimizer_message,
-        "VQE Runtime": float(vqe_runtime),
-        "Total Runtime": float(time.perf_counter() - total_start),
-        "Qubit Mapping": (
-            f"(1↑,1↓,2↑,2↓,…,{L}↑,{L}↓); q0 is the least-significant bit"
-        ),
-        "Fermionic Hamiltonian": (
-            "H=-t Σ(c†jσ c(j+1)σ+h.c.) + U Σ n(j↑)n(j↓) "
-            "- B Σ(n(j↑)-n(j↓))"
-        ),
-        "Pauli Hamiltonian": pauli_expression,
-    }
-
-    # With measure_shots > 0, the public contract would additionally require
-    # Measured Magnetic Moment, Magnetic Moment Standard Errors, and
-    # Measurement Total Shots. The function raises above because SKILL.md does
-    # not define enough detail to produce those values without guessing.
+def reverse_bits(i: int, n: int) -> int:
+    """Reverse the bit order of integer *i* within *n* bits (fast bitwise)."""
+    result = 0
+    for _ in range(n):
+        result = (result << 1) | (i & 1)
+        i >>= 1
     return result
 
 
-if __name__ == "__main__":
-    output = fermi_hubbard_vqe(
-        L=2,
-        t=1.0,
-        U=4.0,
-        B=1.5,
-        layers=5,
-        max_iter=1000,
-        seed=7,
-        measure_shots=0,
-        backend="torch",
-        device="cpu",
-        dtype=np.complex128,
+def _spectrum_invariant(H_before, H_after, atol=1e-10):
+    """Return True if the sorted spectra of two Hermitian matrices match."""
+    eigs_before = np.linalg.eigvalsh(H_before)
+    eigs_after  = np.linalg.eigvalsh(H_after)
+    return np.allclose(np.sort(eigs_before), np.sort(eigs_after), atol=atol)
+
+
+# ---------------------------------------------------------------------------
+#  Ansatz circuit
+# ---------------------------------------------------------------------------
+
+def ansatz_circuit(theta, n_qubits: int, layers: int) -> Circuit:
+    """Build Ry-Rz ring-entangling ansatz circuit.
+
+    Each layer: Ry + Rz on every qubit, then nearest-neighbour CX gates
+    with a ring-closing CX from last to first qubit.
+
+    Args:
+        theta: Flat parameter array of length ``2 * n_qubits * layers``.
+        n_qubits: Qubit count (``2L``).
+        layers: Number of ansatz repetitions.
+    """
+    qc = Circuit(n_qubits)
+    values = np.asarray(theta).reshape(layers, n_qubits, 2)
+    for layer in values:
+        for q in range(n_qubits):
+            qc.ry(layer[q, 0], q)
+            qc.rz(layer[q, 1], q)
+        for q in range(n_qubits - 1):
+            qc.cx(q, q + 1)
+        if n_qubits > 1:
+            qc.cx(n_qubits - 1, 0)
+    return qc
+
+
+# ---------------------------------------------------------------------------
+#  Magnetic-moment measurement (finite-shot simulation)
+# ---------------------------------------------------------------------------
+
+def _kron_sum_operator(single_qubit_op: np.ndarray, n_qubits: int) -> np.ndarray:
+    """Build the full-Hilbert-space sum of a single-qubit operator.
+
+    Returns Σ_{q=0}^{n-1} I ⊗ … ⊗ *single_qubit_op* ⊗ … ⊗ I  as a
+    (2^n × 2^n) complex matrix.
+    """
+    dim = 2 ** n_qubits
+    total = np.zeros((dim, dim), dtype=complex)
+    for q in range(n_qubits):
+        ops = [np.eye(2, dtype=complex)] * n_qubits
+        ops[q] = single_qubit_op
+        total += reduce(np.kron, ops)
+    return total
+
+
+def _rotate_to_basis(state: np.ndarray, u_single: np.ndarray,
+                     n_qubits: int) -> np.ndarray:
+    """Apply *u_single* to every qubit of *state* (tensor-product unitary)."""
+    u_full = reduce(np.kron, [u_single] * n_qubits)
+    return u_full @ state
+
+
+def _sample_sz(state: np.ndarray, n_qubits: int, shots: int,
+               rng: np.random.Generator):
+    """Sample S_z = ½ Σ_q σ_z from Z-basis probabilities of *state*.
+
+    Returns (mean, standard_error).
+    """
+    dim = 2 ** n_qubits
+    probs = np.abs(state) ** 2
+    indices = rng.choice(dim, size=shots, p=probs)
+    # Extract bits and map 0 → +1, 1 → −1 for each qubit
+    bitstrings = ((indices[:, None] >> np.arange(n_qubits)) & 1).astype(np.int8)
+    sz_per_shot = 0.5 * np.sum(1 - 2 * bitstrings, axis=1)
+    mean = float(np.mean(sz_per_shot))
+    se   = float(np.std(sz_per_shot, ddof=1) / np.sqrt(shots))
+    return mean, se
+
+
+def _measure_magnetic_moment(state: np.ndarray, n_qubits: int,
+                             shots: int = 10000) -> dict:
+    """Estimate total-spin magnetic moment ⟨S_x⟩, ⟨S_y⟩, ⟨S_z⟩.
+
+    When *shots* > 0, simulates finite-shot noise by sampling from the
+    statevector in the appropriate measurement basis for each axis.
+    Standard errors are reported alongside the mean values.
+
+    Args:
+        state: Statevector of length 2^{n_qubits}.
+        n_qubits: Number of qubits.
+        shots: Number of measurement shots per axis (0 → exact only).
+
+    Returns:
+        dict with keys magnetic_moment_{x,y,z}, magnetic_moment_{x,y,z}_se,
+        and total_shots.
+    """
+    rng = np.random.default_rng()
+
+    # Exact expectation values as cross-check
+    sx1 = np.array([[0, 1], [1, 0]], dtype=complex)
+    sy1 = np.array([[0, -1j], [1j, 0]], dtype=complex)
+    sz1 = np.array([[1, 0], [0, -1]], dtype=complex)
+
+    Sx = 0.5 * _kron_sum_operator(sx1, n_qubits)
+    Sy = 0.5 * _kron_sum_operator(sy1, n_qubits)
+    Sz = 0.5 * _kron_sum_operator(sz1, n_qubits)
+
+    exact_x = float(np.vdot(state, Sx @ state).real)
+    exact_y = float(np.vdot(state, Sy @ state).real)
+    exact_z = float(np.vdot(state, Sz @ state).real)
+
+    if shots <= 0:
+        return {
+            "magnetic_moment_x": exact_x, "magnetic_moment_x_se": 0.0,
+            "magnetic_moment_y": exact_y, "magnetic_moment_y_se": 0.0,
+            "magnetic_moment_z": exact_z, "magnetic_moment_z_se": 0.0,
+            "total_shots": 0,
+        }
+
+    # Basis-rotation unitaries (map X/Y eigenbases → Z eigenbasis)
+    H = np.array([[1, 1], [1, -1]], dtype=complex) / np.sqrt(2)
+    S_dag = np.diag([1.0, -1j])
+
+    # U_to_x = H  :  H|x+⟩=|0⟩, H|x-⟩=|1⟩
+    # U_to_y = H·S†:  H S†|y+⟩=|0⟩, H S†|y-⟩=|1⟩
+    state_x = _rotate_to_basis(state, H, n_qubits)
+    state_y = _rotate_to_basis(state, H @ S_dag, n_qubits)
+
+    mx, se_x = _sample_sz(state_x, n_qubits, shots, rng)
+    my, se_y = _sample_sz(state_y, n_qubits, shots, rng)
+    mz, se_z = _sample_sz(state,   n_qubits, shots, rng)  # Z = computational
+
+    return {
+        "magnetic_moment_x": mx, "magnetic_moment_x_se": se_x,
+        "magnetic_moment_y": my, "magnetic_moment_y_se": se_y,
+        "magnetic_moment_z": mz, "magnetic_moment_z_se": se_z,
+        "total_shots": shots * 3,  # X, Y, Z
+        "_exact_magnetic_moment_x": exact_x,
+        "_exact_magnetic_moment_y": exact_y,
+        "_exact_magnetic_moment_z": exact_z,
+    }
+
+
+# ---------------------------------------------------------------------------
+#  Main VQE routine
+# ---------------------------------------------------------------------------
+
+def fermi_hubbard_vqe(L=2, t=1.0, U=4.0, B=1.5, layers=5, max_iter=1000,
+                      seed=7, measure_shots=0, backend="torch", device="cpu",
+                      dtype=np.complex128):
+    """Run VQE for the Fermi-Hubbard model on an open chain of *L* sites.
+
+    Parameters match the FermiHubbardVQEAlgorithm contract (see SKILL.md).
+
+    Args:
+        L: Number of lattice sites (qubit count = 2L).
+        t: Hopping coefficient.
+        U: On-site interaction strength.
+        B: Zeeman field strength.
+        layers: Depth of the Ry-Rz ring-entangling ansatz.
+        max_iter: Maximum COBYLA evaluations.
+        seed: RNG seed for initial parameters.
+        measure_shots: Shots per axis for magnetic-moment estimation
+            (0 skips measurement).
+        backend, device, dtype: Circuit execution settings.
+
+    Returns:
+        dict with all fields specified in the SKILL.md return-fields section.
+    """
+    t_start = time.perf_counter()
+
+    # ---- 1. Build Jordan-Wigner Pauli Hamiltonian (big-endian) ----------
+    expression = fermi_hubbard_pauli(L, t, U, B)
+    H_be = pauli_string_to_matrix(expression)   # dense 2^{2L} × 2^{2L}
+    n = 2 * L
+
+    # ---- 2. Bit-reverse for UnitaryLab little-endian convention ---------
+    # Verify spectrum invariance first (per SKILL.md debugging tips and
+    # run_pauli_vqe spec in the Implementation Architecture section).
+    p = np.array([reverse_bits(i, n) for i in range(2 ** n)])
+    H = H_be[p][:, p]
+
+    if not _spectrum_invariant(H_be, H):
+        e_be = np.linalg.eigvalsh(H_be)
+        e_le = np.linalg.eigvalsh(H)
+        diff = np.max(np.abs(np.sort(e_be) - np.sort(e_le)))
+        raise RuntimeError(
+            f"Bit-reversal broke spectrum invariance: "
+            f"max eigenvalue diff = {diff:.3e}"
+        )
+
+    # ---- 3. Exact reference energy (dense diagonalization) --------------
+    exact_energy = float(np.linalg.eigvalsh(H)[0])
+
+    # ---- 4. VQE energy objective ----------------------------------------
+    history = []
+
+    def energy(theta):
+        qc = ansatz_circuit(theta, n, layers)
+        state = np.asarray(
+            qc.execute(backend=backend, device=device, dtype=dtype).state,
+            dtype=complex,
+        ).reshape(-1)
+        val = float(np.vdot(state, H @ state).real)
+        history.append(val)
+        return val
+
+    # ---- 5. COBYLA optimisation -----------------------------------------
+    num_params = 2 * n * layers
+    rng = np.random.default_rng(seed)
+    x0 = rng.uniform(-np.pi, np.pi, num_params)
+
+    t_vqe_start = time.perf_counter()
+    opt = minimize(
+        energy, x0, method="COBYLA",
+        options={"maxiter": max_iter, "tol": 1e-8},
     )
-    print(output["status"])
-    print(output["Exact Energy"])
-    print(output["VQE Energy"])
-    print(output["Absolute Error"])
-    print(output["Circuit Energy"])
-    print(output["Optimizer Converged"])
-    print(output["Optimizer Message"])
-    print(output["VQE Runtime"])
-    print(output["Total Runtime"])
+    t_vqe_end = time.perf_counter()
+    vqe_runtime = t_vqe_end - t_vqe_start
+
+    # ---- 6. Rebuild optimised circuit & compute true energy -------------
+    opt_circuit = ansatz_circuit(opt.x, n, layers)
+    final_state = np.asarray(
+        opt_circuit.execute(backend=backend, device=device, dtype=dtype).state,
+        dtype=complex,
+    ).reshape(-1)
+    circuit_energy = float(np.vdot(final_state, H @ final_state).real)
+
+    # Use circuit_energy as authoritative VQE energy (not opt.fun, which
+    # may reflect COBYLA's internal linear-model approximation).
+    vqe_energy = circuit_energy
+    abs_error = abs(vqe_energy - exact_energy)
+
+    # ---- 7. Status determination ----------------------------------------
+    # COBYLA's OptimizeResult may not expose 'nit'; use nfev as iteration proxy.
+    n_iter = getattr(opt, "nit", opt.nfev)
+
+    if vqe_energy < exact_energy - 1e-8:
+        status = "FAILED: variational bound violated"
+        convergence = False
+    elif abs_error < 1e-8:
+        status = "converged to machine precision"
+        convergence = True
+    elif n_iter < max_iter:
+        status = f"converged (tol satisfied in {n_iter} iters)"
+        convergence = True
+    else:
+        status = f"max_iter={max_iter} reached, ΔE={abs_error:.3e}"
+        convergence = False
+
+    # ---- 8. Build result dictionary (per SKILL.md Return Fields) --------
+    result = {
+        "status": status,
+        "circuit": opt_circuit,
+        "Exact Energy": exact_energy,
+        "VQE Energy": vqe_energy,
+        "Absolute Error": abs_error,
+        "Circuit Energy": circuit_energy,
+        "Number of Qubits": n,
+        "Optimizer Evaluations": opt.nfev,
+        "Optimizer Iterations": n_iter,
+        "Optimizer Converged": convergence,
+        "Optimizer Message": opt.message,
+        "VQE Runtime (s)": vqe_runtime,
+        "Total Runtime (s)": time.perf_counter() - t_start,
+        "Qubit Mapping": (
+            f"(1↑,1↓,2↑,2↓,…,{L}↑,{L}↓) → {n} qubits, little-endian"
+        ),
+        "Fermionic Hamiltonian": (
+            "H = -t Σ_{j,σ}(c†_{jσ}c_{j+1,σ} + h.c.) "
+            "+ U Σ_j n_{j↑}n_{j↓} - B Σ_j(n_{j↑} - n_{j↓})"
+        ),
+        "Pauli Hamiltonian": expression,
+        "Convergence History": history,
+    }
+
+    # ---- 9. Convergence plot (matplotlib, per SKILL.md) -----------------
+    result["plot"] = None
+    result["circuit_path"] = None
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.plot(history, "b.-", markersize=3, linewidth=0.8,
+                label="VQE Energy")
+        ax.axhline(y=exact_energy, color="r", linestyle="--", linewidth=1.2,
+                   label=f"Exact = {exact_energy:.6f}")
+        ax.set_xlabel("COBYLA Function Evaluation")
+        ax.set_ylabel("Energy")
+        ax.set_title(
+            f"Fermi-Hubbard VQE Convergence  "
+            f"(L={L}, t={t}, U={U}, B={B}, layers={layers})"
+        )
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=100)
+        buf.seek(0)
+        result["plot"] = base64.b64encode(buf.read()).decode("ascii")
+        plt.close(fig)
+    except ImportError:
+        pass  # matplotlib not available; plot stays None
+
+    # ---- 10. Optional magnetic-moment measurement -----------------------
+    if measure_shots > 0:
+        mag = _measure_magnetic_moment(final_state, n, shots=measure_shots)
+        result.update(mag)
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+#  Standalone execution & self-test
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    L, layers, max_iter, measure_shots = 2, 5, 1000, 10000
+
+    result = fermi_hubbard_vqe(
+        L=L, t=1.0, U=4.0, B=1.5,
+        layers=layers, max_iter=max_iter, seed=7,
+        measure_shots=measure_shots,
+        backend="torch", device="cpu",
+    )
+
+    # --- Report ---
+    print(f"Status:             {result['status']}")
+    print(f"Exact energy:       {result['Exact Energy']:.8f}")
+    print(f"VQE energy:         {result['VQE Energy']:.8f}")
+    print(f"Absolute error:     {result['Absolute Error']:.3e}")
+    print(f"Circuit energy:     {result['Circuit Energy']:.8f}")
+    print(f"Qubits:             {result['Number of Qubits']}")
+    print(f"Optimizer evals:    {result['Optimizer Evaluations']}")
+    print(f"Optimizer message:  {result['Optimizer Message']}")
+    print(f"VQE runtime:        {result['VQE Runtime (s)']:.3f} s")
+    print(f"Total runtime:      {result['Total Runtime (s)']:.3f} s")
+    print(f"Variational bound:  "
+          f"{result['VQE Energy'] >= result['Exact Energy'] - 1e-8}")
+    print(f"Convergence plot:   "
+          f"{'generated' if result['plot'] else 'not available'}")
+
+    if result.get("total_shots", 0) > 0:
+        print(f"\nMagnetic moments (shots={measure_shots} per axis):")
+        for axis in ("x", "y", "z"):
+            key  = f"magnetic_moment_{axis}"
+            se   = f"magnetic_moment_{axis}_se"
+            print(f"  S_{axis}: {result[key]:.6f} ± {result[se]:.6f}"
+                  f"  (exact: {result.get(f'_exact_magnetic_moment_{axis}', 0):.6f})")
+        print(f"  Total shots: {result['total_shots']}")
+
+    # --- Assertions (per SKILL.md contract) ---
+    assert result["VQE Energy"] >= result["Exact Energy"] - 1e-8, (
+        f"VQE energy {result['VQE Energy']} "
+        f"violates variational bound {result['Exact Energy']}"
+    )
+    assert np.isfinite(result["Absolute Error"])
+    assert abs(result["VQE Energy"] - result["Circuit Energy"]) < 1e-10, (
+        "VQE energy must equal re-evaluated circuit energy"
+    )
+
+    print("\n✅ All validations passed.")

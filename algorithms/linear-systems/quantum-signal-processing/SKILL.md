@@ -1,10 +1,13 @@
 ---
 name: quantum-signal-processing
-description: Basic Quantum Signal Processing (QSP) demo for single-qubit signal operators, phase-factor optimization, and scalar polynomial approximation such as cos(t*x). Use the Hamiltonian-simulation QSP-HS skill instead for block-encoded Hamiltonians and e^{-iHt}.
+description: "Basic Quantum Signal Processing (QSP) demo for single-qubit signal operators, phase-factor optimization, and scalar polynomial approximation such as cos(t*x). Use the Hamiltonian-simulation QSP-HS skill instead for block-encoded Hamiltonians and e^{-iHt}. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
+
 # Quantum Signal Processing (QSP)
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement the basic single-qubit Quantum Signal Processing (QSP) demo.
 
 Quantum Signal Processing implements a polynomial transformation $P(x)$ of a scalar signal $x$ using a sequence of single-qubit signal-processing rotations and phase operators. This implementation demonstrates basic QSP applied to function approximation: approximating $\cos(t \cdot x)$ at a test point.
 
@@ -14,6 +17,14 @@ Use this skill when you need to:
 - Inspect phase-factor optimization and QSP circuit structure.
 
 Do not use this skill for QSP Hamiltonian simulation. If the request mentions a Hamiltonian matrix `H`, time evolution $e^{-iHt}$, block encoding, Chebyshev expansions of $\cos(tH)$ and $\sin(tH)$, or the `QSPHSAlgorithm` class, use `../../hamiltonian-simulation/qsp/SKILL.md`.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -32,7 +43,7 @@ The phase sequence $\Phi$ is optimized (via L-BFGS-B) to approximate the target 
 - Polynomial approximation concepts (Chebyshev expansion).
 - Python: `numpy`, `scipy.optimize`, `Circuit`, `Register`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab_algorithms import QSPAlgorithm
@@ -111,6 +122,7 @@ Total gates: `2d + 1`. The `theta = arccos(clip(x, -1, 1))` is a fixed parameter
 **Data flow:** `(t, d)` → `_find_phases()` → `phases` array → `Circuit` with Rz/Rx gates → `execute()` → `final_state[0]` → `abs_error` vs. `ideal_val = np.cos(t * x)` → `_build_return_dict()` → result dict.
 
 ## Understanding the Key Quantum Components
+
 $$W(x) = \begin{pmatrix} x & i\sqrt{1-x^2} \\ i\sqrt{1-x^2} & x \end{pmatrix}$$
 Implemented as $R_x(2\arccos(x))$ on the single qubit. This maps the scalar signal $x$ into a 2×2 rotation.
 
@@ -144,14 +156,15 @@ over $2d+1$ Chebyshev sample points $x_j = \cos\left(\frac{(2j-1)\pi}{4\tilde{d}
 
 **Notes on implementation vs. theory:** The README describes exact Chebyshev sample points, but the code uses `np.linspace(-1, 1, 2*d+1)` (uniformly spaced) as the optimization grid. The loss function is identical in structure. The `_find_phases` uses 2×2 matrix products for efficiency, not the quantum simulator. The returned `'Absolute error'` is evaluated only at `x`, not over the full interval — it is a spot check, not a worst-case bound.
 
-## Mathematical Deep Dive with $|P(x)| \leq 1$ for all $x \in [-1,1]$ and parity $d \bmod 2$, there exist phases $\Phi$ such that:
+## Mathematical Deep Dive
+
 $$\langle 0|U_\Phi(x)|0\rangle = P(x)$$
 
 **Function approximation target:** $P(x) = \cos(t \cdot x)$, approximated by a degree-$d$ truncated Chebyshev expansion. For $t$ fixed, error decreases exponentially in $d$.
 
 **Complexity:** The circuit uses $d+1$ single-qubit gates plus $2d+1$ $R_z$ gates — total $O(d)$ gates.
 
-## Hands-On Example (UnitaryLab)
+## Hands-On Example
 
 ```python
 from unitarylab_algorithms import QSPAlgorithm
@@ -166,47 +179,7 @@ for x_test in [0.0, 0.3, 0.7, 1.0]:
     print(f"x={x_test:.1f}: error={result['Absolute error']:.2e}, ideal={ideal:.4f}")
 ```
 
-
-## Reference Implementation (PennyLane)
-
-The main implementation path in this project remains the **UnitaryLab QSP implementation** based on `QSPAlgorithm`, `Circuit`, and alternating `Rz/Rx` signal-processing rotations.
-
-PennyLane is provided here only as a reference implementation for the more general **Quantum Singular Value Transformation (QSVT)** framework. Compared with the current UnitaryLab QSP example, PennyLane QSVT applies polynomial transformations to the singular values of a block-encoded matrix or operator.
-
-### Example A: Minimal PennyLane QSVT Run with Matrix Block Encoding
-
-```python
-import pennylane as qml
-import numpy as np
-
-# Hermitian input matrix A
-A = np.array([
-    [0.1, 0.2],
-    [0.2, -0.4],
-])
-
-# Polynomial P(x) = 0.2 + 0.3x^2
-# Coefficients are ordered from lowest to highest power.
-poly = np.array([0.2, 0.0, 0.3])
-
-dev = qml.device("default.qubit", wires=[0, 1])
-
-@qml.qnode(dev)
-def circuit():
-    qml.qsvt(
-        A,
-        poly,
-        encoding_wires=[0, 1],
-        block_encoding="embedding",
-    )
-    return qml.state()
-
-result = circuit()
-print(result)
-
-```
-
-## Minimal Manual Implementation (UnitaryLab) 
+## Minimal Manual Implementation
 
 The following Python skeleton reconstructs the key components: phase optimization and the alternating QSP circuit.
 
@@ -285,3 +258,42 @@ def qsp_approximate(t: float, d: int, x: float, backend: str = 'torch'):
 3. **`x` outside $[-1, 1]$**: Internally clipped by `np.clip`. Ensure your signal values are in the valid domain.
 4. **Error non-zero at `x=0`**: $\cos(t \cdot 0) = 1$; if error is large here with small `t`, the optimizer may have gotten stuck. Re-run to get a different random initialization.
 5. **Random phase initialization**: `_find_phases()` uses `np.random.randn(d+1)*0.1` as starting phases. Results may vary across runs; simply re-run `algo.run()` to try a different initialization.
+
+## Reference Implementation
+
+The main implementation path in this project remains the **UnitaryLab QSP implementation** based on `QSPAlgorithm`, `Circuit`, and alternating `Rz/Rx` signal-processing rotations.
+
+PennyLane is provided here only as a reference implementation for the more general **Quantum Singular Value Transformation (QSVT)** framework. Compared with the current UnitaryLab QSP example, PennyLane QSVT applies polynomial transformations to the singular values of a block-encoded matrix or operator.
+
+### Example A: Minimal PennyLane QSVT Run with Matrix Block Encoding
+
+```python
+import pennylane as qml
+import numpy as np
+
+# Hermitian input matrix A
+A = np.array([
+    [0.1, 0.2],
+    [0.2, -0.4],
+])
+
+# Polynomial P(x) = 0.2 + 0.3x^2
+# Coefficients are ordered from lowest to highest power.
+poly = np.array([0.2, 0.0, 0.3])
+
+dev = qml.device("default.qubit", wires=[0, 1])
+
+@qml.qnode(dev)
+def circuit():
+    qml.qsvt(
+        A,
+        poly,
+        encoding_wires=[0, 1],
+        block_encoding="embedding",
+    )
+    return qml.state()
+
+result = circuit()
+print(result)
+
+```

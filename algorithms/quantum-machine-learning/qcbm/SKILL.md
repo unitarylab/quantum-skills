@@ -1,17 +1,27 @@
 ---
 name: qcbm
-description: Skill for understanding, using, and implementing the Quantum Circuit Born Machine (QCBM) for learning discrete probability distributions (Bars-and-Stripes) via the QCBMAlgorithm class.
+description: "Skill for understanding, using, and implementing the Quantum Circuit Born Machine (QCBM) for learning discrete probability distributions (Bars-and-Stripes) via the QCBMAlgorithm class. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Quantum Circuit Born Machine (QCBM)
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Quantum Circuit Born Machine (QCBM).
 
 QCBM is an unsupervised generative model that uses the Born rule to map a parameterized quantum circuit's measurement outcomes to a probability distribution. It learns to match an arbitrary target distribution by minimizing KL divergence.
 
 Use this skill when you need to:
 - Learn and generate samples from a discrete probability distribution using a quantum circuit.
 - Demonstrate generative quantum machine learning with Born-rule probabilities.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -27,7 +37,7 @@ Use this skill when you need to:
 - Adam optimizer.
 - `torch`, `numpy`, `Circuit`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab_algorithms import QCBMAlgorithm
@@ -145,7 +155,7 @@ $$\frac{\partial \mathcal{L}}{\partial \theta_{l,q}} = \frac{1}{2}\left[\mathcal
 
 ## Mathematical Deep Dive
 
-**State:** $|\psi(\theta)\rangle = U(\theta)|0^n\rangle = \prod_{l=1}^{L}[\text{CX-ring} \cdot \bigotimes_q R_y(\theta_{l,q})]|0^n\rangle$.
+**State:** $|\psi(\theta)\rangle = U(\theta)|0^n\rangle = \prod_{l=1}^{L}[\text{CX-ring} \cdot \bigotimes_q R_z(\theta_{l,q})]|0^n\rangle$.
 
 **Probabilities:** $\mathbf{p}_\theta = (p_\theta(0), \ldots, p_\theta(2^n-1))$ where $\sum_x p_\theta(x) = 1$.
 
@@ -164,7 +174,7 @@ for text_mode in ["plain", "legacy"]:
     print(f"Outputs: {[f['filename'] for f in result['plot']]}")
 ```
 
-## Implementing Your Own Version
+## Minimal Manual Implementation
 
 The following skeleton reconstructs the QCBM circuit builder, Born-rule probability extraction, and Parameter Shift gradient loop.
 

@@ -1,6 +1,6 @@
 ---
 name: pauli
-description: 使用固定 Pauli-word 旋转序列，通过保真度优化近似制备目标态，并用全局相位不变的 L2 误差验证结果。
+description: "使用固定 Pauli-word 旋转序列，通过保真度优化近似制备目标态，并用全局相位不变的 L2 误差验证结果。"
 ---
 
 # Pauli-Word State Preparation
@@ -24,7 +24,7 @@ When using this skill:
 - **Run or reuse:** Generate standalone task code that imports `PauliAlgorithm` from `unitarylab_algorithms`. Do not import from or depend on this skill's `scripts/` directory at runtime.
 - **Debugging:** Run the documented one-qubit example first. Verify the Pauli-word dependency, parameter count, objective/gradient agreement, returned state, `"ok"` or `"failed"` status, and numerical tolerances before changing code.
 - **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the formal Pauli-word sequence, rotation product order, deterministic guesses, optimizer options, candidate selection, emitted circuit, and return contract.
-- **Reference scripts:** Treat `scripts/algorithm.py` and `scripts/pauli_implementation.py` as reference-only material. The latter generates its own Pauli words and uses different phase alignment, so it is not source-equivalent. The formal source at `unitarylab_algorithms/state_preparation/pauli/algorithm.py` is authoritative.
+- **Reference scripts:** `scripts/pauli_implementation.py` is a standalone implementation of the documented formal Pauli-word sequence, fidelity objective, shifted-gradient optimization, circuit emission, and return contract. Use the formal algorithm description in this file as the behavioral reference when extending it.
 - **Validation:** Validate a small deterministic state with fidelity, infidelity, source `Total error`, finite weights, and gradient checks. Report dependency compatibility, optimizer convergence, backend assumptions, ansatz limitations, and scale limits.
 
 ## Overview

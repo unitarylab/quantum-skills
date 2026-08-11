@@ -1,17 +1,27 @@
 ---
 name: discretelog
-description: Use when users ask about solving the discrete logarithm problem g^x ≡ y (mod P) with Shor-style two-register Fourier sampling, building/explaining DLP circuits, running simulator demos, or debugging post-processing (continued fractions plus two-dimensional Fourier-sample congruence solving). Relevant trigger terms include discrete log, DLP, Shor discrete logarithm, g^x mod P, modular exponentiation, two-dimensional Fourier sampling, continued fractions, congruence solving, and quantum cryptography demos.
+description: "Use when users ask about solving the discrete logarithm problem g^x ≡ y (mod P) with Shor-style two-register Fourier sampling, building/explaining DLP circuits, running simulator demos, or debugging post-processing (continued fractions plus two-dimensional Fourier-sample congruence solving). Triggers: discrete log, DLP, Shor discrete logarithm, g^x mod P, modular exponentiation, two-dimensional Fourier sampling, continued fractions, congruence solving, quantum cryptography demo. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Discrete Logarithm Algorithm (DLG)
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Discrete Logarithm Algorithm (DLG).
 
 Solves the discrete logarithm problem (DLP): given $g$, $y$, and prime $P$ with $g^x \equiv y \pmod{P}$, find $x$. The quantum algorithm runs in polynomial time $O(n^3)$ where $n = \log_2 P$, compared to the best classical sub-exponential algorithms.
 
 Use this skill when you need to:
 - Demonstrate a quantum attack on DLP-based cryptography (Diffie-Hellman, ECC).
 - Understand the two-register Fourier-sampling version of Shor's discrete logarithm algorithm.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -30,7 +40,7 @@ Use this skill when you need to:
 - Continued fractions algorithm.
 - Python: `numpy`, `Circuit`, `Register`, `unitarylab.library.IQFT`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab_algorithms import DiscreteLogAlgorithm
@@ -106,7 +116,7 @@ print(result.get('Computation time (s)')) # Simulation time in seconds
 
 - **`_get_modular_matrix(a, N, n_qubits)`** — Builds a $2^{n\_work} \times 2^{n\_work}$ permutation matrix for the map $z \mapsto (a \cdot z) \bmod P$ (identity for $z \geq P$). Used for both $g^{2^i}$ and $(y^{-1})^{2^j}$ controlled applications.
 - **`_classical_post_processing(probs, g, y, P, n, N_size)`** — Multi-step classical routine. This is not a one-dimensional period-finding post-process; it uses the joint sample from both counting registers:
-  1. Sorts bitstrings by probability (the `marginal_probabilities` return value maps each bitstring directly to a float probability); skips entries below 0.02.
+  1. Sorts bitstrings by probability; skips entries below 0.02.
   2. Splits each bitstring into `v_bin = bitstring[:n]` and `u_bin = bitstring[n:]`, then converts them to integers `u, v`.
   3. Applies `Fraction(u, N_size).limit_denominator(P)` to estimate the rational sample component `s/r`, producing candidate `(s_base, r_base)`.
   4. Searches multiples of `r_base` to find the true group order `r` where `g^r ≡ 1 (mod P)`.
@@ -116,9 +126,10 @@ print(result.get('Computation time (s)')) # Simulation time in seconds
 
 **Register address translation:** The `get_p(reg_slice)` inline function inside `run()` translates named register slices into flat qubit indices by adding the appropriate offset (`0` for reg_a, `n_count` for reg_b, `2*n_count` for reg_work).
 
-**Data flow:** `(g, y, P)` → register + oracle construction → `qc.execute()` → `res_vec.marginal_probabilities()` → `_classical_post_processing()` → `found_x` → `_build_return_dict()`.
+**Data flow:** `(g, y, P)` → register + oracle construction → `qc.execute()` → `res_vec.marginal_probabilities(qubits=range(2*n_count), threshold=1e-5)` → `_classical_post_processing()` → `found_x` → `_build_return_dict()`.
 
 ## Understanding the Key Quantum Components
+
 Both reg_A and reg_B are placed in uniform superposition:
 $$\frac{1}{N}\sum_{a=0}^{N-1}\sum_{b=0}^{N-1}|a\rangle|b\rangle|1\rangle_{\text{work}}$$
 where $N = 2^{n_{\text{count}}}$.
@@ -168,7 +179,7 @@ Do not describe this as a purely one-dimensional continued-fraction period extra
 | Controlled $(y^{-1})^{2^j} \bmod P$ via reg_b bit $j$ | Same pattern with `y_inv = pow(y, -1, P)` |
 | Inverse QFT on reg_a | `qc.append(IQFT(n_count), get_p(ra[:]))` |
 | Inverse QFT on reg_b | `qc.append(IQFT(n_count), get_p(rb[:]))` |
-| Probability distribution over (A, B) | `state_obj.marginal_probabilities(qubits=range(2*n_count), threshold=1e-5)` marginalizes work register; returns a flat `{bitstring: probability}` dict |
+| Probability distribution over (A, B) | `state_obj.marginal_probabilities(qubits=range(2*n_count), threshold=1e-5)` marginalizes work register |
 | Split joint two-register sample | `v_bin = bitstring[:n]`, `u_bin = bitstring[n:]`; then `u, v = int(u_bin, 2), int(v_bin, 2)` |
 | Continued fractions: $u/N \approx s/r$ | `Fraction(u, N_size).limit_denominator(P)` |
 | True group order $r$: $g^r \equiv 1$ | Search loop over multiples of `r_base` with `pow(g, r_base*k, P) == 1` |
@@ -188,7 +199,7 @@ Do not describe this as a purely one-dimensional continued-fraction period extra
 
 **Complexity:** $O(n^3)$ gates where $n = \lceil\log_2 P\rceil$. Classical best: sub-exponential $O(\exp(\sqrt{n\log n}))$ via index calculus.
 
-## Hands-On Example (UnitaryLab)
+## Hands-On Example
 
 ```python
 from unitarylab_algorithms import DiscreteLogAlgorithm
@@ -204,7 +215,7 @@ print(f"Verify: 3^3 mod 7 = {pow(3, 3, 7)}")        # Should be 6
 print(result.get('plot', []))  # [{"format": "txt", "filename": "..."}]
 ```
 
-## Implementing Your Own Version
+## Minimal Manual Implementation
 
 Below is a skeleton that reconstructs the discrete-log quantum circuit at the component level, matching `DiscreteLogAlgorithm`.
 
@@ -277,9 +288,9 @@ def solve_dlp(g: int, y: int, P: int, backend: str = 'torch', device: str = 'cpu
     probs_dict = res_vec.marginal_probabilities(qubits=range(2 * n_count), threshold=1e-5)
 
     # Sort by probability and post-process the two-dimensional Fourier sample.
-    sorted_probs = sorted(probs_dict.items(), key=lambda item: item[1], reverse=True)
-    for bitstring, probability in sorted_probs:
-        if probability < 0.02:
+    sorted_probs = sorted(probs_dict.items(), key=lambda item: item[1]['prob'], reverse=True)
+    for bitstring, data in sorted_probs:
+        if data['prob'] < 0.02:
             continue
         v_bin, u_bin = bitstring[:n_count], bitstring[n_count:]
         u, v = int(u_bin, 2), int(v_bin, 2)
@@ -315,9 +326,14 @@ def solve_dlp(g: int, y: int, P: int, backend: str = 'torch', device: str = 'cpu
 - `build_dlp_circuit` — two-register Fourier sampling: register $a$ accumulates powers of $g$, register $b$ accumulates powers of $y^{-1}$, both followed by IQFT.
 - `solve_dlp` — measures both registers, uses continued fractions on `u/N` to estimate `s/r`, combines `v` through `target = round(v*r/N)`, and solves the congruence `s*x ≡ -target (mod r)`.
 
+## Debugging Tips
 
+1. **Simulation is slow**: Qubit count is $5\lfloor\log_2 P\rfloor$; exponential in bits. Keep $P$ small ($P=7$, $11$, $13$).
+2. **`Found x` is `None`**: The joint sample may not yield a usable continued-fraction estimate or solvable congruence. Re-run (the algorithm is probabilistic) or increase $n_{\text{count}}$.
+3. **`g` and `y` not coprime to `P`**: Will raise `ValueError`. Ensure $\gcd(g, P) = \gcd(y, P) = 1$.
+4. **Wrong answer**: The quantum measurement gives the correct answer with high probability but not certainty. The classical post-processing verifies correctness; if wrong, retry.
 
-## Reference Implementation (Classiq)
+## Reference Implementation
 
 Classiq provides a high-level QMOD implementation of the discrete logarithm algorithm. It uses `@qfunc` to define modular exponentiation, the discrete-log oracle, inverse `qft`, model creation, synthesis, and execution.
 
@@ -423,10 +439,3 @@ result = execute(qprog).result_value()
 print(result)
 
 ```
-
-## Debugging Tips
-
-1. **Simulation is slow**: Qubit count is $5\lfloor\log_2 P\rfloor$; exponential in bits. Keep $P$ small ($P=7$, $11$, $13$).
-2. **`Found x` is `None`**: The joint sample may not yield a usable continued-fraction estimate or solvable congruence. Re-run (the algorithm is probabilistic) or increase $n_{\text{count}}$.
-3. **`g` and `y` not coprime to `P`**: Will raise `ValueError`. Ensure $\gcd(g, P) = \gcd(y, P) = 1$.
-4. **Wrong answer**: The quantum measurement gives the correct answer with high probability but not certainty. The classical post-processing verifies correctness; if wrong, retry.

@@ -1,6 +1,6 @@
 ---
 name: schrodingerization
-description: Quantum PDE solvers using Schrodingerization, transforming non-unitary PDEs into unitary Schrodinger-type dynamics for quantum simulation. Currently covers advection and heat equations in 1D/2D.
+description: "Quantum PDE solvers using Schrodingerization, transforming non-unitary PDEs into unitary Schrodinger-type dynamics for quantum simulation. Currently covers advection and heat equations in 1D/2D. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Schrodingerization - Quantum PDE Solvers

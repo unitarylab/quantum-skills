@@ -1,17 +1,27 @@
 ---
 name: vqc
-description: Skill for understanding, using, and implementing the Variational Quantum Classifier (VQC) for Iris dataset classification with data re-uploading and Parameter Shift Rule via the VQCAlgorithm class.
+description: "Skill for understanding, using, and implementing the Variational Quantum Classifier (VQC) for Iris dataset classification with data re-uploading and Parameter Shift Rule via the VQCAlgorithm class. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Variational Quantum Classifier (VQC)
 
-## Purpose
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Variational Quantum Classifier (VQC).
 
 VQC applies a parameterized quantum circuit to supervised classification. This implementation classifies the Iris dataset (4 features, 3 classes) using a single encoding layer followed by multiple variational layers; gradients are computed via the Parameter Shift Rule.
 
 Use this skill when you need to:
 - Classify tabular data with a hybrid quantum-classical neural network.
 - Demonstrate quantum machine learning with the Parameter Shift Rule.
+
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
 ## Overview
 
@@ -28,7 +38,7 @@ Use this skill when you need to:
 - Adam optimizer; cross-entropy loss.
 - `torch`, `numpy`, `sklearn`, `Circuit`.
 
-## Using the Provided Implementation
+## Reference Implementation Example
 
 ```python
 from unitarylab_algorithms.quantum_machine_learning.vqc.algorithm import VQCAlgorithm
@@ -108,6 +118,7 @@ The return value is built by `_build_return_dict(success, circuit_path, filepath
 **Data flow:** Iris data → `_build_circuit` × batches → `_get_batch_logits` → CrossEntropyLoss → manual parameter shift → `theta.grad` → Adam step → final params → `_evaluate` → result dict.
 
 ## Understanding the Key Quantum Components
+
 The 4 input features are encoded once at the beginning of the circuit as $R_y(x_i)$ rotations. The subsequent `layers` variational layers each apply trainable $R_y(\theta_{q,l})$ rotations followed by a ring of CNOT gates; no entanglement is added after the final layer.
 
 ### 2. Parameterized Circuit (Ansatz)
@@ -151,6 +162,7 @@ The Parameter Shift gradients are used with Adam, combining first and second mom
 **Notes on implementation:** The observable scale factor `10 *` in the loss computation boosts logit magnitudes before softmax — without it, the near-zero $\langle Z\rangle$ values lead to nearly uniform class probabilities and slow convergence. This is an engineering choice not reflected in the theory.
 
 ## Mathematical Deep Dive
+
 $$\mathcal{L} = -\frac{1}{|B|}\sum_{i\in B} \sum_{c=1}^3 y_{ic}\log[\text{softmax}(\mathbf{z}_i)_c]$$
 
 **Parameter Shift gradient:**
@@ -173,7 +185,7 @@ print(f"Quantum compute time: {result['Quantal Computation Time (s)']:.4f}s")
 print(result['plot'])  # list of {"format": ..., "filename": ...}
 ```
 
-## Implementing Your Own Version
+## Minimal Manual Implementation
 
 The following skeleton reconstructs the VQC data-reuploading circuit and Parameter Shift training loop from `VQCAlgorithm`.
 

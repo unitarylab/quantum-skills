@@ -1,13 +1,15 @@
 ---
 name: spsa
-description: Concise guide to the SPSA estimator and sampler gradient examples for parameterized quantum circuits.
+description: "Concise guide to the local SPSA estimator and sampler gradient implementations for parameterized quantum circuits. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # SPSA Gradient Estimation
 
-## Purpose
-Use this skill for the SPSA gradient examples in this folder:
-- `scripts/algorithm.py`
+## How to Use This Skill
+
+Use this skill when the user asks to explain, run, debug, modify, or reimplement SPSA Gradient Estimation.
+
+Use this skill for the SPSA gradient workflow documented in `scripts/algorithm.py`, which demonstrates the Qiskit `SPSAEstimatorGradient` entry point. The sampler path is described conceptually below, but this folder does not currently provide a separate sampler example script.
 
 They estimate gradients of:
 - expectation values via `SPSAEstimatorGradient`
@@ -15,7 +17,16 @@ They estimate gradients of:
 
 SPSA is useful when circuits have many parameters, because each batch needs only `2 * batch_size` circuit evaluations, independent of parameter count.
 
+When using this skill:
+- **Explanation:** Explain the algorithm, assumptions, mathematical model, and limitations. Do not generate code unless the user requests it.
+- **Run or reuse:** Generate standalone task code first. Do not import from or depend on this skill's `scripts/` directory at runtime.
+- **Debugging:** Run the smallest documented example first. Compare the observed result with the documented inputs, outputs, status fields, and numerical tolerances before changing code.
+- **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the documented parameter schema, execution flow, and return contract.
+- **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
+- **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
+
 ## Overview
+
 For each random perturbation vector `delta in {+1, -1}^d`, the implementation evaluates:
 - `f(theta + epsilon * delta)`
 - `f(theta - epsilon * delta)`
@@ -23,12 +34,14 @@ For each random perturbation vector `delta in {+1, -1}^d`, the implementation ev
 It then forms a central-difference estimate and averages across `batch_size` perturbations.
 
 ## Prerequisites
+
 - NumPy
 - Qiskit parameterized circuits
 - Estimator or Sampler primitives
 - Basic finite-difference gradient intuition
 
-## Using the Provided Implementation
+## Reference Implementation Example
+
 The real entry classes are:
 - `SPSAEstimatorGradient`
 - `SPSASamplerGradient`
@@ -108,11 +121,6 @@ Run inputs:
 - `parameters`
 - `precision`
 
-Return fields:
-- `gradients`
-- `metadata`
-- `precision`
-
 ### `SPSASamplerGradient`
 - `sampler`: sampling primitive
 - `epsilon`: perturbation size, must be positive
@@ -127,10 +135,21 @@ Run inputs:
 - `parameters`
 - `shots`
 
-Return fields:
-- `gradients`
-- `metadata`
-- `shots`
+## Return Fields
+
+### `SPSAEstimatorGradient` Result
+| Key | Type | Description |
+|---|---|---|
+| `gradients` | `list[np.ndarray]` | Gradient arrays, one per circuit |
+| `metadata` | `list[dict]` | Per-circuit metadata including `"parameters"` |
+| `precision` | `float \| list[float]` | Precision used |
+
+### `SPSASamplerGradient` Result
+| Key | Type | Description |
+|---|---|---|
+| `gradients` | `list[list[dict[int, float]]]` | Per-circuit gradient distributions |
+| `metadata` | `list[dict]` | Per-circuit metadata |
+| `shots` | `int \| list[int]` | Shot count used |
 
 ## Implementation Architecture
 
@@ -188,6 +207,7 @@ for each target parameter j:
 ```
 
 ## Understanding the Key Quantum Components
+
 - Parameterized circuit `U(theta)`
 - Estimator objective: expectation value `f(theta)`
 - Sampler objective: output distribution `p_theta(z)`
@@ -196,6 +216,7 @@ for each target parameter j:
 - Classical post-processing for gradient recovery
 
 ## Theory-to-Code Mapping
+
 - `theta`: `parameter_values`
 - `delta`: random `+1/-1` vectors built with NumPy RNG
 - `epsilon`: constructor argument `epsilon`
@@ -204,6 +225,7 @@ for each target parameter j:
 - batch average: NumPy mean or dict-value averaging
 
 ## Mathematical Deep Dive
+
 For scalar objective `f(theta)`:
 
 $$
@@ -221,6 +243,7 @@ Since `delta_i in {+1, -1}`, dividing by `delta_i` is equivalent to multiplying 
 For sampler gradients, the same idea is applied per output bitstring probability.
 
 ## Hands-On Example
+
 If you request only a parameter subset, the output keeps that order:
 
 ```python
@@ -240,7 +263,7 @@ Expected behavior:
 - output length matches requested parameter count
 - output order matches `parameters=[[...]]`
 
-## Implementing Your Own Version
+## Minimal Manual Implementation
 
 ```python
 import numpy as np
@@ -258,6 +281,7 @@ def spsa_gradient(eval_fn, theta, epsilon, batch_size, rng):
 This matches the core logic of the estimator implementation; the sampler version replaces scalar outputs with sparse probability dictionaries.
 
 ## Debugging Tips
+
 - `epsilon <= 0` raises `ValueError`.
 - In estimator mode, the input lists must have matching lengths.
 - Requested parameters must exist in the circuit.
