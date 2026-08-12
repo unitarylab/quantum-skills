@@ -21,7 +21,7 @@ When using this skill:
 - **Run or reuse:** Use `FermiHubbardVQEAlgorithm().run(...)` as the public entry point. Start with `L=2`, `seed=7`, and `measure_shots=0`; do not import internal adapter code as a second public workflow.
 - **Debugging:** Run the documented small example first. Check the mode order, `q0` least-significant-bit convention, bit-reversal round trip, returned energies, and optimizer fields before changing implementation code.
 - **Modification or reimplementation:** Preserve the documented parameter schema, Hamiltonian sign convention, output contract, best-observed-parameter behavior, and paired-mode measurement definition.
-- **Reference scripts:** Treat `scripts/algorithm.py` and `scripts/fermi_hubbard_vqe_implementation.py` as reference material for troubleshooting, API comparison, and validation; keep standalone reimplementations independent of the skill directory.
+- **Reference scripts:** Treat `scripts/algorithm.py` as the formal-class example and `scripts/fermi_hubbard_vqe_implementation.py` as an independent educational/reference implementation for troubleshooting, API comparison, and validation. Neither script is a runtime dependency; keep standalone reimplementations independent of the skill directory.
 - **Validation:** Compare `VQE Energy` with `Exact Energy`, check `VQE Energy >= Exact Energy - 1e-8`, and report optimizer convergence separately from absolute energy error. Mention backend, dependency, and exponential scaling limitations when relevant.
 
 ## Physical Scope and Assumptions

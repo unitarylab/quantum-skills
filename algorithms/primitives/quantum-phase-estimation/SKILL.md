@@ -23,6 +23,7 @@ When using this skill:
 - **Reference scripts:** Treat `scripts/algorithm.py` and any `*_implementation.py` files as reference-only material for troubleshooting, API comparison, and validation.
 - **Validation:** When practical, validate with a small deterministic example and report backend, dependency, and scale limitations.
 
+
 ## Overview
 
 1. Initialize a $d$-qubit phase register in $|0\rangle^d$ and a target register in the eigenstate $|\psi\rangle$.

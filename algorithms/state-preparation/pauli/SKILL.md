@@ -24,7 +24,7 @@ When using this skill:
 - **Run or reuse:** Generate standalone task code that imports `PauliAlgorithm` from `unitarylab_algorithms`. Do not import from or depend on this skill's `scripts/` directory at runtime.
 - **Debugging:** Run the documented one-qubit example first. Verify the Pauli-word dependency, parameter count, objective/gradient agreement, returned state, `"ok"` or `"failed"` status, and numerical tolerances before changing code.
 - **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve the formal Pauli-word sequence, rotation product order, deterministic guesses, optimizer options, candidate selection, emitted circuit, and return contract.
-- **Reference scripts:** `scripts/pauli_implementation.py` is a standalone implementation of the documented formal Pauli-word sequence, fidelity objective, shifted-gradient optimization, circuit emission, and return contract. Use the formal algorithm description in this file as the behavioral reference when extending it.
+- **Reference scripts:** `scripts/algorithm.py` is the formal-class example, while `scripts/pauli_implementation.py` is an independent educational/reference implementation of the documented Pauli-word sequence, fidelity objective, shifted-gradient optimization, circuit emission, and return contract. Neither script is a runtime dependency; use the formal source class as authoritative.
 - **Validation:** Validate a small deterministic state with fidelity, infidelity, source `Total error`, finite weights, and gradient checks. Report dependency compatibility, optimizer convergence, backend assumptions, ansatz limitations, and scale limits.
 
 ## Overview

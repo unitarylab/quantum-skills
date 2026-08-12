@@ -24,7 +24,7 @@ When using this skill:
 - **Run or reuse:** Generate standalone task code that imports `MultiplexerAlgorithm` from `unitarylab_algorithms`. Do not import from or depend on this skill's `scripts/` directory at runtime.
 - **Debugging:** Run the smallest documented complex-state example first. Compare branch gates, traversal prefixes, phase gates, returned `"ok"` status, user-order state, and numerical tolerances before changing code.
 - **Modification or reimplementation:** Follow the implementation architecture and theory-to-code mapping. Preserve normalization-before-padding, one internal bit reversal, prefix/control order, zero-mass handling, basis-state phase selection, output order, and return fields.
-- **Reference scripts:** `scripts/multiplexer_implementation.py` is a standalone implementation of the documented normalization, recursive magnitude-tree, phase-loading, validation, and return contract. Use the formal algorithm description in this file as the behavioral reference when extending it.
+- **Reference scripts:** `scripts/algorithm.py` is the formal-class example, while `scripts/multiplexer_implementation.py` is an independent educational/reference implementation of the documented normalization, recursive magnitude-tree, phase-loading, validation, and return contract. Neither script is a runtime dependency; use the formal source class as authoritative.
 - **Validation:** Validate basis, ordering-sensitive, complex, zero-amplitude, zero-probability-branch, padded, and deterministic random states. Report norm error, phase-invariant Euclidean error, fidelity, dependency assumptions, and dense scale limits.
 
 ## Overview

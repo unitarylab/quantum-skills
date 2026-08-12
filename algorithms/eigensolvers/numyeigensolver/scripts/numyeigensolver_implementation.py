@@ -32,7 +32,7 @@ import numpy as np
 
 try:
     import scipy.sparse as sp
-    from scipy.sparse.linalg import eigsh
+    from scipy.sparse.linalg import ArpackNoConvergence, eigsh
 
     HAS_SCIPY_SPARSE = True
 except ImportError:
@@ -151,7 +151,7 @@ def solve_eigensystem(
             if sparse_mat.nnz < dim * dim * 0.5:
                 evals, evecs = eigsh(sparse_mat, k=k_eff, which="SA")
                 return evals, evecs
-        except Exception:
+        except (ArpackNoConvergence, TypeError, ValueError, RuntimeError):
             pass  # Fall through to dense path
 
     # Dense path
