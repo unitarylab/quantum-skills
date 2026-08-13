@@ -82,7 +82,6 @@ $$
 
 > Note: General source or non-periodic BC requires full Schrödingerization.
 
-The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 ------
 
 ## Understanding the Key Quantum Components

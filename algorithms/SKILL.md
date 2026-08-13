@@ -81,6 +81,6 @@ See reference: `./gradients/SKILL.md`
 
 ## 10. Quantum Error Correction
 
-Quantum error correcting codes and related fault-tolerance techniques for UnitaryLab circuits.
+Standalone PennyLane/NumPy educational material for quantum error-correcting code construction, including classical LDPC, CSS, and Hypergraph Product examples. This qLDPC material is Skill-local and is not a public `unitarylab_algorithms` implementation.
 
 See reference: `./quantum-error-correction/SKILL.md`

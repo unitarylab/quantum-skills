@@ -15,7 +15,6 @@ It covers:
 - Hypergraph Product (HGP) code construction
 - Small utility functions for binary matrix rank and code dimension
 - A class-based `QLDPCSolver` helper interface for reusable Agent-generated code
-- A Loom/Catalyst repetition-code reference tutorial in `scripts/tutorial_loom_catalyst.py`
 
 Use this skill when you need to:
 - Explain qLDPC ideas with a concrete Python example
@@ -36,7 +35,6 @@ When using this skill:
 - **CSS validation:** Verify `H_X H_Z^T = 0 mod 2` before treating the matrices as a valid CSS code.
 - **HGP validation:** Verify matrix dimensions, block ordering, binary rank, and CSS commutation after constructing a Hypergraph Product code.
 - **Educational scope:** Treat this workflow as a simulator-focused educational implementation, not a complete fault-tolerant hardware execution stack.
-- **Loom/Catalyst:** Treat `scripts/tutorial_loom_catalyst.py` as a conceptual reference. Do not assume it is directly runnable without the required Loom/Catalyst environment.
 
 ## Prerequisites
 - Python 3.10+ (3.11 recommended)
@@ -55,11 +53,10 @@ pip install numpy networkx matplotlib pennylane
 ## File Scope
 - Direct-run tutorial script: `scripts/algorithm.py`
 - Reusable helper implementation: `scripts/qldpc_implementation.py`
-- Loom/Catalyst reference tutorial: `scripts/tutorial_loom_catalyst.py`
 - This skill document: `SKILL.md`
 
-## Loom/Catalyst Reference Pattern
-The file `scripts/tutorial_loom_catalyst.py` explains a repetition-code memory experiment that combines syndrome extraction, conditional correction, and decoder-style postprocessing. It is useful for explanation and design tasks, but it contains tutorial fragments that depend on Loom/Catalyst objects not imported in the file.
+# Loom/Catalyst Reference Pattern
+
 
 Use this pattern when explaining the Catalyst section:
 

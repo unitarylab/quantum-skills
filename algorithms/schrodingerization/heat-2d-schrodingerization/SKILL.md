@@ -204,7 +204,7 @@ u = u.reshape((Nx, Nx))          # reshape back to 2D field
 qc = circuit_classical(nx, na, dim=2)
 ```
 
-`point` selects the Fourier-basis evaluation point for the ancilla register. The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
+`point` selects the Fourier-basis evaluation point for the ancilla register.
 ------
 
 ### Step 6: Trotter Quantum Circuit (Optional)

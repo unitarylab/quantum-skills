@@ -234,7 +234,6 @@ Final Hamiltonian:
 $$
 H = D \otimes H_1 + I \otimes H_2
 $$
-The Schrödingerization framework can be referred to in './Schr_skills.markdown'.
 
 ------
 

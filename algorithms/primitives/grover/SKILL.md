@@ -109,14 +109,14 @@ print(result["circuit_path"])
 
 | Key | Type | Description |
 |---|---|---|
-| `status` | `str` | `'success'` if `Result` matches `target`; `'partial_success'` otherwise. |
+| `status` | `str` | Public return status from `BaseAlgorithm`: `'ok'` when `run()` completes normally; execution exceptions propagate instead of producing a result dictionary. Check `Result == target` to determine whether the intended target was found. |
 | `Amplified target-state probability` | `float` | Probability of the most likely state (`argmax` over full statevector) after Grover iterations. In normal successful runs this corresponds to the target state's dominant probability, but it is the probability of whatever state was selected by `argmax`, not necessarily the user-intended target. Check `Result == target` to confirm. |
 | `Result` | `str` | Most likely computational-basis state inferred from the simulated statevector probabilities via `argmax`. It is **not** a finite-shot measurement sample. |
 | `circuit_path` | `str` | Path to the saved circuit diagram. |
 | `plot` | `list` | Saved output file metadata. |
 | `circuit` | `Circuit` | The assembled Grover circuit. |
 
-**Validation note:** For generated examples or tests, compare `result["Result"]` with the input `target`. The algorithm may return `status='partial_success'` even when `run()` completes without exception if the returned most-likely state does not match the intended target — this can happen due to invalid inputs, bit-ordering mismatch, or excessive iterations.
+**Status note:** Internally, `run()` records `self.status` as `'success'` or `'partial_success'` according to whether the most-likely state matches `target`. The public return dictionary is built through `BaseAlgorithm._build_return_dict(True, ...)`, so `result["status"]` is `'ok'` for any normal completion. For generated examples or tests, compare `result["Result"]` with the input `target`; do not use the public `status` field alone to infer target recovery.
 
 ## Implementation Architecture
 
