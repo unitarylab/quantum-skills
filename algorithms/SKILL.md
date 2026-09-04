@@ -1,6 +1,6 @@
 ---
 name: algorithms
-description: "A top-level index of quantum algorithms centered on the UnitaryLab implementation, covering quantum primitives, linear systems, cryptography, Hamiltonian simulation, Schrodingerization, quantum machine learning, eigensolvers, gradients, and quantum error correction, with selected Qiskit, PennyLane, and Classiq examples included as reference extensions. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "A top-level index of quantum algorithms centered on the UnitaryLab implementation, covering quantum primitives, linear systems, cryptography, Hamiltonian simulation, Schrodingerization, quantum machine learning, quantum chemistry, eigensolvers, gradients, and quantum error correction, with selected Qiskit, PennyLane, and Classiq examples included as reference extensions. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Quantum Algorithms
@@ -45,7 +45,7 @@ See reference: `./cryptography/SKILL.md`
 
 ## 4. Hamiltonian Simulation
 
-Methods for simulating quantum Hamiltonians, including Trotter-Suzuki decomposition, QDrift randomized simulation, Taylor series simulation, and QSP-HS.
+Methods for simulating quantum Hamiltonians, including Trotter-Suzuki decomposition, QDrift randomized simulation, Taylor series simulation, and QSP-HS. Route the packaged two-dimensional transverse-field Ising workflow through Quantum Machine Learning, where its leaf skill is located.
 
 See reference: `./hamiltonian-simulation/SKILL.md`
 
@@ -57,7 +57,7 @@ See reference: `./schrodingerization/SKILL.md`
 
 ## 6. Quantum Machine Learning
 
-Variational and hybrid quantum-classical learning algorithms, including VQE, VQC, QAOA, QCBM, CVQNN, and Fermi-Hubbard VQE.
+Variational and hybrid quantum-classical learning algorithms, plus the packaged two-dimensional transverse-field Ising dynamics workflow, including VQE, VQC, QAOA, QCBM, CVQNN, and Fermi-Hubbard VQE.
 
 See reference: `./quantum-machine-learning/SKILL.md`
 
@@ -67,19 +67,25 @@ Methods for loading target quantum states, including sparse superposition, Mött
 
 See reference: `./state-preparation/SKILL.md`
 
-## 8. Eigensolvers
+## 8. Quantum Chemistry
+
+Molecular electronic-structure workflows that combine active-space Hamiltonian construction, DMRG, circuit-based disentangling, and grouped quantum measurement.
+
+See reference: `./quantum-chemistry/SKILL.md`
+
+## 9. Eigensolvers
 
 Algorithms for computing eigenvalues and eigenstates of quantum operators, including exact classical diagonalization (NumPyEigensolver) and variational excited-state methods (VQD).
 
 See reference: `./eigensolvers/SKILL.md`
 
-## 9. Gradients
+## 10. Gradients
 
 Quantum gradient and geometric tensor methods, including parameter-shift, finite-difference, linear-combination, SPSA, reverse-mode, and QFI.
 
 See reference: `./gradients/SKILL.md`
 
-## 10. Quantum Error Correction
+## 11. Quantum Error Correction
 
 Standalone PennyLane/NumPy educational material for quantum error-correcting code construction, including classical LDPC, CSS, and Hypergraph Product examples. This qLDPC material is Skill-local and is not a public `unitarylab_algorithms` implementation.
 

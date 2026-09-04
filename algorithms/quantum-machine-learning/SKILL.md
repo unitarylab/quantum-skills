@@ -1,6 +1,6 @@
 ---
 name: quantum-machine-learning
-description: "Variational quantum algorithms for optimization and machine learning, including QAOA for combinatorial optimization, VQE for ground-state energy estimation, Fermi-Hubbard VQE for lattice models, VQC for supervised learning, QCBM for generative modeling, and CVQNN for continuous-variable workflows. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Variational quantum algorithms for optimization and machine learning, plus two-dimensional transverse-field Ising dynamics, including QAOA for combinatorial optimization, VQE for ground-state energy estimation, Fermi-Hubbard VQE for lattice models, VQC for supervised learning, QCBM for generative modeling, and CVQNN for continuous-variable workflows. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 # Quantum Machine Learning Algorithms
 
@@ -23,6 +23,8 @@ Use this category when the user asks about optimization with parameterized circu
   - Read `./fermi-hubbard-vqe/SKILL.md`
 - If the user asks about continuous-variable neural networks, photonic modes, or CV quantum layers:
   - Read `./cvqnn/SKILL.md`
+- If the user asks about the two-dimensional transverse-field Ising model, Ising dynamics, local Trotter-Suzuki evolution, or the packaged `IsingAlgorithm`:
+  - Read `./ising/SKILL.md`
 
 ## Available Leaf Skills
 
@@ -32,9 +34,10 @@ Use this category when the user asks about optimization with parameterized circu
 4. Variational Quantum Eigensolver: `./vqe/SKILL.md`
 5. Continuous-Variable Quantum Neural Network: `./cvqnn/SKILL.md`
 6. Fermi-Hubbard VQE: `./fermi-hubbard-vqe/SKILL.md`
+7. 2D Transverse-Field Ising Dynamics: `./ising/SKILL.md`
 
 ## Response Contract
 
-1. Identify the learning objective: optimization, classification, generative modeling, energy minimization, or continuous-variable modeling.
+1. Identify the requested workflow: optimization, classification, generative modeling, energy minimization, continuous-variable modeling, or Ising dynamics.
 2. Read the matching leaf skill before writing code or commands.
 3. Keep model-specific APIs, training loops, and examples in the leaf skill.
