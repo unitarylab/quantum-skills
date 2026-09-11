@@ -12,8 +12,11 @@
   - [Register](#register)
   - [ClassicalRegister](#classicalregister)
 - [Execution backends and TensorNet](#execution-backends-and-tensornet)
+- [Density matrices and noise](density-matrix-and-noise.md)
 - [Transpilation](#transpilation)
 - [Serialization and OpenQASM](#serialization-and-openqasm)
+- [Compilation and hardware](compilation-and-hardware.md)
+- [Molecular chemistry](chemistry.md)
 - [unitarylab.library](#unitarylablibrary)
   - [Differential Operators](#differential-operators-differential_operator)
   - [QFT / IQFT](#quantum-fourier-transform-qft)
@@ -45,6 +48,10 @@ The top-level `unitarylab` package re-exports the most commonly used symbols for
 | `Circuit` | `unitarylab.core` | Quantum circuit container (see [Circuit](#circuit)) |
 | `Register` | `unitarylab.core` | Quantum register (see [Register](#register)) |
 | `ClassicalRegister` | `unitarylab.core` | Classical register (see [ClassicalRegister](#classicalregister)) |
+| `CompileConfig` | `unitarylab.qcompiler` | Validated compiler configuration (lazy export) |
+| `CompilationResult` | `unitarylab.qcompiler` | Local compilation and mapping result (lazy export) |
+| `HardwareResult` | `unitarylab.qcompiler` | Provider-neutral hardware result (lazy export) |
+| `QCompiler` | `unitarylab.qcompiler` | Compiler and hardware facade (lazy export) |
 
 
 ---
@@ -159,7 +166,15 @@ For `Circuit(state_vector)`, pass a normalized one-dimensional `np.ndarray` whos
 **Custom unitary**
 
 ```python
-qc.unitary(matrix, target, control=None, control_state=None)
+import numpy as np
+from unitarylab import Circuit
+
+matrix = np.array([[0, 1], [1, 0]], dtype=np.complex128)
+qc = Circuit(1)
+qc.unitary(matrix, target=[0])
+
+result = qc.execute(backend="numpy")
+print(result.probabilities)
 ```
 
 Apply an arbitrary unitary matrix to `target` qubits. `matrix` must be a unitary ndarray of shape `(2^len(target), 2^len(target))`.
@@ -167,7 +182,16 @@ Apply an arbitrary unitary matrix to `target` qubits. `matrix` must be a unitary
 **Measurement**
 
 ```python
-qc.measure(target, clbit)
+from unitarylab import Circuit, ClassicalRegister, Register
+
+q = Register("q", 1)
+c = ClassicalRegister("c", 1)
+qc = Circuit(q, c)
+qc.x(q[0])
+qc.measure(q[0], c[0])
+
+result = qc.execute(shots=10, seed=7)
+print(result.counts)
 ```
 
 Map `target` qubit(s) to `clbit` classical bit(s). Measurement results are available from the execution result, such as `result.classical_results_map`.
@@ -191,6 +215,7 @@ Map `target` qubit(s) to `clbit` classical bit(s). Measurement results are avail
 | `repeat(times)` | `Circuit` | Repeat circuit `times` times |
 | `control(num_control_qubits, control_state=None)` | `Circuit` | Add `num_control_qubits` control qubits |
 | `transpile(gates_to_unroll=None, basis="default")` | `Circuit` | Return a transpiled circuit |
+| `optimize(optimization_level=1)` | `Circuit` | Return a rule-based optimized circuit |
 
 Gate methods mutate the circuit and return `None`; call them on separate lines rather than chaining calls.
 
@@ -199,9 +224,12 @@ Gate methods mutate the circuit and return `None`; call them on separate lines r
 | Method | Return | Description |
 |--------|--------|-------------|
 | `execute(initial_state=None, backend="torch", device="cpu", dtype=np.complex128, shots=1, seed=42, backend_options=None)` | `ExecutionResult` | Execute the circuit; TensorNet returns a compatible `TensorNetExecutionResult` |
+| `execute_density(initial_state=None, device="cpu", dtype=np.complex128, noise_model=None)` | `DensityMatrixResult` | Execute a dense mixed-state simulation; no circuit measurements or shots/counts |
 | `get_matrix(m=None, backend="torch", dtype=np.complex128, device="cpu")` | `ndarray` | Compute the circuit matrix. If `m=None`, use all qubits. |
+| `compile(provider="local", machine=None, token=None)` | `CompilationResult` | Compile and map without submitting a hardware task |
+| `submit(provider, machine=None, shots=1024, token=None)` | `HardwareResult` | Compile and submit to a hardware provider |
 
-Supported execution backends are `torch`, `numpy`, `cpp`, and `tensornet`. Use `device="gpu"` only with a compatible Torch installation. `backend_options` is TensorNet-only and accepts `max_bond`, `cutoff`, and `routing` (`"auto"`, `"swap"`, or `"mpo"`). `shots` must be a positive integer; `seed` must be a non-negative integer or `None`.
+Supported statevector backends are `torch`, `numpy`, `cpp`, and `tensornet`. `cpp` supports CPU and, with `unitarylab[cuda]`, NVIDIA GPU execution. Torch `device="gpu"` selects an available accelerator; Apple MPS requires complex64 and at most 16 qubits. `backend_options` is TensorNet-only and accepts `max_bond`, `cutoff`, and `routing` (`"auto"`, `"swap"`, or `"mpo"`). `shots` must be a positive integer; `seed` must be a non-negative integer or `None`. See the routed density and compiler references for their distinct contracts.
 
 **Visualization**
 
@@ -281,7 +309,7 @@ Classical register for storing measurement results.
 | Method | Return | Description |
 |--------|--------|-------------|
 | `probability(bitstring, qubits=None)` | float | Probability of one outcome. |
-| `marginal_probabilities(qubits=None, threshold=1e-12)` | dict | Probability distribution on selected qubits. |
+| `marginal_probabilities(qubits=None, threshold=0.0)` | dict | Probability distribution on selected qubits. |
 | `sample(shots=1, qubits=None, seed=None)` | list[str] | Sample without collapsing the stored state. |
 | `measure(target_indices, seed=None)` | str | Projectively measure selected qubits and collapse the stored state. |
 | `expectation(observable, qubits=None)` | complex | Return normalized observable expectation value. |
@@ -342,6 +370,7 @@ print(result.classical_registers)
 | `torch` | `cpu`, `gpu` | PyTorch tensor | Default backend; GPU requires a compatible PyTorch installation. |
 | `numpy` | `cpu` | NumPy array | Dense statevector execution. |
 | `cpp` | `cpu` | NumPy-compatible result | Requires the packaged native `cppgates` extension. |
+| `cpp` | `gpu` | NumPy-compatible result | CUDA 12 C++ backend; requires `unitarylab[cuda]`. |
 | `tensornet` | `cpu` | `TensorNetState` | MPS execution with truncation and routing options. |
 
 Use `TensorNetState` for an MPS input or native MPS result:
@@ -710,7 +739,12 @@ Quantum linear-system solver for `Ax = b`.
 The current dispatcher sends `schro`, `schro_trotter`, and `schro_classical` to `SCHROSolver` without deriving its `type` argument from the method name. Select the Trotter implementation explicitly:
 
 ```python
+import numpy as np
+
+A = np.array([[1.0, 0.0], [0.0, 2.0]])
+b = np.array([1.0, 0.0])
 result = solve(A, b, method="schro_trotter", type="trotter")
+print(result.solution)
 ```
 
 ---

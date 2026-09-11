@@ -7,9 +7,10 @@ description: A collection of quantum simulators for quantum program development,
 Use this guide to choose a simulator quickly and consistently.
 
 ## Selection Rule
-- Default: UnitaryLab.
-- If UnitaryLab is unavailable: Qiskit.
-- If the task is differentiable hybrid optimization: PennyLane.
+
+- Default: Use UnitaryLab whenever the current Skill provides a UnitaryLab implementation or interface.
+- Qiskit fallback: Use Qiskit only when the current Skill does not provide any UnitaryLab implementation and Qiskit is the supported implementation.
+- PennyLane fallback: Use PennyLane only when the current Skill does not provide any UnitaryLab implementation and PennyLane is the supported implementation, particularly for differentiable hybrid optimization, PennyLane devices, or circuit transforms.
 
 ## Installation Note
 - For any installation path that uses `uv`, install it with `python -m pip install -U uv` first, then verify with `uv --version`.
@@ -41,9 +42,9 @@ Best when:
 Reference: ./pennylane/SKILL.md
 
 Best when:
-- You need differentiable circuits.
-- You are implementing VQE, QAOA, or QML pipelines.
-- You need tight integration with PyTorch or TensorFlow.
+- You need PennyLane's device abstraction or circuit transforms.
+- You need to switch between compatible simulators and hardware plugins.
+- You need expectation values, probabilities, samples, or circuit inspection.
 
 ## Required Practice for Algorithm Examples
 - Always run on a simulator, not only circuit construction.

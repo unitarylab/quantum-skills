@@ -1,42 +1,35 @@
 ---
 name: unitarylab
-description: Use UnitaryLab for local quantum circuit construction, simulation, measurement, expectation values, transpilation, drawing, serialization, and algorithms provided by unitarylab.library. Trigger for runnable UnitaryLab workflows; consult bundled references for package APIs and dedicated algorithm skills for algorithm-specific workflows.
+description: Use UnitaryLab for runnable quantum-circuit construction, statevector or density-matrix simulation, noise, measurement, expectations, transpilation, hardware compilation, and chemistry. Consult the routed reference for version-sensitive APIs and use dedicated algorithm skills for algorithm-specific workflows.
 ---
 
 # UnitaryLab
 
 ## Purpose
 
-Use UnitaryLab when the task needs:
+Use UnitaryLab for concrete circuit construction, local execution, result queries, circuit analysis,
+serialization, compilation, and chemistry. Keep algorithm theory and algorithm-specific
+workflows in the relevant quantum algorithm skill.
 
-- Quantum circuit construction.
-- Local statevector or tensor-network simulation.
-- Measurement, sampling, or expectation values.
-- Circuit analysis, drawing, or transpilation.
-- OpenQASM or Python serialization.
+## Installation
 
-Keep this file as the simulator entry point. Use the references for implementation details and do not reproduce complete API or algorithm documentation here.
+UnitaryLab supports Python 3.10–3.12. Install only when execution or import verification is required:
 
-## Installation Rule
+```bash
+python -m pip install unitarylab
+python -m pip install "unitarylab[cuda]"       # optional CUDA 12 C++ backends
+python -m pip install "unitarylab[chemistry]"  # optional molecular workflow
+```
 
-Install only when code will actually be executed.
-
-- Install for run, execute, verification, or import-error requests.
-- Skip installation for explanation, circuit design, code generation, and review.
-
-Check the active environment first:
+Check the active environment before installing:
 
 ```bash
 python -c "from unitarylab import Circuit; print('OK')"
 ```
 
-If the import fails and installation is authorized:
-
-```bash
-python -m pip install unitarylab
-```
-
-Use an existing virtual environment when available. Do not create or replace environments unless execution requires it.
+The main package supports Windows, Linux, and macOS. CUDA requires a compatible NVIDIA driver and
+is supported on Linux x86_64/aarch64 server environments and Windows x86-64. Chemistry currently
+supports Linux and macOS.
 
 ## Minimal Example
 
@@ -46,58 +39,63 @@ from unitarylab import Circuit
 circuit = Circuit(2)
 circuit.h(0)
 circuit.cx(0, 1)
-
 result = circuit.execute(backend="numpy")
+
 print(result.state)
 print(result.probabilities)
 ```
 
-Expected Bell-state probabilities are approximately `{"00": 0.5, "11": 0.5}`.
+Probability bit strings are little-endian: qubit 0 is the rightmost bit.
 
-## Simulator Entry
+## Routing
 
-Follow this high-level flow:
+Read only the reference needed for the request:
 
-1. Convert the request into qubits, gates, measurements, execution constraints, and requested output.
-2. Create a `Circuit` and add operations in program order.
-3. Choose the backend according to scale and output needs.
-4. Execute only when requested.
-5. Return the smallest useful result and explain the little-endian basis convention when relevant.
-6. Consult the references before using unfamiliar signatures or advanced features.
-
-When running a demonstration, print at least one validation artifact such as a statevector, probability distribution, counts, or expectation value.
-
-## Agent Decision
-
-| User need | Route |
+| User need | Reference |
 |---|---|
-| Build or simulate a circuit | Use the workflow in [references/circuitsbuild.md](references/circuitsbuild.md). |
-| Measurement counts | Use its measurement workflow with `shots` and `seed`. |
-| Sampling without collapse | Use its ExecutionResult sampling workflow. |
-| Observable or Hamiltonian expectation | Use its expectation workflow. |
-| Large low-entanglement simulation | Use TensorNet and avoid unnecessary dense results. |
-| Circuit lowering or target basis | Use transpilation guidance. |
-| QASM import/export or Python generation | Use serialization guidance. |
-| Simulator signature, parameter, or return-type lookup | Read [references/api-reference.md](references/api-reference.md). |
-| Circuit depth, gate counts, or structure analysis | Read [references/CircuitInfo.md](references/CircuitInfo.md). |
-| QFT, QPE, QSP, QSVT, LCU, block encoding, linear solving, Hamiltonian simulation, or equation algorithms | Use the `unitarylab.library` API in [references/api-reference.md](references/api-reference.md); consult the relevant algorithm skill for the full workflow. |
+| Build, execute, measure, sample, optimize, transpile, or serialize a circuit | [references/circuit-building.md](references/circuit-building.md) |
+| Look up a core signature, return field, gate, backend, or `unitarylab.library` API | [references/api-reference.md](references/api-reference.md) |
+| Circuit depth, gate counts, layers, coupling map, parameters, or qubit history | [references/circuit-info.md](references/circuit-info.md) |
+| Mixed states, density matrices, Kraus noise, or density CUDA | [references/density-matrix-and-noise.md](references/density-matrix-and-noise.md) |
+| Molecular electronic structure or DMRG/CVD workflow | [references/chemistry.md](references/chemistry.md) |
+| Local compilation, mapping, hardware providers, or submission | [references/compilation-and-hardware.md](references/compilation-and-hardware.md) |
 
-## Common Pitfalls
+For QFT, QPE, QSP, QSVT, LCU, linear solving, Hamiltonian simulation, or equation algorithms,
+consult the matching algorithm skill in addition to the API reference.
 
-| Problem | Response |
+## Backend Selection
+
+| Need | Selection |
 |---|---|
-| `ModuleNotFoundError: unitarylab` | Install in the active environment only when execution is required. |
-| Backend or device is unavailable | Select a supported local backend; fall back to NumPy or Torch CPU when appropriate. |
-| TensorNet state is sent to a statevector backend | Use TensorNet or convert the input to a statevector. |
-| TensorNet options are used with another backend | Remove them or select TensorNet. |
-| Invalid `shots` | Require a positive integer. |
-| Invalid `seed` | Require a non-negative integer or `None`. |
-| Result interpretation is ambiguous | Check little-endian basis labels and use the targeted result query described in the Agent Guide. |
+| Broad compatibility | `backend="torch", device="cpu"` |
+| NumPy-native dense state | `backend="numpy", device="cpu"` |
+| Faster native CPU execution | `backend="cpp", device="cpu"` when the native extension is available |
+| NVIDIA CUDA statevector | `backend="cpp", device="gpu"` with `unitarylab[cuda]` |
+| Larger low-entanglement circuit | `backend="tensornet", device="cpu"` |
+| Mixed state or gate-local noise | `circuit.execute_density(...)` on CPU or CUDA |
 
-## References
+Use `np.complex128` unless the device or memory budget requires `complex64`. Torch on Apple MPS
+rejects complex128 and the current implementation limits that path to 16 qubits. TensorNet options
+belong only to the TensorNet backend.
 
-- [references/api-reference.md](references/api-reference.md): primary simulator and `unitarylab.library` signatures, parameters, return values, and advanced capabilities.
-- [references/circuitsbuild.md](references/circuitsbuild.md): Quantum Circuit Agent Guide for construction, execution, measurement, backend selection, TensorNet, transpilation, and serialization.
-- [references/CircuitInfo.md](references/CircuitInfo.md): circuit analysis, depth, gate counts, layers, coupling maps, and qubit history.
+## Safety and Boundaries
 
-Read only the reference needed for the current task.
+- Execute locally only when requested or needed for verification.
+- Before a real-hardware submission, obtain or confirm the provider, machine, credentials, shots,
+  quota, and possible charges. Never invent credentials or submit as part of documentation testing.
+- Treat chemistry as an optional dependency and allow its documented missing-extra error to surface.
+- Density-matrix execution currently has no circuit measurement or shots/counts.
+- Prefer targeted result queries over dense state materialization for large TensorNet jobs.
+- Verify unfamiliar signatures against the implementation or focused tests; code and tests take
+  precedence over README prose when they disagree.
+
+## Common Failures
+
+| Symptom | First action |
+|---|---|
+| Optional CUDA import fails | Install `unitarylab[cuda]` only when CUDA execution is required, or use CPU. |
+| Chemistry import fails | Install `unitarylab[chemistry]` only when the molecular workflow is required. |
+| Unsupported backend/device/dtype | Select a compatible row from Backend Selection. |
+| Invalid shots or seed | Require a positive integer for shots and a non-negative integer or `None` for seed. |
+| Result interpretation is ambiguous | Check little-endian bit strings and Pauli-to-qubit order. |
+| Hardware request lacks target or credentials | Stop before submission and request the missing external details. |
