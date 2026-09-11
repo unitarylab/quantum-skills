@@ -53,7 +53,7 @@ Read only the reference needed for the request:
 
 | User need | Reference |
 |---|---|
-| Build, execute, measure, sample, optimize, transpile, or serialize a circuit | [references/circuit-building.md](references/circuit-building.md) |
+| Build, execute, measure, sample, optimize, transpile, serialize, or import/export OpenQASM 2/3 circuits | [references/circuit-building.md](references/circuit-building.md) |
 | Look up a core signature, return field, gate, backend, or `unitarylab.library` API | [references/api-reference.md](references/api-reference.md) |
 | Circuit depth, gate counts, layers, coupling map, parameters, or qubit history | [references/circuit-info.md](references/circuit-info.md) |
 | Mixed states, density matrices, Kraus noise, or density CUDA | [references/density-matrix-and-noise.md](references/density-matrix-and-noise.md) |
