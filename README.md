@@ -52,6 +52,7 @@
 | **Primitives** | Grover, QPE, Hadamard Test, Hadamard Transform, Amplitude Amplification, Amplitude Estimation |
 | **Linear Systems** | HHL, LCU, QSVT-QLSA, Quantum Signal Processing (QSP) |
 | **Cryptography** | Shor's Algorithm, Discrete Logarithm, Simon's Algorithm |
+| **Search** | Glued Trees, Hidden Shift |
 | **Hamiltonian Simulation** | Trotter, QDrift, Taylor Series, QSP |
 | **Schrodingerization** | Advection, Heat (1D/2D) |
 | **Eigensolvers** | NumPyEigensolver, VQD |
@@ -82,6 +83,7 @@ quantum-skills/
 |   +-- primitives/             # Grover, QPE, Hadamard test/transform, AA, AE
 |   +-- linear-systems/         # HHL, LCU, QSVT-QLSA, QSP
 |   +-- cryptography/           # Shor, discrete logarithm, Simon
+|   +-- search/                 # Glued Trees, Hidden Shift
 |   +-- hamiltonian-simulation/ # Trotter, QDrift, Taylor, QSP
 |   +-- schrodingerization/     # PDE solvers 
 |   +-- eigensolvers/           # NumPyEigensolver, VQD
@@ -139,6 +141,7 @@ When you ask Copilot a question about quantum computing in VS Code, the agent re
 | `Simulate 1D heat equation with Schrodingerization` | Loads schrodingerization/heat-1d guide |
 | `Compare Trotter and QDrift for Hamiltonian simulation` | Loads hamiltonian-simulation guide |
 | `Run Shor's algorithm on n=15` | Loads cryptography/shor guide |
+| `Recover a Boolean hidden shift` | Loads search/hidden-shift guide |
 
 ---
 
@@ -175,6 +178,7 @@ This project is licensed under the MIT license. For details, please refer to the
 | **基础量子算法** | Grover、QPE、Hadamard 测试、Hadamard 变换、振幅放大、振幅估计 |
 | **线性系统** | HHL、LCU、QSVT-QLSA、量子信号处理（QSP） |
 | **密码学** | Shor 算法、离散对数、Simon 算法 |
+| **量子搜索** | Glued Trees、Hidden Shift |
 | **哈密顿量模拟** | Trotter、QDrift、Taylor 级数、QSP |
 | **Schrodingerization** | 对流、热方程（一维/二维）|
 | **本征求解器** | NumPyEigensolver、VQD |
@@ -205,6 +209,7 @@ quantum-skills/
 |   +-- primitives/             # Grover、QPE、Hadamard 测试/变换、振幅放大与估计
 |   +-- linear-systems/         # HHL、LCU、QSVT-QLSA、QSP
 |   +-- cryptography/           # Shor、离散对数、Simon
+|   +-- search/                 # Glued Trees、Hidden Shift
 |   +-- hamiltonian-simulation/ # Trotter、QDrift、Taylor、QSP
 |   +-- schrodingerization/     # PDE 求解器
 |   +-- eigensolvers/           # NumPyEigensolver、VQD
@@ -262,6 +267,7 @@ git clone https://github.com/unitarylab/quantum-skills `
 | `用 Schrodingerization 模拟一维热方程` | 加载 schrodingerization/heat-1d 指南 |
 | `比较 Trotter 和 QDrift 在哈密顿量模拟中的异同` | 加载哈密顿量模拟指南 |
 | `对 n=15 运行 Shor 算法` | 加载密码学/shor 指南 |
+| `恢复布尔函数的隐藏位移` | 加载搜索/hidden-shift 指南 |
 
 ---
 

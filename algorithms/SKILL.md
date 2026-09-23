@@ -1,6 +1,6 @@
 ---
 name: algorithms
-description: "A top-level index of quantum algorithms centered on the UnitaryLab implementation, covering quantum primitives, linear systems, cryptography, Hamiltonian simulation, Schrodingerization, quantum machine learning, quantum chemistry, eigensolvers, gradients, and quantum error correction, with selected Qiskit, PennyLane, and Classiq examples included as reference extensions. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "A top-level index of quantum algorithms centered on the UnitaryLab implementation, covering quantum primitives, linear systems, cryptography, Hamiltonian simulation, Schrodingerization, quantum machine learning, quantum chemistry, search, eigensolvers, gradients, and quantum error correction, with selected Qiskit, PennyLane, and Classiq examples included as reference extensions. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
 ---
 
 # Quantum Algorithms
@@ -85,7 +85,13 @@ Quantum gradient and geometric tensor methods, including parameter-shift, finite
 
 See reference: `./gradients/SKILL.md`
 
-## 11. Quantum Error Correction
+## 11. Quantum Search
+
+Glued Trees quantum-walk transport and Boolean Hidden Shift recovery. Grover search and amplitude amplification remain under Quantum Primitives.
+
+See reference: `./search/SKILL.md`
+
+## 12. Quantum Error Correction
 
 Standalone PennyLane/NumPy educational material for quantum error-correcting code construction, including classical LDPC, CSS, and Hypergraph Product examples. This qLDPC material is Skill-local and is not a public `unitarylab_algorithms` implementation.
 
