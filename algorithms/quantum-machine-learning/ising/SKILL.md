@@ -1,6 +1,6 @@
 ---
 name: ising
-description: Simulate open-boundary two-dimensional transverse-field Ising dynamics with local Trotter-Suzuki circuits and the UnitaryLab TensorNet backend.
+description: "Simulate open-boundary two-dimensional transverse-field Ising dynamics with UnitaryLab TensorNet. Use for real-time lattice evolution and observables, rather than classical Ising optimization."
 ---
 
 # 2D Transverse-Field Ising Dynamics

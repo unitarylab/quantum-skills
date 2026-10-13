@@ -1,6 +1,6 @@
 ---
 name: linear-systems
-description: "A set of quantum algorithms for solving linear systems of equations and related Fourier/signal-processing subroutines. This skill includes UnitaryLab implementations and educational resources for HHL, LCU, AQC, QFT, the basic single-qubit QSP demo, QSVT-QLSA, and VQLS. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Select a quantum linear-system solver or a related Fourier or signal-processing subroutine. Use to choose a solving approach or route QFT and basic single-qubit QSP requests."
 ---
 # Quantum Linear Systems Algorithms
 

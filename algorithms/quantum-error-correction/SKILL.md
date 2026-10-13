@@ -1,6 +1,6 @@
 ---
 name: quantum-error-correction
-description: "A clear and practical skill guide for learning and running a PennyLane-based qLDPC tutorial, from classical LDPC basics to CSS and Hypergraph Product code construction. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Explain or implement the PennyLane-based quantum LDPC tutorial. Use for classical LDPC foundations, CSS codes, and hypergraph-product quantum code construction."
 ---
 
 # PennyLane qLDPC Skill

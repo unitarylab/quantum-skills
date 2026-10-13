@@ -1,6 +1,6 @@
 ---
 name: mottonen
-description: "Prepares an arbitrary small complex quantum state using the Möttönen decomposition. This skill explains the amplitude and phase rotations, Gray-code uniformly controlled RY/RZ ladders, bit-order conversion, and phase-invariant validation used by UnitaryLab."
+description: "Prepare an arbitrary small complex state using the Möttönen decomposition with uniformly controlled rotations. Use for deterministic amplitude-and-phase loading rather than variational fitting."
 ---
 
 # Möttönen State Preparation

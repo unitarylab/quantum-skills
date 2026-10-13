@@ -1,6 +1,6 @@
 ---
 name: grover
-description: "Grover's search algorithm for finding a marked computational-basis state in an unstructured search space with quadratic query speedup. This is the uniform-superposition, fixed-target special case of amplitude amplification. This skill provides a comprehensive guide to understanding, implementing, and utilizing Grover's algorithm in quantum computing applications."
+description: "Find a marked computational-basis state using Grover search from a uniform superposition. Use for the fixed-target special case of amplitude amplification, rather than general prepared-state amplification."
 ---
 
 # Grover Search

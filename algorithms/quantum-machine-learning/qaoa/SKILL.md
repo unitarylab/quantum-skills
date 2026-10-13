@@ -1,6 +1,6 @@
 ---
 name: qaoa
-description: "Skill for understanding, using, and implementing the Quantum Approximate Optimization Algorithm (QAOA) for Max-Cut problems via the QAOAAlgorithm class. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Explain or implement the Quantum Approximate Optimization Algorithm (QAOA) for combinatorial optimization. Use for alternating cost-and-mixer variational circuits and QAOAAlgorithm workflows."
 ---
 
 # Quantum Approximate Optimization Algorithm (QAOA)

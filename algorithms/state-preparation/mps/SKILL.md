@@ -1,6 +1,6 @@
 ---
 name: mps
-description: "Loads states with a Matrix Product State representation when low-entanglement structure can reduce the preparation cost. It covers state-to-MPS decomposition, bond-dimension truncation, canonicalization, QR-based unitary completion, work-qubit encoding, leakage, and phase-invariant validation in UnitaryLab."
+description: "Prepare states through a matrix product state (MPS) representation. Use when low entanglement and a manageable bond dimension make tensor-network preparation appropriate."
 ---
 
 # Matrix Product State Preparation

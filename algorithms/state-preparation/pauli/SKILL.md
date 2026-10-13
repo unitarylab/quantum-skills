@@ -1,6 +1,6 @@
 ---
 name: pauli
-description: "使用固定 Pauli-word 旋转序列，通过保真度优化近似制备目标态，并用全局相位不变的 L2 误差验证结果。"
+description: "使用 UnitaryLab 的固定 Pauli-word 旋转序列，通过变分优化近似制备目标态。适用于需要可训练旋转参数、保真度优化或排查收敛问题的态制备任务。"
 ---
 
 # Pauli-Word State Preparation

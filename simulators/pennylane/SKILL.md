@@ -1,6 +1,6 @@
 ---
 name: pennylane
-description: PennyLane - A versatile quantum machine learning library that supports hybrid quantum-classical computations.
+description: "Guide PennyLane differentiable circuits, device selection, and hybrid quantum-classical workflows. Use when the user requests PennyLane or needs its device, autodifferentiation, or circuit-transform interfaces."
 license: MIT
 ---
 

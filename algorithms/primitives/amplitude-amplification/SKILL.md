@@ -1,6 +1,6 @@
 ---
 name: amplitude-amplification
-description: "A quantum algorithm that generalizes Grover's search algorithm, allowing for the amplification of the probability of desired outcomes in a quantum state. It is used to find marked items in an unsorted database with quadratic speedup compared to classical algorithms. This skill provides a comprehensive guide to understanding, implementing (using UnitaryLab's quantum simulator), and utilizing amplitude amplification in quantum computing applications. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Increase the probability of marked outcomes using quantum amplitude amplification. Use for general state-preparation and oracle-based amplification; choose Grover for uniform-superposition fixed-target search."
 ---
 
 # Amplitude Amplification

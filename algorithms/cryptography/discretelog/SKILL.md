@@ -1,6 +1,6 @@
 ---
 name: discretelog
-description: "Use when users ask about solving the discrete logarithm problem g^x ≡ y (mod P) with Shor-style two-register Fourier sampling, building/explaining DLP circuits, running simulator demos, or debugging post-processing (continued fractions plus two-dimensional Fourier-sample congruence solving). Triggers: discrete log, DLP, Shor discrete logarithm, g^x mod P, modular exponentiation, two-dimensional Fourier sampling, continued fractions, congruence solving, quantum cryptography demo. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Explain or implement Shor-style discrete logarithm solving for g^x = y modulo P. Use for two-register Fourier sampling and discrete-log post-processing, rather than integer factorization."
 ---
 
 # Discrete Logarithm Algorithm (DLG)

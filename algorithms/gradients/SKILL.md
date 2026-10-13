@@ -1,6 +1,6 @@
 ---
 name: gradients
-description: "Master routing guide for all quantum gradient and geometric tensor methods in this folder. Read this file first, then follow the leaf skill for the chosen method. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Select a gradient or quantum geometric tensor method for parameterized quantum circuits. Use when choosing between numerical, analytic, stochastic, and exact statevector differentiation."
 ---
 
 # Quantum Gradients — Master Guide

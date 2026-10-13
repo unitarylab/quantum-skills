@@ -1,6 +1,6 @@
 ---
 name: eigensolvers
-description: "Quantum eigensolver algorithms for operator spectrum estimation, covering exact classical diagonalization with NumPyEigensolver and variational excited-state solving with VQD. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Select an eigensolver for operator eigenvalues and eigenstates. Use to choose between exact classical diagonalization, minimum-eigenvalue computation, and variational excited-state estimation."
 ---
 
 # Quantum Eigensolvers

@@ -1,6 +1,6 @@
 ---
 name: heat-2d-schrodingerization
-description: "A quantum-compatible solver for the 2D Heat Equation using Schrödingerization to transform the non-unitary diffusion equation into a unitary evolution problem. Supports anisotropic diffusion, Dirichlet and periodic boundary conditions, source terms, and both classical and Trotter-based quantum evolution with automatic 2D circuit generation and 3D temperature field visualization. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Solve the two-dimensional heat equation using Schrodingerization. Use for 2D diffusion, including anisotropic coefficients, with Dirichlet or periodic boundaries."
 ---
 
 

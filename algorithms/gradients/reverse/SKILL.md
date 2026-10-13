@@ -1,6 +1,6 @@
 ---
 name: reverse
-description: "Reverse-mode statevector gradient and QGT computation for parameterized circuits using Qiskit Algorithms classes ReverseEstimatorGradient and ReverseQGT. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Compute exact statevector expectation gradients and quantum geometric tensors using Qiskit reverse-mode differentiation. Use for small simulated circuits when shifted-circuit evaluations are unnecessary."
 ---
 
 # Reverse-Mode Gradient

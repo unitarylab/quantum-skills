@@ -1,6 +1,6 @@
 ---
 name: hadamard-test
-description: "A quantum algorithm that uses the Hadamard test to estimate the expectation value of a unitary operator with respect to a given quantum state. This algorithm is fundamental in quantum computing and has applications in various quantum algorithms, including quantum phase estimation and variational quantum algorithms. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Estimate unitary expectation values, overlaps, or matrix elements using the Hadamard test. Use when an ancilla and controlled-unitary interference provide the required measurement."
 ---
 
 # Hadamard Test

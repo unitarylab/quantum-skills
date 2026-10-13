@@ -1,6 +1,6 @@
 ---
 name: vqe
-description: "Skill for understanding, using, and implementing the Variational Quantum Eigensolver (VQE) for finding the ground state energy of any user-supplied or randomly generated Hermitian Hamiltonian via the VQEAlgorithm class. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Estimate a Hermitian Hamiltonian's ground-state energy with Variational Quantum Eigensolver (VQE). Use for generic Hamiltonians; choose the Fermi-Hubbard leaf for its specialized lattice workflow."
 ---
 
 # Variational Quantum Eigensolver (VQE)

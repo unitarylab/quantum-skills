@@ -1,6 +1,6 @@
 ---
 name: primitives
-description: "A collection of fundamental quantum computing primitives implemented using UnitaryLab, including basic gates, state preparation techniques, and measurement protocols. Provides efficient implementations and educational resources for understanding and utilizing quantum primitives in algorithm development. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Select a reusable quantum primitive for amplitude amplification or estimation, phase estimation, and Hadamard-based routines. Use when choosing a building block for a larger algorithm."
 ---
 # Quantum Primitives
 

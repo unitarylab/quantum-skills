@@ -1,6 +1,6 @@
 ---
 name: multiplexer
-description: "Repository-faithful multiplexer state preparation: normalization, zero padding, one internal bit reversal, binary magnitude loading, basis-selective phase loading, and the actual run() contract."
+description: "Prepare a general small complex state using UnitaryLab's recursive multiplexer construction. Use for binary probability-tree amplitude loading with basis-selective phases."
 ---
 
 # Multiplexer State Preparation

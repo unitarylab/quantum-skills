@@ -1,6 +1,6 @@
 ---
 name: quantum-signal-processing
-description: "Basic Quantum Signal Processing (QSP) demo for single-qubit signal operators, phase-factor optimization, and scalar polynomial approximation such as cos(t*x). Use the Hamiltonian-simulation QSP-HS skill instead for block-encoded Hamiltonians and e^{-iHt}. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Explain or implement basic single-qubit quantum signal processing (QSP) for scalar polynomial approximation and phase optimization. Use the QSP-HS skill instead for block-encoded Hamiltonian time evolution."
 ---
 
 # Quantum Signal Processing (QSP)

@@ -1,6 +1,6 @@
 ---
 name: vqd
-description: "Variational Quantum Deflation (VQD) eigensolver for computing the lowest excited states of a quantum operator with Qiskit primitives. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Estimate low-lying excited states with Variational Quantum Deflation (VQD) and Qiskit primitives. Use when a variational workflow must find states beyond the ground state."
 ---
 
 # Variational Quantum Deflation (VQD)

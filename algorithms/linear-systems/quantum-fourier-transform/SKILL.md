@@ -1,6 +1,6 @@
 ---
 name: quantum-fourier-transform
-description: "Use this skill when the user asks for Quantum Fourier Transform (QFT), inverse QFT (IQFT), Fourier-basis state conversion, QFT circuit construction, or implementing/running/debugging QFTAlgorithm in the UnitaryLab algorithm library. Prefer the UnitaryLab `QFTAlgorithm` and `unitarylab.core.Circuit` implementation; PennyLane material is reference-only. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Explain or implement the Quantum Fourier Transform (QFT) and inverse QFT with UnitaryLab. Use for Fourier-basis conversion or a QFT subroutine within another quantum algorithm."
 ---
 
 # Quantum Fourier Transform (QFT)

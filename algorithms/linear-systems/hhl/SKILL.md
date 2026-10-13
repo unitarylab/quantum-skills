@@ -1,6 +1,6 @@
 ---
 name: hhl
-description: "HHL quantum linear-system solver for Hermitian A and power-of-two dimension N. This implementation accepts user-provided A and b, auto-computes the evolution time t, uses QPE with U = exp(i2πAt), and reconstructs an approximate classical solution from post-selection in a statevector simulation; exponential speedup claims require sparse/block-encoded access, efficient state preparation, bounded condition number, efficient Hamiltonian simulation, and partial readout rather than full classical-vector recovery."
+description: "Solve small Hermitian linear systems of power-of-two dimension with HHL phase estimation and post-selection. Use for HHL explanations, simulator examples, or debugging reconstructed solutions."
 ---
 
 # HHL Algorithm (Harrow-Hassidim-Lloyd)

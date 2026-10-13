@@ -1,6 +1,6 @@
 ---
 name: numpy-minimum-eigensolver
-description: "NumPyMinimumEigensolver skill for deterministic minimum-eigenvalue computation in qiskit_algorithms.minimum_eigensolvers. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Compute the smallest operator eigenvalue and its eigenstate with Qiskit's NumPyMinimumEigensolver. Use when an exact classical minimum-eigenvalue reference is needed rather than a variational solver."
 ---
 
 # NumPy Minimum Eigensolver

@@ -1,7 +1,7 @@
 ---
 name: taylor
 
-description: "Simulate the time evolution of a quantum system using Taylor series expansion. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Simulate Hamiltonian time evolution with a truncated Taylor-series LCU expansion. Use when the requested method is Taylor-based rather than a product formula or QSP."
 ---
 
 # Taylor Hamiltonian Simulation Skill Guide

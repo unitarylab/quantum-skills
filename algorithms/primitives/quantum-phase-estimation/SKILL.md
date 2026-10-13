@@ -1,6 +1,6 @@
 ---
 name: quantum-phase-estimation
-description: "A quantum phase estimation algorithm that can estimate the eigenvalues of a unitary operator with high precision, which is a fundamental component in many quantum algorithms such as Shor's algorithm and quantum simulation. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Estimate a unitary operator's eigenphase using quantum phase estimation (QPE). Use for phase or eigenvalue estimation and QPE subroutines in larger algorithms."
 ---
 
 # Quantum Phase Estimation (QPE)

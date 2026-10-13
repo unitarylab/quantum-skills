@@ -1,6 +1,6 @@
 ---
 name: linear-combination
-description: "Analytic quantum gradient and Quantum Geometric Tensor (QGT) estimation via linear combination of unitaries (LCU). Supports Estimator (expectation value gradients), Sampler (probability distribution gradients), and QGT primitives with configurable derivative types. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Compute analytic circuit gradients or the quantum geometric tensor using linear combinations of unitaries. Use for LCU-based Estimator, Sampler, or QGT differentiation."
 ---
 
 # Linear Combination of Unitaries (LCU) Gradient

@@ -1,6 +1,6 @@
 ---
 name: vqc
-description: "Skill for understanding, using, and implementing the Variational Quantum Classifier (VQC) for Iris dataset classification with data re-uploading and Parameter Shift Rule via the VQCAlgorithm class. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Train or explain the Variational Quantum Classifier (VQC) for supervised classification. Use for the Iris data-reuploading workflow or VQCAlgorithm implementation and debugging."
 ---
 
 # Variational Quantum Classifier (VQC)

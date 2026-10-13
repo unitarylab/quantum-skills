@@ -1,6 +1,6 @@
 ---
 name: qsp
-description: "QSP-HS: QSP-based Hamiltonian simulation for approximating e^{-iHt} by block-encoding a Hamiltonian and applying polynomial spectral transformations. Use the basic QSP demo skill instead for single-qubit scalar QSP examples such as cos(t*x). Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Simulate Hamiltonian time evolution with block encoding and quantum signal processing (QSP-HS). Use for exp(-iHt); choose the basic QSP skill for single-qubit scalar polynomial examples."
 ---
 
 # QSP-HS Hamiltonian Simulation Skill Guide

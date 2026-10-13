@@ -1,6 +1,6 @@
 ---
 name: cartan
-description: "Simulate the time evolution of a quantum system using Cartan decomposition. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Simulate Hamiltonian time evolution using Cartan-Lax decomposition. Use for real symmetric Hamiltonians when Lie-algebraic structure guides the decomposition."
 ---
 
 # Cartan Decomposition Hamiltonian Simulation Skill Guide

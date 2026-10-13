@@ -21,14 +21,18 @@ from unitarylab.backend import (
 ```
 
 `Circuit.execute_density(initial_state=None, device="cpu", dtype=np.complex128,
-noise_model=None)` is the normal entry point. It returns `DensityMatrixResult`.
+noise_model=None, shots=1, seed=42)` is the normal entry point. It returns `DensityMatrixResult`.
 
 Initial state may be `None`, a normalized statevector, a valid density matrix, or a
 `DensityMatrixState`. Supported dtypes are `np.complex64` and `np.complex128`. Device may be `cpu`,
 `gpu`/`cuda` (aliases for `cuda:0`), or `cuda:<id>`. CUDA requires `unitarylab[cuda]`.
 
-Circuit measurement, shots, counts, sampling, and projective result measurement are not available
-in density mode.
+Circuit measurements, including mid-circuit collapse, are supported on CPU and CUDA.
+`shots` is a positive integer; `seed` is a non-negative integer or `None`. Each shot executes
+from the supplied initial state; `counts` aggregates measured classical outcomes. The returned
+density matrix, `classical_results_map`, and `classical_registers` describe the final shot,
+not a density matrix averaged across shots. Without circuit measurements, `counts` is empty.
+`DensityMatrixResult` does not expose the statevector result's `sample()` or `measure()` methods.
 
 ## Result Queries
 
@@ -42,6 +46,30 @@ in density mode.
 | Full probabilities | `result.probabilities` |
 | One or marginal probability | `result.probability(...)`, `result.marginal_probabilities(...)` |
 | Observable expectation | `result.expectation(observable, qubits=None)` |
+| Number of executions | `result.shots` |
+| Aggregated classical outcomes | `result.counts` |
+| Final-shot classical-bit values | `result.classical_results_map` |
+| Final-shot values by register | `result.classical_registers` |
+
+## Measurement Workflow
+
+```python
+from unitarylab import Circuit, ClassicalRegister, Register
+
+q = Register("q", 2)
+c = ClassicalRegister("c", 2)
+circuit = Circuit(q, c)
+circuit.h(q[0])
+circuit.cx(q[0], q[1])
+circuit.measure(q[:], c[:])
+result = circuit.execute_density(shots=1000, seed=42)
+print(result.counts)
+print(result.classical_registers)
+```
+
+Count keys place the highest classical-bit index on the left. Unmeasured classical bits
+are `#` in keys and `-1` in register snapshots. Measurement collapses the state before
+subsequent gates and noise are applied.
 
 ## Noise Workflow
 

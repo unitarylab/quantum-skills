@@ -1,0 +1,7 @@
+{
+  "type": "prefix_constraints",
+  "name": "default-prefix-search",
+  "max_depth": 2,
+  "accepted_paths": ["10"],
+  "rejected_prefixes": ["0"]
+}

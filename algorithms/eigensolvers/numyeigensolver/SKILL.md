@@ -1,6 +1,6 @@
 ---
 name: numyeigensolver
-description: "Exact classical eigensolver for quantum operators using NumPy and SciPy backends, with optional auxiliary operator evaluation and eigenpair filtering. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Compute operator eigenvalues and eigenstates by exact classical diagonalization with NumPy and SciPy. Use for spectrum references, eigenpair filtering, or auxiliary observable evaluation."
 ---
 
 # NumPy Eigensolver

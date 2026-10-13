@@ -1,6 +1,6 @@
 ---
 name: "qsvt-qlsa"
-description: "Quantum Singular Value Transformation (QSVT) based Linear System Solver (QLSA) implements matrix inversion through polynomial approximation, offering significant asymptotic complexity advantages. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Solve linear systems using quantum singular value transformation (QSVT) and polynomial matrix inversion. Use for QSVT-QLSA explanations, implementation, or debugging the UnitaryLab solver."
 ---
 
 # QSVT QLSA

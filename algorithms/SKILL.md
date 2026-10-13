@@ -1,6 +1,6 @@
 ---
 name: algorithms
-description: "A top-level index of quantum algorithms centered on the UnitaryLab implementation, covering quantum primitives, linear systems, cryptography, Hamiltonian simulation, Schrodingerization, quantum machine learning, quantum chemistry, search, eigensolvers, gradients, and quantum error correction, with selected Qiskit, PennyLane, and Classiq examples included as reference extensions. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Select the appropriate quantum algorithm skill for explanation, implementation, or debugging. Use this index when the method is not yet chosen or the request spans algorithm categories."
 ---
 
 # Quantum Algorithms
@@ -24,6 +24,8 @@ Use the following workflow when handling `unitarylab_algorithms`:
 Leaf algorithm skills often include a `scripts/` directory with two kinds of material: a small example that calls the corresponding `unitarylab_algorithms` class, and a direct implementation reference for the algorithm. Treat both as fallback references for troubleshooting, API comparison, and validation. They are not files to import from generated answers, and they should not become runtime dependencies.
 
 For user-facing code generation, first write standalone code for the requested task. If that generated code fails, or if the required API/algorithm detail is ambiguous, inspect the scripts to understand the intended behavior and adapt the idea without importing or depending on the script files.
+
+The self-contained `./search/quantum-walk-search/SKILL.md` and `./search/quantum-backtracking/SKILL.md` leaves have explicit local execution contracts: their examples call their bundled implementations, and neither requires the installed algorithm package or another checkout. Follow the selected leaf for its diagnostic and `--execute` modes; the reference-only policy above remains unchanged for other leaves.
 
 ## 1. Quantum Primitives
 
@@ -87,7 +89,7 @@ See reference: `./gradients/SKILL.md`
 
 ## 11. Quantum Search
 
-Glued Trees quantum-walk transport and Boolean Hidden Shift recovery. Grover search and amplitude amplification remain under Quantum Primitives.
+Glued Trees quantum-walk transport, multi-marked continuous-time Quantum Walk Search on graphs, binary CNF/prefix-constraint Quantum Backtracking with walk-QPE subtree detection, and Boolean Hidden Shift recovery. Grover search and amplitude amplification remain under Quantum Primitives.
 
 See reference: `./search/SKILL.md`
 

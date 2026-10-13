@@ -1,6 +1,6 @@
 ---
 name: simon
-description: "Use for implementing, explaining, running, or debugging Simon's algorithm in this repository, especially for oracle construction, measurement interpretation, GF(2) post-processing, simulator state extraction, and compatible reimplementation. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Explain or implement Simon's algorithm for recovering a hidden XOR period from an oracle. Use for Simon circuits, measurement interpretation, and GF(2) post-processing."
 ---
 
 # Simon's Algorithm

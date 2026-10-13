@@ -1,6 +1,6 @@
 ---
 name: qfi
-description: "Compute the Quantum Fisher Information (QFI) matrix for a pure parameterized quantum state using the Quantum Geometric Tensor (QGT). Extracts the real part of the QGT and scales it by 4. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Compute the quantum Fisher information matrix of a pure parameterized state from its quantum geometric tensor. Use for parameter sensitivity or quantum information geometry."
 ---
 
 # Quantum Fisher Information (QFI)

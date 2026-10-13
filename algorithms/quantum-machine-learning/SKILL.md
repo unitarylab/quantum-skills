@@ -1,6 +1,6 @@
 ---
 name: quantum-machine-learning
-description: "Variational quantum algorithms for optimization and machine learning, plus two-dimensional transverse-field Ising dynamics, including QAOA for combinatorial optimization, VQE for ground-state energy estimation, Fermi-Hubbard VQE for lattice models, VQC for supervised learning, QCBM for generative modeling, and CVQNN for continuous-variable workflows. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Select a variational algorithm for optimization, ground-state estimation, or quantum machine learning. Also route the packaged two-dimensional transverse-field Ising dynamics workflow."
 ---
 # Quantum Machine Learning Algorithms
 

@@ -1,6 +1,6 @@
 ---
 name: qcbm
-description: "Skill for understanding, using, and implementing the Quantum Circuit Born Machine (QCBM) for learning discrete probability distributions (Bars-and-Stripes) via the QCBMAlgorithm class. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Train a Quantum Circuit Born Machine (QCBM) to learn discrete probability distributions. Use for quantum generative modeling, including Bars-and-Stripes examples."
 ---
 
 # Quantum Circuit Born Machine (QCBM)

@@ -8,11 +8,9 @@
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/Python-3.11-3b82f6?style=flat-square&logo=python&logoColor=white" alt="Python 3.11"/>
-  <img src="https://img.shields.io/badge/UnitaryLab-0.1.0-7c3aed?style=flat-square" alt="UnitaryLab 0.1.0"/>
-  <img src="https://img.shields.io/badge/VS_Code_Copilot-Skill-22c55e?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Copilot Skill"/>
-  <img src="https://img.shields.io/badge/Claude_Code-Skill-7c3aed?style=flat-square&logo=anthropic&logoColor=white" alt="Claude Code Skill"/>
-  <img src="https://img.shields.io/badge/Quantum_Algorithms-30%2B-f59e0b?style=flat-square" alt="30+ Quantum Algorithms"/>
+  <img src="https://img.shields.io/badge/Algorithm_Guides-51-f59e0b?style=flat-square" alt="51 Algorithm Guides"/>
+  <img src="https://img.shields.io/badge/Categories-12-3b82f6?style=flat-square" alt="12 Categories"/>
+  <a href="#installation"><img src="https://img.shields.io/badge/Codex%20%7C%20Claude%20Code%20%7C%20VS%20Code%20Copilot-Install_Skill-111827?style=flat-square" alt="Install Skill for Codex, Claude Code, and VS Code Copilot"/></a>
 </p>
 
 <p>
@@ -29,125 +27,88 @@
 
 ## English
 
-### What is this?
+**Quantum Skill** provides agent guidance for explaining quantum computing, writing code, and running examples with [UnitaryLab](https://unitarylab.com), Qiskit, or PennyLane.
 
-**Quantum Skill** is a VS Code Copilot agent skill for quantum computing. It provides structured, progressive guidance to help Copilot explain concepts, write code, and run quantum algorithm demos using [UnitaryLab](https://unitarylab.com), Qiskit, or PennyLane.
+- **Progressive loading** — The root [SKILL.md](SKILL.md) routes requests to algorithm or simulator guides as needed.
+- **Theory and practice** — Guides cover concepts, circuit construction, implementation references, debugging, and validation.
+- **Simulator selection** — UnitaryLab is the default; Qiskit and PennyLane support hardware/noise and differentiable workflows respectively.
 
----
+### Coverage
 
-### &#10024; Key Features
+**12 categories, 51 algorithm and workflow guides.** Counts exclude routing indexes and simulator guides; the quantum error correction tutorial counts as one guide. These include classical reference methods and supporting routines, not just distinct quantum algorithms.
 
-- **Progressive Disclosure** — Root `SKILL.md` is lightweight; algorithm and simulator guides load only when needed.
-- **Full Algorithm Coverage** — Primitives, linear systems, cryptography, Hamiltonian simulation, PDE solvers, eigensolvers, gradients, and quantum error correction.
-- **Multi-Simulator Support** — UnitaryLab (recommended), Qiskit, and PennyLane, with clear selection rules.
-- **Run-Ready Setup** — Pre-built wheels for Windows, macOS, and Linux; `uv`-based one-command install.
-- **Education-Friendly** — Suitable for concept explanation, circuit design, code review, and hands-on demos.
+| Category | Guides | Topics |
+|----------|-------:|--------|
+| Primitives | 6 | Grover, QPE, Hadamard Test/Transform, Amplitude Amplification/Estimation |
+| Linear Systems | 7 | HHL, LCU, AQC, QFT, QSP, QSVT-QLSA, VQLS |
+| Cryptography | 3 | Shor, Discrete Logarithm, Simon |
+| Search | 4 | Glued Trees, Hidden Shift, Quantum Walk Search, Quantum Backtracking |
+| Hamiltonian Simulation | 5 | Trotter, QDrift, Taylor Series, QSP, Cartan |
+| Schrodingerization | 3 | Advection, Heat (1D/2D) |
+| Quantum Machine Learning | 7 | VQE, VQC, QAOA, QCBM, CVQNN, Fermi-Hubbard VQE, 2D Ising Dynamics |
+| State Preparation | 5 | Sparse Superposition, Möttönen, MPS, Multiplexer, Pauli-Word Preparation |
+| Quantum Chemistry | 1 | Molecular DMRG |
+| Eigensolvers | 3 | NumPy Eigensolver, NumPy Minimum Eigensolver, VQD |
+| Gradients | 6 | Parameter-shift, Finite-difference, Linear-combination, SPSA, Reverse-mode, QFI |
+| Quantum Error Correction | 1 | LDPC, CSS, Hypergraph Product Codes |
 
----
+See [algorithm routing](algorithms/SKILL.md) for entry points.
 
-### &#127775; Algorithms Covered
+### Simulators
 
-| Category | Algorithms |
-|----------|-----------|
-| **Primitives** | Grover, QPE, Hadamard Test, Hadamard Transform, Amplitude Amplification, Amplitude Estimation |
-| **Linear Systems** | HHL, LCU, QSVT-QLSA, Quantum Signal Processing (QSP) |
-| **Cryptography** | Shor's Algorithm, Discrete Logarithm, Simon's Algorithm |
-| **Search** | Glued Trees, Hidden Shift |
-| **Hamiltonian Simulation** | Trotter, QDrift, Taylor Series, QSP |
-| **Schrodingerization** | Advection, Heat (1D/2D) |
-| **Eigensolvers** | NumPyEigensolver, VQD |
-| **Gradients** | Parameter-shift, Finite-difference, Linear-combination, SPSA, Reverse-mode, QFI |
-| **Quantum Error Correction** | qLDPC, CSS Codes, Hypergraph Product Codes |
+| Simulator | Typical use |
+|-----------|-------------|
+| [UnitaryLab](simulators/unitarylab/SKILL.md) *(default)* | Circuit programming, algorithm demos, PDE workflows |
+| [Qiskit](simulators/qiskit/SKILL.md) | Noise models, IBM hardware workflows |
+| [PennyLane](simulators/pennylane/SKILL.md) | Differentiable hybrid optimization |
 
----
+### Installation
 
-### &#128187; Supported Simulators
-
-| Simulator | When to Use | Platform |
-|-----------|-------------|----------|
-| **UnitaryLab** *(default)* | Learning, algorithm demos, PDE workflows | Win / macOS / Linux |
-| **Qiskit** | Noise models, IBM hardware workflows | Win / macOS / Linux |
-| **PennyLane** | Differentiable hybrid optimization | Win / macOS / Linux |
-
----
-
-### &#128193; Repository Structure
-
-```
-quantum-skills/
-|
-+-- SKILL.md                    # Root index — entry point for the agent
-+-- README.md
-|
-+-- algorithms/                 # Quantum algorithm skills
-|   +-- primitives/             # Grover, QPE, Hadamard test/transform, AA, AE
-|   +-- linear-systems/         # HHL, LCU, QSVT-QLSA, QSP
-|   +-- cryptography/           # Shor, discrete logarithm, Simon
-|   +-- search/                 # Glued Trees, Hidden Shift
-|   +-- hamiltonian-simulation/ # Trotter, QDrift, Taylor, QSP
-|   +-- schrodingerization/     # PDE solvers 
-|   +-- eigensolvers/           # NumPyEigensolver, VQD
-|   +-- gradients/              # Parameter-shift, finite-diff, SPSA, reverse, QFI
-|   +-- quantum-error-correction/ # qLDPC, CSS codes
-|
-+-- simulators/                 # Simulator selection & installation guides
-    +-- unitarylab/             # Recommended
-    +-- qiskit/
-    +-- pennylane/
-```
-
----
-
-### &#128640; Installation
-
-**Install into your project using `bunx` (recommended) or `npx`:**
+Install as a custom skill for Codex, Claude Code, or another compatible agent. Choose the target agent and project/user scope when prompted by the installer:
 
 ```bash
-# Using Bun (recommended)
 bunx skills add https://github.com/unitarylab/quantum-skills
-
-# Using npm / npx
+# Or:
 npx skills add https://github.com/unitarylab/quantum-skills
 ```
 
-This places the skill under `.agents/skills/quantum-skills/` in your workspace — Copilot will discover it automatically.
+For manual installation, clone the **complete repository** into the appropriate directory:
 
-**Or clone manually:**
+| Agent | Project only | All local projects |
+|-------|--------------|-------------------|
+| Codex | `.agents/skills/quantum-skills/` | `~/.agents/skills/quantum-skills/` |
+| Claude Code | `.claude/skills/quantum-skills/` | `~/.claude/skills/quantum-skills/` |
+
+Project-level examples (run from your project root; choose the agent you use):
 
 ```bash
-# macOS / Linux
-git clone https://github.com/unitarylab/quantum-skills \
-  .agents/skills/quantum-skills
-
-# Windows (PowerShell)
-git clone https://github.com/unitarylab/quantum-skills `
-  .agents/skills/quantum-skills
+# Codex
+git clone https://github.com/unitarylab/quantum-skills .agents/skills/quantum-skills
+# Claude Code
+git clone https://github.com/unitarylab/quantum-skills .claude/skills/quantum-skills
 ```
 
-> The skill itself requires no Python installation. The UnitaryLab simulator is only needed when you intend to **run** code — setup instructions are inside `simulators/unitarylab/SKILL.md`.
+For user-level installation, use the corresponding `~` path from the table. Keep the root `SKILL.md`, `algorithms/`, and `simulators/` together so relative references work. This installs a custom skill, not an officially bundled skill.
 
----
+In Codex, you can also ask: `$skill-installer install the root skill from https://github.com/unitarylab/quantum-skills as quantum-skills, retaining its algorithms and simulators directories.` If the skill does not appear after installation, restart Codex.
 
-### &#128161; Usage
+References: [Codex documentation](https://learn.chatgpt.com/docs/build-skills), [Claude Code documentation](https://code.claude.com/docs/en/skills), [skills installer](https://github.com/vercel-labs/skills).
 
-When you ask Copilot a question about quantum computing in VS Code, the agent reads the corresponding `SKILL.md` file level by level, finds the most matching leaf-level guide, and then generates the code.
+The skill documents require no Python environment. To run examples, follow the selected [simulator guide](simulators/SKILL.md) for Python compatibility and dependencies.
 
-**Example prompts:**
+### Usage
 
-| Prompt | What happens |
-|--------|-------------|
-| `Implement Grover's algorithm using UnitaryLab` | Loads primitives/grover guide |
-| `Explain the HHL algorithm with a 2×2 example` | Loads linear-systems/hhl guide with matrix demo |
-| `Simulate 1D heat equation with Schrodingerization` | Loads schrodingerization/heat-1d guide |
-| `Compare Trotter and QDrift for Hamiltonian simulation` | Loads hamiltonian-simulation guide |
-| `Run Shor's algorithm on n=15` | Loads cryptography/shor guide |
-| `Recover a Boolean hidden shift` | Loads search/hidden-shift guide |
+Ask your agent a quantum computing question. It follows the skill indexes to the relevant guide before generating code.
 
----
+To select it explicitly, use `$quantum-skills` in Codex or `/quantum-skills` in Claude Code, followed by your request.
 
-## License
-
-This project is licensed under the MIT license. For details, please refer to the `LICENSE` file in the repository root directory or the license description included in the distribution package.
+| Example prompt | Guide |
+|----------------|-------|
+| `Implement Grover's algorithm using UnitaryLab` | [Grover](algorithms/primitives/grover/SKILL.md) |
+| `Explain HHL with a 2×2 example` | [HHL](algorithms/linear-systems/hhl/SKILL.md) |
+| `Simulate the 1D heat equation with Schrodingerization` | [1D Heat](algorithms/schrodingerization/heat-1d-schrodingerization/SKILL.md) |
+| `Search a graph with multiple marked vertices using a quantum walk` | [Quantum Walk Search](algorithms/search/quantum-walk-search/SKILL.md) |
+| `Explain quantum backtracking on a small binary CNF problem` | [Quantum Backtracking](algorithms/search/quantum-backtracking/SKILL.md) |
 
 ---
 
@@ -155,122 +116,85 @@ This project is licensed under the MIT license. For details, please refer to the
 
 ## 中文
 
-### 这是什么？
+**Quantum Skill** 为 Agent 提供量子计算指南，帮助其解释概念、编写代码，并基于 [UnitaryLab](https://unitarylab.com)、Qiskit 或 PennyLane 运行示例。
 
-**Quantum Skill** 是一个面向量子计算的 VS Code Copilot Agent 技能包。它为 Copilot 提供结构化、按需加载的引导，帮助其解释量子概念、编写代码，并基于 [UnitaryLab](https://unitarylab.com)、Qiskit 或 PennyLane 运行量子算法示例。
+- **渐进式加载** — 根 [SKILL.md](SKILL.md) 按需路由到算claudecode法或模拟器指南。
+- **理论与实践** — 涵盖概念、电路构建、实现参考、调试和验证。
+- **模拟器选型** — 默认使用 UnitaryLab；Qiskit 和 PennyLane 分别支持硬件与噪声、可微分计算工作流。
 
----
+### 覆盖范围
 
-### &#10024; 核心特性
+**12 个分类，51 篇算法与工作流指南。** 数量不含路由索引和模拟器指南，量子纠错教程计为一篇；其中包含经典参考方法和辅助例程，并非 51 种独立量子算法。
 
-- **渐进式加载** — 根 `SKILL.md` 轻量，算法与模拟器指南仅在需要时才加载。
-- **算法全覆盖** — 基元、线性系统、密码学、哈密顿量模拟、PDE 求解器、本征求解器、梯度方法、量子纠错一应俱全。
-- **多模拟器支持** — UnitaryLab（推荐）、Qiskit、PennyLane，附明确选型规则。
-- **开箱即用** — 提供 Windows / macOS / Linux 预编译 wheel，一条命令完成安装。
-- **教学友好** — 适用于概念解释、电路设计、代码审查和动手实验。
+| 分类 | 指南数 | 内容 |
+|------|-------:|------|
+| 基础量子算法 | 6 | Grover、QPE、Hadamard 测试与变换、振幅放大与估计 |
+| 线性系统 | 7 | HHL、LCU、AQC、QFT、QSP、QSVT-QLSA、VQLS |
+| 密码学 | 3 | Shor、离散对数、Simon |
+| 量子搜索 | 4 | Glued Trees、Hidden Shift、Quantum Walk Search（量子游走搜索）、Quantum Backtracking（量子回溯） |
+| 哈密顿量模拟 | 5 | Trotter、QDrift、Taylor 级数、QSP、Cartan |
+| Schrodingerization | 3 | 对流、热方程（一维/二维） |
+| 量子机器学习 | 7 | VQE、VQC、QAOA、QCBM、CVQNN、Fermi-Hubbard VQE、二维 Ising 动力学 |
+| 态制备 | 5 | 稀疏叠加态、Möttönen、MPS、Multiplexer、Pauli 字符串态制备 |
+| 量子化学 | 1 | 分子 DMRG |
+| 本征求解器 | 3 | NumPy 本征求解器、NumPy 最小本征求解器、VQD |
+| 梯度方法 | 6 | 参数位移、有限差分、线性组合、SPSA、反向模式、QFI |
+| 量子纠错 | 1 | LDPC、CSS、超图乘积码 |
 
----
+入口见[算法索引](algorithms/SKILL.md)。
 
-### &#127775; 算法覆盖范围
+### 模拟器
 
-| 分类 | 算法 |
-|------|------|
-| **基础量子算法** | Grover、QPE、Hadamard 测试、Hadamard 变换、振幅放大、振幅估计 |
-| **线性系统** | HHL、LCU、QSVT-QLSA、量子信号处理（QSP） |
-| **密码学** | Shor 算法、离散对数、Simon 算法 |
-| **量子搜索** | Glued Trees、Hidden Shift |
-| **哈密顿量模拟** | Trotter、QDrift、Taylor 级数、QSP |
-| **Schrodingerization** | 对流、热方程（一维/二维）|
-| **本征求解器** | NumPyEigensolver、VQD |
-| **梯度方法** | 参数位移、有限差分、线性组合、SPSA、反向模式、QFI |
-| **量子纠错** | qLDPC、CSS 码、超图乘积码 |
+| 模拟器 | 适用场景 |
+|--------|----------|
+| [UnitaryLab](simulators/unitarylab/SKILL.md) *（默认）* | 电路编程、算法演示、PDE 工作流 |
+| [Qiskit](simulators/qiskit/SKILL.md) | 噪声模型、IBM 硬件工作流 |
+| [PennyLane](simulators/pennylane/SKILL.md) | 可微分混合优化 |
 
----
+### 安装
 
-### &#128187; 支持的模拟器
-
-| 模拟器 | 适用场景 | 平台 |
-|--------|---------|------|
-| **UnitaryLab** *(默认)* | 学习、算法演示、PDE 工作流 | Win / macOS / Linux |
-| **Qiskit** | 噪声模型、IBM 硬件工作流 | Win / macOS / Linux |
-| **PennyLane** | 可微分混合优化 | Win / macOS / Linux |
-
----
-
-### &#128193; 仓库结构
-
-```
-quantum-skills/
-|
-+-- SKILL.md                    # 根索引 — Agent 入口
-+-- README.md
-|
-+-- algorithms/                 # 量子算法技能
-|   +-- primitives/             # Grover、QPE、Hadamard 测试/变换、振幅放大与估计
-|   +-- linear-systems/         # HHL、LCU、QSVT-QLSA、QSP
-|   +-- cryptography/           # Shor、离散对数、Simon
-|   +-- search/                 # Glued Trees、Hidden Shift
-|   +-- hamiltonian-simulation/ # Trotter、QDrift、Taylor、QSP
-|   +-- schrodingerization/     # PDE 求解器
-|   +-- eigensolvers/           # NumPyEigensolver、VQD
-|   +-- gradients/              # 参数位移、有限差分、SPSA、反向模式、QFI
-|   +-- quantum-error-correction/ # qLDPC、CSS 码
-|
-+-- simulators/                 # 模拟器选型与安装指南
-    +-- unitarylab/             # 推荐
-    +-- qiskit/
-    +-- pennylane/
-```
-
----
-
-### &#128640; 安装
-
-**使用 `bunx`（推荐）或 `npx` 安装到项目中：**
+可安装为 Codex、Claude Code 或其他兼容 Agent 的自定义技能。使用以下安装器时，按提示选择目标 Agent 及项目级或用户级范围：
 
 ```bash
-# 使用 Bun（推荐）
 bunx skills add https://github.com/unitarylab/quantum-skills
-
-# 使用 npm / npx
+# 或：
 npx skills add https://github.com/unitarylab/quantum-skills
 ```
 
-命令会将技能放置到工作区的 `.agents/skills/quantum-skills/` 目录下，Copilot 将自动发现并加载它。
+手动安装时，将**完整仓库**克隆到对应目录：
 
-**或手动克隆：**
+| Agent | 仅当前项目 | 所有本地项目 |
+|-------|------------|--------------|
+| Codex | `.agents/skills/quantum-skills/` | `~/.agents/skills/quantum-skills/` |
+| Claude Code | `.claude/skills/quantum-skills/` | `~/.claude/skills/quantum-skills/` |
+
+项目级安装示例（在项目根目录运行，选择所用 Agent）：
 
 ```bash
-# macOS / Linux
-git clone https://github.com/unitarylab/quantum-skills \
-  .agents/skills/quantum-skills
-
-# Windows (PowerShell)
-git clone https://github.com/unitarylab/quantum-skills `
-  .agents/skills/quantum-skills
+# Codex
+git clone https://github.com/unitarylab/quantum-skills .agents/skills/quantum-skills
+# Claude Code
+git clone https://github.com/unitarylab/quantum-skills .claude/skills/quantum-skills
 ```
 
-> 技能本身无需 Python 环境。UnitaryLab 模拟器仅在需要**执行代码**时才需安装，安装步骤详见 `simulators/unitarylab/SKILL.md`。
+用户级安装使用表中的 `~` 路径。请保留根 `SKILL.md`、`algorithms/` 和 `simulators/` 的相对位置，确保引用有效。安装后属于自定义技能，并非官方预装技能。
 
----
+也可在 Codex 中输入：`$skill-installer 从 https://github.com/unitarylab/quantum-skills 安装仓库根技能，命名为 quantum-skills，并保留 algorithms 和 simulators 目录。` 安装后若未显示，请重启 Codex。
 
-### &#128161; 使用方法
+参考：[Codex 官方文档](https://learn.chatgpt.com/docs/build-skills)、[Claude Code 官方文档](https://code.claude.com/docs/en/skills)、[skills 安装器](https://github.com/vercel-labs/skills)。
 
-在 VS Code 中向 Copilot 提问量子计算相关问题时，Agent 会逐级读取对应的 `SKILL.md` 文件，找到最匹配的叶级指南后再生成代码。
+技能文档本身无需 Python 环境。运行示例时，请按所选[模拟器指南](simulators/SKILL.md)配置 Python 版本和依赖。
 
-**prompt 示例：**
+### 使用
 
-| Prompt | 触发行为 |
-|--------|---------|
-| `用 UnitaryLab 实现 Grover 算法` | 加载基元/grover 指南 |
-| `解释 HHL 算法，并给出 2×2 的示例` | 加载线性系统/hhl 指南，含矩阵示例 |
-| `用 Schrodingerization 模拟一维热方程` | 加载 schrodingerization/heat-1d 指南 |
-| `比较 Trotter 和 QDrift 在哈密顿量模拟中的异同` | 加载哈密顿量模拟指南 |
-| `对 n=15 运行 Shor 算法` | 加载密码学/shor 指南 |
-| `恢复布尔函数的隐藏位移` | 加载搜索/hidden-shift 指南 |
+向 Agent 提出量子计算问题，它会沿技能索引读取对应指南，再生成代码。
 
----
+显式调用时，在 Codex 中使用 `$quantum-skills`，在 Claude Code 中使用 `/quantum-skills`，后接具体问题。
 
-## License
-
-本项目采用 MIT 许可证。详情请参阅仓库根目录中的 `LICENSE` 文件，或发布包中随附的许可证说明。
+| 示例问题 | 指南 |
+|----------|------|
+| `用 UnitaryLab 实现 Grover 算法` | [Grover](algorithms/primitives/grover/SKILL.md) |
+| `解释 HHL 算法，并给出 2×2 示例` | [HHL](algorithms/linear-systems/hhl/SKILL.md) |
+| `用 Schrodingerization 模拟一维热方程` | [一维热方程](algorithms/schrodingerization/heat-1d-schrodingerization/SKILL.md) |
+| `用量子游走搜索图上的多个标记顶点` | [量子游走搜索](algorithms/search/quantum-walk-search/SKILL.md) |
+| `用一个小型二元 CNF 问题解释量子回溯` | [量子回溯](algorithms/search/quantum-backtracking/SKILL.md) |

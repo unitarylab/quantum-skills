@@ -17,6 +17,8 @@
 - [Serialization and OpenQASM](#serialization-and-openqasm)
 - [Compilation and hardware](compilation-and-hardware.md)
 - [Molecular chemistry](chemistry.md)
+- [Native QML](qml.md)
+- [Classical Ising/QUBO tools](qubocore.md)
 - [unitarylab.library](#unitarylablibrary)
   - [Differential Operators](#differential-operators-differential_operator)
   - [QFT / IQFT](#quantum-fourier-transform-qft)
@@ -48,6 +50,7 @@ The top-level `unitarylab` package re-exports the most commonly used symbols for
 | `Circuit` | `unitarylab.core` | Quantum circuit container (see [Circuit](#circuit)) |
 | `Register` | `unitarylab.core` | Quantum register (see [Register](#register)) |
 | `ClassicalRegister` | `unitarylab.core` | Classical register (see [ClassicalRegister](#classicalregister)) |
+| `GateSequencePacked` | `unitarylab.backend.gatesequence` | Native C++ packed gate store |
 | `CompileConfig` | `unitarylab.qcompiler` | Validated compiler configuration (lazy export) |
 | `CompilationResult` | `unitarylab.qcompiler` | Local compilation and mapping result (lazy export) |
 | `HardwareResult` | `unitarylab.qcompiler` | Provider-neutral hardware result (lazy export) |
@@ -68,7 +71,7 @@ from unitarylab import Circuit, Register, ClassicalRegister
 
 ### Circuit
 
-#### `Circuit(*args, name="Circuit", **kwargs)`
+#### `Circuit(*args, name="Circuit", gate_storage="python", **kwargs)`
 
 `Circuit` uses a flexible constructor. It parses different initialization patterns through `*args`.
 
@@ -91,6 +94,8 @@ Quantum circuit container. Wraps the backend gate-sequence implementation and ad
 
 For `Circuit(state_vector)`, pass a normalized one-dimensional `np.ndarray` whose length is a power of two. The constructor does not accept a Python list as a state vector.
 
+`gate_storage` selects `"python"` (default) or `"packed"` (requires the native C++ extension). Storage selection is independent of the execution backend; see [Gate Storage](circuit-building.md#gate-storage).
+
 **Circuit management**
 
 | Method | Return | Description |
@@ -98,7 +103,8 @@ For `Circuit(state_vector)`, pass a normalized one-dimensional `np.ndarray` whos
 | `get_num_qubits()` | int | Total qubit count |
 | `get_num_clbits()` | int | Total classical-bit count |
 | `update_name(name)` | — | Rename the circuit |
-| `data()` | `GateSequence` | Return the underlying gate sequence object |
+| `data()` | `GateSequence` or `GateSequencePacked` | Return the underlying gate sequence object |
+| `gate_storage` | str property | Gate store: `"python"` or `"packed"` |
 | `copy()` | `Circuit` | Create an independent circuit copy with copied registers, mappings, and gate sequence |
 | `add_register(register)` | — | Append a `Register` and assign global qubit indices |
 | `add_classical_register(cl_register)` | — | Append a `ClassicalRegister` |
@@ -139,6 +145,7 @@ For `Circuit(state_vector)`, pass a normalized one-dimensional `np.ndarray` whos
 | Method | Description |
 |--------|-------------|
 | `swap(qubit1, qubit2)` | SWAP gate |
+| `rzz(angle, target1, target2)` | Two-qubit ZZ rotation |
 | `cnot(control, target, control_state=None)` | CNOT (CX) |
 | `cx(control, target, control_state=None)` | CX (alias for CNOT) |
 | `cy(control, target, control_state=None)` | CY |
@@ -224,7 +231,7 @@ Gate methods mutate the circuit and return `None`; call them on separate lines r
 | Method | Return | Description |
 |--------|--------|-------------|
 | `execute(initial_state=None, backend="torch", device="cpu", dtype=np.complex128, shots=1, seed=42, backend_options=None)` | `ExecutionResult` | Execute the circuit; TensorNet returns a compatible `TensorNetExecutionResult` |
-| `execute_density(initial_state=None, device="cpu", dtype=np.complex128, noise_model=None)` | `DensityMatrixResult` | Execute a dense mixed-state simulation; no circuit measurements or shots/counts |
+| `execute_density(initial_state=None, device="cpu", dtype=np.complex128, noise_model=None, shots=1, seed=42)` | `DensityMatrixResult` | Dense mixed-state execution with circuit measurement, final-shot state/classical snapshots, and aggregated counts |
 | `get_matrix(m=None, backend="torch", dtype=np.complex128, device="cpu")` | `ndarray` | Compute the circuit matrix. If `m=None`, use all qubits. |
 | `compile(provider="local", machine=None, token=None)` | `CompilationResult` | Compile and map without submitting a hardware task |
 | `submit(provider, machine=None, shots=1024, token=None)` | `HardwareResult` | Compile and submit to a hardware provider |
@@ -428,13 +435,30 @@ qasm2 = qc.to_qasm2()
 restored = Circuit.from_qasm(qasm3)
 
 qc.to_qasm_file("circuit.qasm")
-from_file = Circuit.from_qasm_file("circuit.qasm")
+from_file = Circuit.from_qasm_file("circuit.qasm", gate_storage="python")
 
 python_source = qc.to_python(variable_name="generated")
 qc.to_python_file("generated.py", variable_name="generated")
+cudaq_source = qc.to_python(framework="cudaq", variable_name="generated")
 ```
 
-`from_qasm()` detects OpenQASM 2.0 or 3.0 from the header. `to_qasm()` and `to_qasm_file()` emit OpenQASM 3.0; `to_qasm2()` emits OpenQASM 2.0. OpenQASM 2 parsing currently ignores measurement statements, so use OpenQASM 3 when measurement-to-classical-bit mappings must survive a serialization round trip. For supported composite gates, retry export with `to_qasm(decompose=True, transpile=True)`. Python source generation currently supports native `rx`, `ry`, `rz`, `p`, and `cx`; unsupported or nested gates raise `RuntimeError`.
+`from_qasm()` detects OpenQASM 2.0 or 3.0 from the header. Both QASM import methods accept
+keyword-only `gate_storage="python"` or `"packed"`. `to_qasm()` and `to_qasm_file()` emit
+OpenQASM 3.0; `to_qasm2()` emits OpenQASM 2.0. OpenQASM 2 parsing currently ignores measurements,
+so use OpenQASM 3 when classical mappings must survive a round trip. For supported composite
+gates, retry QASM export with `to_qasm(decompose=True, transpile=True)`.
+
+| Python export API | Result |
+|---|---|
+| `to_python(*, framework="unitarylab", circuit_name="Unitarylab Circuit", variable_name="circuit")` | Source string for UnitaryLab or CUDA-Q |
+| `to_python_file(filepath, *, framework="unitarylab", circuit_name="Unitarylab Circuit", variable_name="circuit")` | Resolved `pathlib.Path` of the written source |
+| `to_cudaq()` | Non-parameterized `cudaq.Kernel`; requires optional CUDA-Q installation |
+
+UnitaryLab Python export supports ordinary gates, measurement/register mappings, nested
+controlled blocks, and custom unitaries, with generic `QuantumGate` reconstruction for internal
+operations. CUDA-Q source generation requires no CUDA-Q installation, but running the source does.
+CUDA-Q export supports arbitrary one-/two-qubit unitaries and either no measurement or complete,
+ordered terminal measurement. See [CUDA-Q](circuit-building.md#cuda-q) for restrictions.
 
 
 ## unitarylab.library
@@ -939,4 +963,7 @@ Inspect the selected class or use the relevant algorithm skill before constructi
 
 ## Package Boundary
 
-`unitarylab.library` and its equation, Pauli, block-encoding, Hamiltonian, and linear-solver subpackages belong to the current package. `unitarylab_algorithms` is separate and is intentionally not documented here.
+`unitarylab.library` and its equation, Pauli, block-encoding, Hamiltonian, linear-solver,
+[QML](qml.md), and [classical Ising/QUBO](qubocore.md) subpackages belong to the SDK.
+`unitarylab_algorithms` is separate and is intentionally not documented here. Installed versions
+may differ from the source used for these notes; verify the requested SDK entry before use.

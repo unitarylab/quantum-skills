@@ -1,6 +1,6 @@
 ---
 name: finite-difference
-description: "Quantum gradient estimation via finite difference method. Supports both Estimator (expectation value gradients) and Sampler (probability distribution gradients) primitives with central, forward, and backward difference schemes. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Estimate expectation-value or probability gradients by finite differences. Use for numerical differentiation or gradient checks when an analytic gate derivative is unavailable."
 ---
 
 # Finite Difference Gradient

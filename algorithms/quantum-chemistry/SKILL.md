@@ -1,6 +1,6 @@
 ---
 name: quantum-chemistry
-description: Route molecular quantum-chemistry tasks involving electronic structure, active-space Hamiltonians, DMRG, circuit-based disentangling, and grouped quantum measurement to the appropriate UnitaryLab algorithm skill.
+description: "Route molecular electronic-structure tasks to the appropriate UnitaryLab algorithm skill. Use for active-space molecular calculations and DMRG-to-quantum-circuit workflows."
 ---
 
 # Quantum Chemistry

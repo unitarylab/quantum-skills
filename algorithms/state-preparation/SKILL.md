@@ -1,6 +1,6 @@
 ---
 name: state-preparation
-description: A router for UnitaryLab quantum state-preparation algorithms, including sparse-support, uniformly controlled-rotation, tensor-network, recursive multiplexer, and variational Pauli-word preparation. Use when selecting or comparing methods for loading target amplitude vectors into quantum circuits.
+description: "Select a UnitaryLab state-preparation method for loading target amplitudes into a quantum circuit. Use to compare sparse-support, general complex-state, low-entanglement, and variational preparation approaches."
 ---
 
 # Quantum State Preparation Algorithms

@@ -1,6 +1,6 @@
 ---
 name: spsa
-description: "Concise guide to the local SPSA estimator and sampler gradient implementations for parameterized quantum circuits. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Estimate circuit gradients with simultaneous perturbation stochastic approximation (SPSA). Use for many-parameter circuits when the number of circuit evaluations per estimate should not grow with parameter count."
 ---
 
 # SPSA Gradient Estimation

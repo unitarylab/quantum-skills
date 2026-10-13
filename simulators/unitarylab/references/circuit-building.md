@@ -26,6 +26,21 @@ order such as `rx(angle, target)`, `cx(control, target)`, and `mcx(controls, tar
 `append()` and `prepend()` mutate the receiver. `copy()`, `inverse()`, `dagger()`, `reverse()`,
 `repeat()`, `control()`, `decompose()`, `optimize()`, and `transpile()` return circuits.
 
+### Gate Storage
+
+`Circuit(..., gate_storage="python")` is the default. `gate_storage="packed"` uses
+the native C++ `GateSequencePacked` store and requires the packaged C++ extension:
+
+```python
+packed = Circuit(2, gate_storage="packed")
+packed.h(0)
+packed.cx(0, 1)
+```
+
+Storage is independent of the execution backend; packed storage does not imply CUDA execution.
+`circuit.gate_storage` identifies the store and `circuit.data()` returns its gate sequence.
+`Circuit.from_qasm(..., gate_storage="packed")` and `from_qasm_file()` accept the same option.
+
 ## Execute
 
 ```python
@@ -124,24 +139,36 @@ qasm3 = circuit.to_qasm()
 qasm2 = circuit.to_qasm2()
 restored = Circuit.from_qasm(qasm3)
 
-# Python source generation currently supports only rx, ry, rz, p, and cx.
 exportable = Circuit(2)
-exportable.rx(0.5, 0)
+exportable.h(0)
 exportable.cx(0, 1)
 python_source = exportable.to_python(variable_name="generated")
+cudaq_source = exportable.to_python(framework="cudaq", variable_name="generated")
 ```
 
 - `to_qasm()` emits OpenQASM 3; `to_qasm2()` emits OpenQASM 2.
 - `from_qasm()` detects the version. OpenQASM 2 parsing currently ignores measurements, so use
   OpenQASM 3 when classical mappings must survive a round trip.
 - File variants are `to_qasm_file()`, `from_qasm_file()`, and `to_python_file()`.
-- Python generation currently exports only native `rx`, `ry`, `rz`, `p`, and `cx` gates. It raises
-  `RuntimeError` for `h`, measurement, and other unsupported gates, so do not call `to_python()` or
-  `to_python_file()` on an arbitrary circuit without first checking its gate set.
-- `decompose=True` and `transpile=True` may help with supported composite gates, but they do not
-  convert every unsupported primitive into the Python generator's native subset. In particular,
-  these options do not make the current `h` or measurement export paths supported. Use QASM export
-  when the circuit contains unsupported gates.
+- `to_python(framework="unitarylab")` preserves ordinary gates, registers, measurements,
+  nested controlled blocks, and custom unitary matrices. Internal gates without a direct
+  circuit method use a `QuantumGate` reconstruction. Malformed or unsupported input can still fail.
+- `to_python()` and `to_python_file()` accept keyword-only `framework`, `circuit_name`,
+  and `variable_name`; they do not accept QASM's `decompose`/`transpile` options.
+
+### CUDA-Q
+
+`to_python(framework="cudaq")` generates source without importing CUDA-Q.
+`to_python_file("generated.py", framework="cudaq")` writes that source and returns a `Path`.
+`to_cudaq()` instead imports the optional `cudaq` package and returns a non-parameterized
+`cudaq.Kernel` with the circuit's current numerical parameters fixed.
+
+The exporter lowers supported gates and nested controlled blocks, including zero-state controls.
+Arbitrary unitary gates are limited to one or two target qubits. Measurements may be absent;
+when present, they must be terminal and cover every qubit exactly in order
+`q0 -> c0, q1 -> c1, ...`. Partial, reordered, controlled, or mid-circuit measurements raise
+`NotImplementedError`. These CUDA-Q limits do not restrict UnitaryLab Python export.
+Run generated code only when the user authorizes execution.
 
 ## Failure Guide
 

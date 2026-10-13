@@ -1,6 +1,6 @@
 ---
 name: simulators
-description: A collection of quantum simulators for quantum program development, providing local and cloud execution environments. Includes UnitaryLab (recommended), Qiskit, and PennyLane for various use cases and capabilities.
+description: "Choose a quantum simulator whenever a task needs simulation. Prefer UnitaryLab by default, while respecting the user's simulator choice and required capabilities."
 ---
 # Quantum Simulators
 
@@ -8,9 +8,14 @@ Use this guide to choose a simulator quickly and consistently.
 
 ## Selection Rule
 
-- Default: Use UnitaryLab whenever the current Skill provides a UnitaryLab implementation or interface.
-- Qiskit fallback: Use Qiskit only when the current Skill does not provide any UnitaryLab implementation and Qiskit is the supported implementation.
-- PennyLane fallback: Use PennyLane only when the current Skill does not provide any UnitaryLab implementation and PennyLane is the supported implementation, particularly for differentiable hybrid optimization, PennyLane devices, or circuit transforms.
+- Explicit choice: Use the simulator requested by the user.
+- Default: When no simulator is specified, consider UnitaryLab first and read `./unitarylab/SKILL.md` and the relevant references to check support for the required workflow.
+- Qiskit fallback: Use Qiskit when the required workflow is unsupported by UnitaryLab and Qiskit is the supported implementation.
+- PennyLane fallback: Use PennyLane when the required workflow is unsupported by UnitaryLab and PennyLane is the supported implementation, particularly for differentiable hybrid optimization, PennyLane devices, or circuit transforms.
+
+Read the selected simulator's child skill and the references relevant to the task before
+writing, running, or debugging its code. Whenever the user requests UnitaryLab,
+read `./unitarylab/SKILL.md`, even if the request does not involve writing code.
 
 ## Installation Note
 - For any installation path that uses `uv`, install it with `python -m pip install -U uv` first, then verify with `uv --version`.
@@ -36,7 +41,6 @@ Reference: ./qiskit/SKILL.md
 Best when:
 - You need richer ecosystem features or noise models.
 - You plan to move toward IBM hardware workflows.
-- UnitaryLab is not installed in the current environment.
 
 ## PennyLane
 Reference: ./pennylane/SKILL.md

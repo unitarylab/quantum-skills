@@ -1,6 +1,6 @@
 ---
 name: trotter
-description: "Trotter-Suzuki product-formula Hamiltonian simulation, approximating e^{-iHt} via structured short-time exponential products with controllable order and step count. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Simulate Hamiltonian time evolution with Trotter-Suzuki product formulas. Use when a term decomposition and controllable product-formula order or step count are desired."
 ---
 
 # Trotter-Suzuki Hamiltonian Simulation Skill Guide

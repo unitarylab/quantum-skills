@@ -1,6 +1,6 @@
 ---
 name: quantum-skills
-description: Root entrypoint for the quantum-skills package. Use this skill to route requests to the correct simulator or algorithm sub-skill, enforce full skill-chain reading before coding, and avoid duplicating implementation details that are already defined in leaf skills.
+description: "Route quantum algorithm and simulator requests to the relevant sub-skills. Read this entrypoint before choosing a workflow or generating quantum code."
 ---
 
 # Quantum Skills Root Entrypoint
@@ -8,7 +8,7 @@ description: Root entrypoint for the quantum-skills package. Use this skill to r
 ## Purpose
 This file is only the package-level router.
 
-Use it to choose one domain index:
+Use it to choose the relevant domain indexes:
 
 - `./algorithms/SKILL.md`
 - `./simulators/SKILL.md`
@@ -19,7 +19,7 @@ Detailed routing, setup, examples, and implementation guidance belong in those d
 Before writing code or commands:
 
 1. Read this file.
-2. Read either `./algorithms/SKILL.md` or `./simulators/SKILL.md`.
+2. Read `./algorithms/SKILL.md` for algorithm tasks and `./simulators/SKILL.md` whenever a task needs a simulator. Read both for algorithm implementations that use a simulator.
 3. Continue to the relevant child skill when needed.
 
 Never code from this root file alone.
@@ -30,6 +30,10 @@ Never code from this root file alone.
   - Read `./algorithms/SKILL.md`
 - Simulator choice, runtime setup, backend comparison, or execution environment:
   - Read `./simulators/SKILL.md`
+
+For tasks that need a simulator, follow the UnitaryLab-first selection rule in
+`./simulators/SKILL.md` and read the selected simulator's child skill.
+When the user requests UnitaryLab, read `./simulators/unitarylab/SKILL.md`.
 
 ## Package Map
 

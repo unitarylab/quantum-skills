@@ -1,6 +1,6 @@
 ---
 name: "vqls"
-description: "Variational Quantum Linear Solver for caller-provided power-of-two linear systems. Documents the current A-and-b interface, three implemented cost paths, source-verified return contract, execution limits, and runnable examples."
+description: "Solve caller-provided power-of-two linear systems with Variational Quantum Linear Solver (VQLS). Use when a parameterized ansatz and classical optimization are the desired solving approach."
 ---
 
 # VQLS

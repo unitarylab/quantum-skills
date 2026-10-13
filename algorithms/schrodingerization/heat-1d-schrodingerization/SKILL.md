@@ -1,6 +1,6 @@
 ---
 name: heat-1d-schrodingerization
-description: "A quantum-compatible solver for the 1D Heat Equation using Schrödingerization to transform the non-unitary diffusion equation into a unitary evolution problem. Supports Dirichlet and periodic boundary conditions, source terms, and both classical and Trotter-based quantum evolution with automatic circuit generation and solution visualization. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Solve the one-dimensional heat equation using Schrodingerization. Use for 1D diffusion with Dirichlet or periodic boundaries and classical or circuit-based evolution."
 ---
 
 

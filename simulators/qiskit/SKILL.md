@@ -1,6 +1,6 @@
 ---
 name: qiskit
-description: A collection of quantum algorithms implemented using Qiskit, covering a wide range of topics including quantum search, quantum phase estimation, amplitude amplification, and more. Provides efficient implementations and examples for various quantum computing applications.
+description: "Guide Qiskit circuit construction, Aer simulation, and IBM hardware workflows. Use when the user requests Qiskit or the simulator-selection guide identifies a Qiskit-specific requirement."
 license: MIT
 ---
 

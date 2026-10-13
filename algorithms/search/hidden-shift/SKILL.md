@@ -1,6 +1,6 @@
 ---
 name: hidden-shift
-description: "Use when users ask about Boolean Hidden Shift, bent-function phase oracles, the X_s U_f X_s construction, Hadamard interference, sample-versus-execute measurement paths, bit-order debugging, or UnitaryLab's HiddenShiftAlgorithm. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and reference-guided reimplementation."
+description: "Recover a Boolean hidden shift with bent-function phase oracles and Hadamard interference. Use for HiddenShiftAlgorithm explanations, implementation, or measurement debugging."
 ---
 
 # Boolean Hidden Shift Algorithm

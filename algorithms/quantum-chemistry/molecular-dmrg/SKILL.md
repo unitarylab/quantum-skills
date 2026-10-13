@@ -1,6 +1,6 @@
 ---
 name: molecular-dmrg
-description: "Guide the source-backed MolecularDMRGAlgorithm workflow for molecular electronic structure, active-space Hamiltonians, DMRG, CVD state-preparation circuits, QWC measurements, energy verification, and QASM artifacts."
+description: "Guide molecular electronic-structure calculations with MolecularDMRGAlgorithm. Use for active-space DMRG and conversion of the resulting state into CVD circuits for energy measurement."
 ---
 
 # Molecular DMRG

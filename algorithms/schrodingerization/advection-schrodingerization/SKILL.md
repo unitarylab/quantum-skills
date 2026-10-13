@@ -1,6 +1,6 @@
 ---
 name: advection-schrodingerization
-description: "A Schrödingerization-based solver for the 1D advection equation, supporting both direct unitary evolution (under periodic and central difference discretization) and general transformation for non-unitary cases. Enables classical and quantum simulation through Hamiltonian formulation. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Solve the one-dimensional advection equation through Schrodingerization or supported direct unitary evolution. Use for transport PDE examples rather than heat diffusion."
 ---
 
 

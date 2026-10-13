@@ -1,6 +1,6 @@
 ---
 name: fermi-hubbard-vqe
-description: "Guides small open-chain Fermi-Hubbard ground-state calculations with UnitaryLab's VQE workflow, including its Jordan-Wigner mapping, Ry-Rz COBYLA ansatz, exact-energy reference, endianness checks, output contract, and paired-mode spin measurements."
+description: "Estimate small open-chain Fermi-Hubbard ground states with UnitaryLab VQE. Use for lattice-model calculations and paired-mode spin measurements rather than a generic Hamiltonian VQE example."
 ---
 
 # Fermi-Hubbard VQE

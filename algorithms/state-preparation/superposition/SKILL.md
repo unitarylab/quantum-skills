@@ -1,6 +1,6 @@
 ---
 name: superposition
-description: "Prepares a normalized state with sparse computational-basis support using compact coefficient preparation followed by a support permutation. The current implementation is exact up to floating-point error but materializes dense matrices."
+description: "Prepare a normalized state supported on a sparse set of computational-basis states. Use for sparse-support amplitude loading; the current implementation still uses dense matrices."
 ---
 
 # Sparse Superposition State Preparation

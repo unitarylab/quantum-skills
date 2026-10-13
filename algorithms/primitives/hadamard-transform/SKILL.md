@@ -1,6 +1,6 @@
 ---
 name: hadamard-transform
-description: "A quantum algorithm for performing the Hadamard transform, which is a fundamental operation in quantum computing that creates superposition states. This skill includes efficient implementations and educational resources for understanding and utilizing the Hadamard transform in various quantum algorithms and applications. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Apply the Hadamard or Walsh-Hadamard transform to create uniform superpositions or change basis. Use for Hadamard layers and interference subroutines, rather than expectation-value estimation."
 ---
 
 # Hadamard Transform

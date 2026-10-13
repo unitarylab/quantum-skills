@@ -1,6 +1,6 @@
 ---
 name: parameter-shift
-description: "Analytic quantum gradient estimation via the parameter shift rule. Supports both Estimator (expectation value gradients) and Sampler (probability distribution gradients) primitives. Requires circuits composed exclusively of supported gate types. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Compute analytic expectation-value or probability gradients using the parameter-shift rule. Use when the parameterized gates support shift rules and circuit-based derivatives are required."
 ---
 
 # Parameter Shift Gradient

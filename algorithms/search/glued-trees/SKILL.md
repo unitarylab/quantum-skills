@@ -1,6 +1,6 @@
 ---
 name: glued-trees
-description: "Use when users ask about the Glued Trees quantum walk, coupled-oscillator graph embedding, Pauli decomposition and cropping, Suzuki-Trotter evolution, exit-state sampling, or debugging UnitaryLab's GluedTreesAlgorithm. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and reference-guided reimplementation."
+description: "Explain or implement quantum-walk transport through a Glued Trees graph using UnitaryLab's coupled-oscillator embedding. Use for entry-to-exit transport rather than marked-vertex graph search."
 ---
 
 # Glued Trees Quantum Walk Algorithm

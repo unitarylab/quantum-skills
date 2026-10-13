@@ -1,6 +1,6 @@
 ---
 name: amplitude-estimation
-description: "A quantum algorithm for estimating the amplitude of a specific state in a quantum superposition, which can be used for various applications such as Monte Carlo simulations and optimization problems. Provides efficient implementations and educational resources for understanding and utilizing amplitude estimation in quantum algorithm development. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Estimate a quantum state's success probability with amplitude estimation. Use when a numerical amplitude or probability estimate is needed rather than amplification of marked outcomes."
 ---
 
 # Amplitude Estimation (QAE)

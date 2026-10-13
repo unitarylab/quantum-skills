@@ -1,6 +1,6 @@
 ---
 name: qdrift
-description: "QDrift randomized Hamiltonian simulation, approximating e^{-iHt} by stochastically sampling Pauli-term evolutions with probability proportional to coefficient magnitude. Skill-first for covered code generation, runnable examples, execution, debugging, validation, and fixed workflows."
+description: "Approximate Hamiltonian time evolution with QDrift randomized Pauli-term sampling. Use when stochastic sampling is preferred to a fixed product-formula schedule."
 ---
 
 # QDrift Hamiltonian Simulation Skill Guide
