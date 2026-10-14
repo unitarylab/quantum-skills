@@ -7,31 +7,18 @@ description: "Search for marked vertices on small undirected weighted graphs wit
 
 ## How to Use This Skill
 
-Use this leaf for continuous-time search of marked graph vertices, rather than
-Glued Trees transport or discrete Grover iterations. Read the explanation and then
-inspect [the bundled implementation](scripts/quantum_walk_search_implementation.py)
-and [its local example](scripts/algorithm.py). They contain all required local code;
-an installed algorithm implementation package or another checkout is unnecessary.
+Use this skill when the user asks to explain, run, debug, modify, or reimplement continuous-time Quantum Walk Search.
 
-For explanation, use the Hamiltonian and measurement definitions below.
-For local reproduction, run the documented script modes in an environment with the
-normal dependencies. For user-specific code, adapt the same included calculation
-without searching other checkouts. For independent reconstruction, use the complete
-manual example below, which imports no leaf script or packaged algorithm class.
-For debugging/modification, preserve matrix construction and floating-point order,
-initial-state ownership, vertex indexing, random-call order and returned evidence.
+The implementation searches for one or more marked vertices on a small undirected weighted graph. It constructs a graph-search Hamiltonian, prepares a uniform state on valid vertices, simulates time evolution with UnitaryLab, and compares marked-state probabilities with an exact reference. This is a marked-vertex search workflow, distinct from Glued Trees transport and discrete Grover iterations.
 
-From this leaf directory, these commands request diagnostics or execution:
+When using this skill:
 
-```bash
-python scripts/algorithm.py
-python scripts/quantum_walk_search_implementation.py
-python scripts/algorithm.py --execute --output-dir results/walk
-```
-
-Default mode lists configuration and planned checks; it does not calculate a search
-result or export files. Only --execute runs the example. These commands are
-documented suggestions, not executed validation or permission for an agent to run code.
+- **Explanation:** Explain the graph model, marked-vertex Hamiltonian, initial state, time selection, measurement probabilities, and implementation limitations. Do not generate code unless requested.
+- **Run or reuse:** Generate standalone task code that imports `QuantumWalkSearchAlgorithm` from the installed `unitarylab_algorithms` package when its public API satisfies the task. Use the `Minimal Manual Implementation` when independent reconstruction, modification, or porting is requested. Never import or depend on bundled scripts.
+- **Debugging:** Start with a small complete or path graph, an explicit evolution time, and a fixed sampling seed. Compare simulated and exact probabilities before changing code; separate Hamiltonian construction, padding, evolution approximation, sampling, and backend errors.
+- **Modification or reimplementation:** Preserve adjacency validation, matrix construction and floating-point order, initial-state ownership, vertex indexing, padding conventions, random-call order, and the return contract.
+- **Reference scripts:** Read `scripts/algorithm.py` and `scripts/quantum_walk_search_implementation.py` only to understand algorithm logic, parameters, conventions, and outputs when needed. Never directly run, import, call, or dynamically execute these files. For execution or validation, generate standalone task code that calls the installed public API, or independently reconstruct the algorithm when requested; execute only that generated code within the user's requested scope.
+- **Validation:** Check probability normalization, padded-state probability, sample totals, marked counts, and agreement with an exact small-graph reference. Include an all-marked case and a non-power-of-two graph when relevant. Report the observed approximation error rather than treating `target_error` as an achieved-error guarantee.
 
 ## Scope and Limitations
 
@@ -53,12 +40,10 @@ reinterpretation. target_error is not an achieved-error guarantee. Explicit zero
 can encounter original zero-step simulator behavior. The sampling seed does not
 seed construction of stochastic simulation circuits.
 
-Relative to the selected algorithm, local packaging embeds the exact BaseAlgorithm,
-fixes the default output directory to results/search/quantum_walk_search despite
-the scripts location, and adds diagnostic/--execute main. The old research argparse
-entry is retained as research_main; its file-based interface remains distinct.
-The selected calculation keeps the already-reviewed integer histogram change.
-No further numerical or performance changes were made.
+The installed public API writes its default outputs under
+`<cwd>/results/search/quantum_walk_search`, or under an explicitly supplied `algo_dir`.
+Bundled sources describe the computation and result/export conventions for reading
+and independent reconstruction; their entrypoints are not task execution interfaces.
 
 ## Overview
 
@@ -81,45 +66,59 @@ The ordered flow is:
 
 Understand weighted adjacency, Hermitian eigenproblems, unitary evolution, basis-state
 probabilities and sampling. The required packages are NumPy with np.exceptions
-and a compatible UnitaryLab exposing Circuit, Register, ClassicalRegister and
+and, for public API calls, the installed `unitarylab-algorithms` package exporting
+`QuantumWalkSearchAlgorithm`. Independent reconstruction also requires a compatible
+UnitaryLab exposing Circuit, Register, ClassicalRegister and
 unitarylab.library.hamiltonian_simulation. UnitaryLab's normal simulator and drawing
 dependencies are also needed for execution/exports; this delivery does not install them.
 Matplotlib is imported only for optional research PNG exports. No new package version
 range has been validated, so no compatibility guarantee is claimed.
 
-All required local code is in the two linked scripts. No input dataset, external
-algorithm checkout or downloaded code is required for the default graph.
-Retained source import behavior sets missing numerical thread environment variables
-to1; actual run creates the requested output directory.
+The default graph requires no input dataset or external algorithm checkout. Generate
+API calls against the installed package; use the two linked scripts only as reading
+material for independent reconstruction. The reference source sets missing numerical
+thread environment variables to1; the public API creates its requested output directory.
 
 ## Reference Implementation Example
 
-Run this code from the scripts directory so the same-directory module resolves
-normally, without changing sys.path:
+`QuantumWalkSearchAlgorithm` is a public class exported by the installed
+`unitarylab_algorithms` package. Generate the following as standalone task code in
+the user's task directory. Run it only when execution, debugging, or verification
+is requested; it writes circuit and result artifacts under the chosen `algo_dir`.
 
 ```python
 import numpy as np
-from quantum_walk_search_implementation import QuantumWalkSearchAlgorithm
+from unitarylab_algorithms import QuantumWalkSearchAlgorithm
 
-algorithm = QuantumWalkSearchAlgorithm(text_mode="plain", algo_dir="results/walk")
-result = algorithm.run(
-    num_vertices=8, marked="2,5", graph_type="complete",
-    backend="numpy", device="cpu", dtype=np.complex128,
+algorithm = QuantumWalkSearchAlgorithm(
+    text_mode="plain", algo_dir="results/quantum_walk_search"
 )
-print(result["success_probability"])
-print(result["exact_probability_at_time"])
-print(result["counts"])
-print(result["circuit_path"])
+result = algorithm.run(
+    num_vertices=8,
+    marked="2,5",
+    graph_type="complete",
+    method="trotter",
+    simulation_steps=8,
+    shots=128,
+    seed=7,
+    backend="numpy",
+    device="cpu",
+    dtype=np.complex128,
+)
+print(result["success_probability"], result["exact_probability_at_time"])
+print(result["counts"], result["circuit_path"], result["plot"])
 ```
 
-The class comes from the bundled source, not an installed algorithm package.
-The separate script example calls this same class. Both examples remain unexecuted.
+Resolve this import from the active environment's installed package, without adding
+the skill directory or another checkout to `sys.path`. If the installed version
+lacks the export, report that API/version gap. For independent reconstruction, use
+the `Minimal Manual Implementation`; never invoke or import the bundled script class.
 
 ## Core Parameters Explained
 
 | Parameter/entry | Type and actual default | Meaning and constraints |
 |---|---|---|
-| constructor text_mode | str, plain | plain/legacy formatting; test uses legacy |
+| constructor text_mode | str, plain | plain/legacy formatting |
 | constructor algo_dir | str or None, None | None uses <cwd>/results/search/quantum_walk_search |
 | run num_vertices | int,8 | Built-in graph size; effective graph must be2–32 vertices |
 | run marked | str/int/sequence, "2,5" | Nonempty unique zero-based in-range targets; strings comma-separated |
@@ -134,21 +133,15 @@ The separate script example calls this same class. Both examples remain unexecut
 | run seed | int,7 | Vertex-sampling seed; NumPy RNG requires a non-negative seed |
 | run backend | str,numpy | Simulator construction and final execute receive it |
 | run device | str,cpu | Depends on backend; numpy only CPU |
-| run dtype | np.complex128 | Execution precision; local CLI/test dtype string defaults complex128 |
-
-The diagnostic/execute main exposes the14 run parameters and constructor output-dir;
-it parses integer/float settings and converts dtype via np.dtype(...).type.
-The local example intentionally uses fixed small run defaults and exposes only
---execute and --output-dir. test has the same run defaults but accepts the dtype string.
-The research_main interface is preserved; it has its own graph-file/PNG options
-and does not expose the three execution settings.
+| run dtype | np.complex128 | NumPy-compatible execution precision |
 
 graph_json accepts an adjacency array, {"adjacency":[...]}, or
 {"num_vertices":N,"edges":[[u,v],[u,v,weight]]}. Repeated edges accumulate.
 Its marked/name fields are not consumed by run; provide marked separately.
-load_graph_problem(path) instead loads a file's marked/name fields.
+For file-based input, independently read the task's JSON file, construct the accepted
+graph_json value, and pass marked separately; do not call a bundled file loader.
 The original UI regex excluded10–19 even though the Python implementation accepts them;
-UI metadata is not used to validate these standalone scripts.
+UI metadata does not override the public Python API's validation.
 
 ## Return Fields
 
@@ -191,9 +184,8 @@ The same file contains all these implementations:
 - QuantumWalkResult separates public serializable evidence from retained state/simulator.
 - BaseAlgorithm formats logs/reports. QuantumWalkSearchAlgorithm.run records input,
   invokes solve, records output, creates _build_overview_circuit and saves SVG/TXT.
-- main supplies default diagnostics and explicit execution; scripts/algorithm.py
-  is a thin local example. research_main and _write_visuals retain optional
-  file-problem and JSON/PNG workflows; no local data file is required by default.
+- _write_visuals describes optional research artifacts; the public API's standard
+  result export remains SVG/TXT, and no local data file is required by default.
 
 ## Understanding the Key Quantum Components
 
@@ -275,14 +267,19 @@ This all-marked four-vertex check differs from the default search example: it
 checks indexing, sample totals and the distinction between process completion
 and approximation quality. It uses nonzero explicit time to avoid zero-step edges.
 
-From the scripts directory:
+Generate the following standalone task code in the user's task directory. It calls the installed public API with four vertices, all vertices marked, explicit time, and fixed sampling settings. Execute it only when execution, debugging, or verification is requested:
 
 ```python
-from quantum_walk_search_implementation import QuantumWalkSearchAlgorithm
+import numpy as np
+from unitarylab_algorithms import QuantumWalkSearchAlgorithm
 
-result = QuantumWalkSearchAlgorithm(algo_dir="results/all-marked").run(
-    num_vertices=4, marked="0,1,2,3", evolution_time=1.0,
-    simulation_steps=8, shots=16, seed=7,
+algorithm = QuantumWalkSearchAlgorithm(
+    algo_dir="results/quantum_walk_search_all_marked"
+)
+result = algorithm.run(
+    num_vertices=4, marked="0,1,2,3", graph_type="complete",
+    evolution_time=1.0, method="trotter", simulation_steps=8,
+    shots=16, seed=7, backend="numpy", device="cpu", dtype=np.complex128,
 )
 assert result["status"] == "ok"
 assert result["num_vertices"] == 4 and result["hilbert_dimension"] == 4
@@ -404,15 +401,17 @@ def manual_search(n=8, marked=(2, 5), steps=8, shots=128, seed=7):
 ```
 
 The manual example only covers the complete graph with automatic coupling/time
-and trotter NumPy CPU complex128. Custom graphs and other methods use the fuller
-bundled implementation. N and marked can vary within the documented small range.
+and trotter NumPy CPU complex128. For custom graphs and other methods, generate
+calls to the installed public API with its documented parameters, or read the
+fuller source to independently reconstruct the requested variant. Never invoke
+the bundled implementation. N and marked can vary within the documented small range.
 Repeated spectral decompositions and initial.copy protection intentionally remain.
 
 ## Debugging Tips
 
 - Missing NumPy/UnitaryLab or incompatible APIs: report the missing dependency/version;
   do not repair by cloning another checkout, changing sys.path or downloading core code.
-- Default output has no results: diagnostics deliberately do not run; --execute is required.
+- No result has been produced: generating or reading code does not execute it. If execution is requested, run the generated standalone task code that calls the installed API; never run the bundled scripts. Inspect returned probabilities and counts separately from process completion.
 - Invalid graph: check square shape, finite values, original allclose symmetry/zero-diagonal
   tolerance and non-negative edge weights. The edge-list constructor forbids self-loops
   and sums duplicate edges.
@@ -432,31 +431,13 @@ Repeated spectral decompositions and initial.copy protection intentionally remai
 
 ## Reference Implementation
 
-Required local resources are:
+Reference-only source files:
 
-- [scripts/algorithm.py](scripts/algorithm.py): small example and default diagnostic entry.
-- [scripts/quantum_walk_search_implementation.py](scripts/quantum_walk_search_implementation.py):
-  actual computation, embedded BaseAlgorithm, research helpers, diagnostic/execute main.
+- [scripts/algorithm.py](scripts/algorithm.py): reference-only example of input/output usage and result reporting.
+- [scripts/quantum_walk_search_implementation.py](scripts/quantum_walk_search_implementation.py): Hamiltonian construction, evolution, sampling, embedded base, and result/export logic.
 
-From this leaf directory:
+Read the relevant source only when implementation details or conventions are unclear. Do not run these files, import their modules, call their entrypoints, load them dynamically, or use them as runtime dependencies. Generate all task code and task inputs outside the skill package.
 
-```bash
-python scripts/quantum_walk_search_implementation.py
-python scripts/quantum_walk_search_implementation.py --execute --num-vertices 4 --marked 0,1,2,3 --evolution-time 1 --shots 16 --output-dir results/all-marked
-python scripts/quantum_walk_search_implementation.py --execute --num-vertices 3 --marked 1 --graph-json '{"num_vertices":3,"edges":[[0,1],[1,2]]}' --output-dir results/path3
-```
+For API use, generate standalone task code against the installed `QuantumWalkSearchAlgorithm`. For independent reconstruction, modification, or porting, use the algorithm description, parameter/result tables, theory-to-code mapping, and manual implementation to generate independent UnitaryLab task code. Run and verify only generated code when the requested scope requires execution. Preserve matrix construction, floating-point order, vertex indexing, and random-call order unless an algorithm change is separately requested.
 
-The source corresponds to the previously selected quantum-walk-search implementation:
-the initial research behavior plus execution-setting forwarding and the reviewed integer
-histogram. Provenance/version and file baselines are recorded in task archives, not required
-by these scripts. Packaging differences are listed in Scope and Limitations.
-
-Static inspection only: no scripts, tests, import probes, compilation, installation,
-services or performance measurements have run. Leaf-only execution with declared
-dependencies and numerical comparison with the selected baseline remain unverified.
-There is no verified task-specific pytest command. The displayed commands are the
-documented reproduction interface, not test results.
-
-When updating, synchronize the implementation, local example, defaults, return fields,
-mathematical mapping, manual reconstruction and nearest search router. Preserve the
-existing numerical/random behavior unless a separately authorized change is validated.
+When updating this reference, keep parameter defaults, return fields, mathematical mapping, and top-level routing aligned with the reference source. Source examples and provenance alone are not execution evidence.

@@ -7,29 +7,28 @@ description: "Explain or implement quantum backtracking on small binary CNF or p
 
 ## How to Use This Skill
 
-Use this leaf for constrained binary-tree search, including SAT-style CNF and accepted-path/rejected-prefix problems. Read the explanations, [bundled source](scripts/quantum_backtracking_implementation.py) and [local example](scripts/algorithm.py). All required local code is included; no installed algorithm package or other checkout is needed.
+Use this skill when the user asks to explain, run, debug, modify, or reimplement Quantum Backtracking for binary CNF or prefix-constraint trees.
 
-For explanation, use the formulas and source mapping below. For reproduction, use the script modes with the normal simulator dependencies. For debugging/modification, preserve predicate uncomputation, reflection order, low-bit phase marginalization, precision, RNG call order and branch order. For independent reconstruction, use the complete small manual implementation below, which imports no leaf module or packaged algorithm class.
+The implementation encodes a constrained binary tree with reversible accept/reject predicates, constructs alternating local reflections, uses quantum phase estimation to detect candidate subtrees, and selects branches classically. It supports SAT-style CNF and accepted-path/rejected-prefix problems; accepted prefixes may produce partial assignments.
 
-From this leaf directory:
+When using this skill:
 
-```bash
-python scripts/algorithm.py
-python scripts/quantum_backtracking_implementation.py
-python scripts/algorithm.py --execute --output-dir results/backtracking
-```
-
-Default mode reports configuration and planned checks without constructing circuits, executing the solver or exporting results. Only `--execute` runs the algorithm. Imports still load NumPy and preserve the source thread environment defaults. Commands here are suggestions, not agent execution authorization or observed test results.
+- **Explanation:** Explain the constraint tree, reversible predicates, depth encoding, reflection walk, QPE-based detection, classical branch selection, and finite-sampling limitations. Do not generate code unless requested.
+- **Run or reuse:** Generate standalone task code that imports `QuantumBacktrackingAlgorithm` from the installed `unitarylab_algorithms` package when its public API satisfies the task. Use the `Minimal Manual Implementation` when independent reconstruction, modification, or porting is requested. Never import or depend on bundled scripts.
+- **Debugging:** Start with the small documented prefix problem or a one-variable CNF, fixed precision, shots, and seed. Check classical predicates and returned-path acceptance before changing code; separate oracle, reflection, phase-order, sampling, and backend errors.
+- **Modification or reimplementation:** Preserve predicate uncomputation, reflection order, low-bit phase marginalization, numerical precision, RNG call order, branch order, and the parameter/result contract.
+- **Reference scripts:** Read `scripts/algorithm.py`, `scripts/quantum_backtracking_implementation.py`, and the included JSON example only to understand algorithm logic, parameters, conventions, and outputs when needed. Never directly run, import, call, or dynamically execute these code files. For execution or validation, generate standalone task code that calls the installed public API, or independently reconstruct the algorithm when requested; execute only that generated code within the user's requested scope.
+- **Validation:** Verify reversible predicate behavior, phase-probability normalization, sample totals, and classical acceptance of returned paths or assignments on small problems. Report sampling and precision limits; `exists=False` is not a proof of unsatisfiability, and `status='ok'` only means the call completed.
 
 ## Scope and Limitations
 
 The implemented variant uses reversible accept/reject oracles, one-hot depth encoding, local star reflections, W=R_B R_A, QPE subtree detection and classical branch selection. It supports `prefix_constraints` and `binary_cnf`; it is not a general constraint language or a classical exhaustive solver. Accepted prefixes can produce partial assignments.
 
-Defaults are numpy/cpu/complex128. Execution settings reach both predicate and QPE executes. Backend/device support depends on installed UnitaryLab and hardware; NumPy is CPU-only. The CLI dtype choice is complex64/complex128; intermediate NumPy calculations retain source precision. No silent precision reduction or backend fallback is added. Other configurations have not been run-validated.
+Defaults are numpy/cpu/complex128. Execution settings reach both predicate and QPE executes. Backend/device support depends on installed UnitaryLab and hardware; NumPy is CPU-only. The public API accepts a NumPy-compatible dtype; intermediate NumPy calculations retain source precision. No silent precision reduction or backend fallback is added. Other configurations have not been run-validated.
 
 Finite QPE resolution and finite-shot sampling can miss a solution. `exists=False` is not a proof of unsatisfiability; `status='ok'` only means the call completed. Dense simulation grows exponentially. There is no Python API maximum for depth or phase_bits; the original Web phase_bits maximum 8 is UI metadata, not enforced by this leaf's API.
 
-Packaging differences from the previously selected version: complete BaseAlgorithm is embedded; default output directory is fixed to results/search/quantum_backtracking despite the scripts location; original argparse main is retained as `research_main`; new main defaults to diagnostics and provides explicit execution. [The included JSON](scripts/example_problem.json) supplies the retained research default. The selected execute-parameter forwarding and reviewed local abs-array square are retained; this regeneration introduces no new numerical optimization.
+The installed public API writes its default outputs under `<cwd>/results/search/quantum_backtracking`, or under an explicitly supplied `algo_dir`. [The included JSON](scripts/example_problem.json) is a reference-only input-schema example. It is not required for the built-in problem or a runtime dependency; define task inputs independently and pass them through `problem_json`.
 
 ## Overview
 
@@ -46,36 +45,48 @@ Input describes a binary constraint tree plus phase_bits, shots, seed and thresh
 
 ## Prerequisites
 
-Understand reversible Boolean predicates, computational-basis encoding, controlled rotations/reflections, phase estimation and discrete sampling. Required packages are NumPy and a compatible UnitaryLab exposing `Circuit` and `unitarylab.library.QPE`, with its normal simulation and drawing dependencies. Matplotlib is used only in optional research PNG/histogram exports. No dependency version guarantee or installation was validated.
+Understand reversible Boolean predicates, computational-basis encoding, controlled rotations/reflections, phase estimation and discrete sampling. Public API calls require the installed `unitarylab-algorithms` package exporting `QuantumBacktrackingAlgorithm`. Independent reconstruction requires NumPy and a compatible UnitaryLab exposing `Circuit` and `unitarylab.library.QPE`, with its normal simulation and drawing dependencies. Matplotlib is used only in optional research PNG/histogram exports. No dependency version guarantee or installation was validated.
 
-All local code and the research example JSON are supplied here. No remote source/data, external algorithm checkout or sys.path modification is required. The source retains `os.environ.setdefault` for missing numerical thread variables; actual run creates its output directory.
+The built-in prefix problem requires no remote source/data or external algorithm checkout. Generate API calls against the installed package without modifying `sys.path`. The bundled sources and research example JSON are reading material for independent reconstruction. The reference source retains `os.environ.setdefault` for missing numerical thread variables; the public API creates its requested output directory.
 
 ## Reference Implementation Example
 
-From the scripts directory, the sibling module resolves normally:
+`QuantumBacktrackingAlgorithm` is a public class exported by the installed
+`unitarylab_algorithms` package. Generate the following as standalone task code in
+the user's task directory. Run it only when execution, debugging, or verification
+is requested; it writes circuit and result artifacts under the chosen `algo_dir`.
 
 ```python
 import numpy as np
-from quantum_backtracking_implementation import QuantumBacktrackingAlgorithm
+from unitarylab_algorithms import QuantumBacktrackingAlgorithm
 
 algorithm = QuantumBacktrackingAlgorithm(
-    text_mode="plain", algo_dir="results/backtracking",
+    text_mode="plain", algo_dir="results/quantum_backtracking"
 )
 result = algorithm.run(
-    problem_json="", phase_bits=3, shots=128, seed=7, threshold=0.375,
-    backend="numpy", device="cpu", dtype=np.complex128,
+    problem_json="",  # Built-in prefix-constraint problem
+    phase_bits=3,
+    shots=128,
+    seed=7,
+    threshold=0.375,
+    backend="numpy",
+    device="cpu",
+    dtype=np.complex128,
 )
 print(result["exists"], result["solution_path"], result["solution_assignment"])
 print(result["circuit_path"], result["plot"])
 ```
 
-This invokes the bundled implementation, not an installed algorithm class. The separate example script forwards to this implementation's main and uses the same small defaults. Neither example was executed during generation.
+Resolve this import from the active environment's installed package, without adding
+the skill directory or another checkout to `sys.path`. If the installed version
+lacks the export, report that API/version gap. For independent reconstruction, use
+the `Minimal Manual Implementation`; never invoke or import the bundled script class.
 
 ## Core Parameters Explained
 
 | Parameter / entry | Type and actual default | Meaning and constraints |
 |---|---|---|
-| constructor text_mode | str, plain | plain/legacy text formatting; test uses legacy |
+| constructor text_mode | str, plain | plain/legacy text formatting |
 | constructor algo_dir | str or None, None | None uses `<cwd>/results/search/quantum_backtracking`; constructor creates it |
 | run problem_json | str or dict, empty string | empty/None/"None"/"null" selects built-in depth-two prefix problem; otherwise JSON object |
 | run phase_bits | int, 3 | >=1; QPE precision 2^-p and 2^p-1 controlled-W applications |
@@ -85,13 +96,10 @@ This invokes the bundled implementation, not an installed algorithm class. The s
 | run backend | str, numpy | forwarded to every predicate and QPE execution |
 | run device | str, cpu | backend-dependent, numpy CPU only; backend reports unsupported modes |
 | run dtype | NumPy-compatible dtype, np.complex128 | execution precision; NumPy dtype conversion also used for input logging |
-| test dtype | NumPy-compatible dtype or str, complex128 | converted with np.dtype(...).type |
-| main | eight run options + output-dir + execute | numeric options parsed, dtype limited to complex64/complex128; default diagnostic |
-| example main | execute + output-dir | uses fixed small business/execution defaults |
 
 run casts phase_bits/shots/seed to int and threshold to float as in the source. Prefix max_depth>=1; paths contain only 0/1, are within max_depth and unique within each list; no accepted path may descend from a rejected prefix. CNF requires nonempty unique variable names; literals are signed one-based indices; clauses are nonempty with valid indices and no repeated variable in a clause. CNF depth equals variable count. An empty clauses list is allowed. Missing type selects binary_cnf. Caller input is not mutated.
 
-Lower-level Solver takes a `ReversibleBinaryBacktrackingProblem` with the same sampling and backend/device/dtype defaults, and exposes detect, find_solution and solve. `solve(output_dir=None, full_artifacts=False)` returns SolveResult; optional artifact output is separate from standard run. `research_main` retains file-problem and PNG/QASM/report options, default seed7/phase_bits3/shots128/threshold3/8 and solver numpy/cpu/complex128; it is not automatically invoked.
+For implementation-level analysis, the lower-level Solver takes a `ReversibleBinaryBacktrackingProblem` with the same sampling and backend/device/dtype defaults, and exposes detect, find_solution and solve. `solve(output_dir=None, full_artifacts=False)` returns SolveResult; optional artifact output is separate from the public algorithm's standard run. These details support independent reconstruction; they do not permit invoking bundled scripts.
 
 ## Return Fields
 
@@ -108,7 +116,7 @@ Lower-level Solver takes a `ReversibleBinaryBacktrackingProblem` with the same s
 | artifacts | dict | empty in standard run; optional lower-level research exports populate it |
 | Elapsed time (s) | float | solver construction/solve/resource report; excludes final SVG/TXT export |
 
-No full quantum state is returned by standard run. Main's JSON excerpt additionally reports `returned_path_is_accepted` from a classical predicate, or None when no path was returned; this wrapper diagnostic does not change run's result or search flow.
+No full quantum state is returned by standard run. When verification is requested, check the returned path against the task's classical acceptance predicate; a completed API call alone does not prove that a solution exists.
 
 ## Implementation Architecture
 
@@ -120,7 +128,6 @@ No full quantum state is returned by standard run. Main's JSON excerpt additiona
 - Solver.detect performs terminal shortcuts or QPE, phase marginalization, normalization and RNG sampling; find_solution descends in fixed branch order, preserving repeated predicate queries.
 - SolveResult stores evidence/resources/artifacts. Solver._resource_report retains child, decomposed and transpiled summaries.
 - BaseAlgorithm and QuantumBacktrackingAlgorithm wrap logs, inputs/outputs, SVG/TXT and the result envelope. All implementation and private helpers are in one file.
-- New main and the thin local example provide diagnostic/execute modes; research_main retains separate research exports and the supplied local JSON resource.
 
 ## Understanding the Key Quantum Components
 
@@ -161,14 +168,21 @@ QPE applies controlled-W 2^p-1 times. Its dense state contains 2^(N+p) complex v
 
 ## Hands-On Example
 
-Use a terminal accepted root to separate deterministic predicate behavior from stochastic QPE. From scripts directory:
+Use a terminal accepted root to separate deterministic predicate behavior from stochastic QPE. Generate the following standalone task code in the user's task directory; it calls the installed public API without importing bundled sources. Execute it only when execution, debugging, or verification is requested:
 
 ```python
-from quantum_backtracking_implementation import QuantumBacktrackingAlgorithm
+import numpy as np
+from unitarylab_algorithms import QuantumBacktrackingAlgorithm
 
 problem = {"type":"prefix_constraints", "name":"accepted-root",
            "max_depth":1, "accepted_paths":[""], "rejected_prefixes":[]}
-result = QuantumBacktrackingAlgorithm(algo_dir="results/accepted-root").run(problem)
+algorithm = QuantumBacktrackingAlgorithm(
+    algo_dir="results/quantum_backtracking_accepted_root"
+)
+result = algorithm.run(
+    problem_json=problem, phase_bits=3, shots=128, seed=7,
+    threshold=0.375, backend="numpy", device="cpu", dtype=np.complex128,
+)
 assert result["status"] == "ok" and result["exists"] is True
 assert result["solution_path"] == [] and result["solution_assignment"] == {}
 assert result["evidence"][0]["method"] == "accept-oracle"
@@ -309,7 +323,7 @@ The subset matches prefix input `max_depth=1, accepted_paths=["1"], rejected_pre
 ## Debugging Tips
 
 - Missing/incompatible Circuit or QPE: report the actual dependency/API gap; do not locate another checkout, change sys.path or download core source.
-- Diagnostic output has no solution: expected without --execute; planned checks are not test results.
+- No result has been produced: generating or reading code does not execute it. If execution is requested, run the generated standalone task code that calls the installed API; never run the bundled scripts. Inspect `exists` separately from process completion.
 - CNF invalid/missing keys: check variable names, signed one-based literal indices and nonempty clauses. Prefix paths must be binary and within max_depth; contradictory accepted/rejected prefixes are rejected.
 - No detected solution: inspect QPE zero probability, sampled count and strict threshold separately. Finite p/shots may miss a valid subtree; do not silently change threshold or add a classical fallback.
 - Wrong path: retain 0-before-1 branch order and q0-first variable ordering; count labels are phase integers, not solution paths.
@@ -321,17 +335,14 @@ The subset matches prefix input `max_depth=1, accepted_paths=["1"], rejected_pre
 
 ## Reference Implementation
 
-Complete local resources:
+Reference-only source files:
 
-- [scripts/algorithm.py](scripts/algorithm.py): thin example, default diagnostic / explicit small execution.
-- [scripts/quantum_backtracking_implementation.py](scripts/quantum_backtracking_implementation.py): core algorithm, complete embedded base, research helpers, reusable class and main.
-- [scripts/example_problem.json](scripts/example_problem.json): depth-two input for retained research_main.
+- [scripts/algorithm.py](scripts/algorithm.py): reference-only example of parameter forwarding and result reporting.
+- [scripts/quantum_backtracking_implementation.py](scripts/quantum_backtracking_implementation.py): reversible predicates, reflection walk, QPE detection, branch selection, embedded base, and result/export logic.
+- [scripts/example_problem.json](scripts/example_problem.json): a small prefix-constraint input schema example.
 
-```bash
-python scripts/quantum_backtracking_implementation.py
-python scripts/quantum_backtracking_implementation.py --execute --problem-json '{"type":"binary_cnf","variables":["x1"],"clauses":[[1]]}' --output-dir results/cnf1
-```
+Read the relevant source only when implementation details or conventions are unclear. Do not run the code files, import their modules, call their entrypoints, load them dynamically, or use them as runtime dependencies. Generate all task code and task inputs outside the skill package.
 
-Implementation provenance is the previously selected quantum-backtracking version, with unchanged compute/validation/evidence/export helpers plus the packaging differences stated above. Original paths, baseline identifiers and regeneration decisions live in task archives; they are not runtime resources. No external documentation is needed for the definitions and formulas in this leaf.
+For API use, generate standalone task code against the installed `QuantumBacktrackingAlgorithm`. For independent reconstruction, modification, or porting, use the algorithm description, parameter/result tables, theory-to-code mapping, and manual implementation to generate independent UnitaryLab task code. Run and verify only generated code when the requested scope requires execution. Preserve predicate uncomputation, reflection order, low-bit phase marginalization, precision, RNG call order, and branch order unless an algorithm change is separately requested.
 
-Static inspection only: no tests, scripts, imports, compilation, installation or measurements were run. Leaf-only diagnostic/execution under declared dependencies, numeric comparison with the selected baseline and actual SVG/TXT exports remain unverified. No relevant pytest path was established; the displayed commands are reproduction instructions, not test results. Keep both scripts, documentation, parameter/return mapping and nearest Search route synchronized when interfaces change.
+When updating this reference, keep parameter defaults, return fields, mathematical mapping, and top-level routing aligned with the reference source. Source examples and provenance alone are not execution evidence.
