@@ -1,7 +1,7 @@
 """Independent 2D transverse-field Ising circuit implementation.
 
 The implementation is derived from the sibling ``SKILL.md`` and uses only
-public UnitaryLab interfaces. It does not import ``new.ising.algorithm`` or a
+public UnitaryLab interfaces. It does not import ``unitarylab_algorithms.quantum_machine_learning.ising.algorithm`` or a
 reference/example script. The module constructs open-boundary Trotter-Suzuki
 circuits, continues a TensorNet state through time, evaluates physical
 observables, and grades small systems against an exact dense evolution.

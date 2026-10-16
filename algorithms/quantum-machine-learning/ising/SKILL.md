@@ -9,7 +9,7 @@ description: "Simulate open-boundary two-dimensional transverse-field Ising dyna
 
 Use this skill when explaining, running, debugging, or modifying `IsingAlgorithm`. The implementation builds local circuits for an open-boundary two-dimensional transverse-field Ising model, evolves a TensorNet backend state over Trotter steps, computes global and optional local observables, and saves plots or GIFs.
 
-For user-facing code, import `IsingAlgorithm` from `new.ising.algorithm` and use its public `run()` method. Do not import reference/example scripts as runtime dependencies. Theory-only explanations do not require execution; numerical verification requires the UnitaryLab TensorNet backend.
+For user-facing code, import `IsingAlgorithm` from `unitarylab_algorithms.quantum_machine_learning.ising.algorithm` and use its public `run()` method. Do not import reference/example scripts as runtime dependencies. Theory-only explanations do not require execution; numerical verification requires the UnitaryLab TensorNet backend.
 
 ## Scope and Limitations
 
@@ -40,7 +40,7 @@ For a `rows × cols` lattice, map sites to qubits in row-major order and enumera
 ## API Example
 
 ```python
-from unitarylab_algorithms.new.ising.algorithm import IsingAlgorithm
+from unitarylab_algorithms.quantum_machine_learning.ising.algorithm import IsingAlgorithm
 
 algorithm = IsingAlgorithm(text_mode="plain")
 result = algorithm.run(
@@ -209,7 +209,7 @@ The numerical result is affected by Trotter error, TensorNet truncation (`max_bo
 ## Hands-On Example
 
 ```python
-from unitarylab_algorithms.new.ising.algorithm import IsingAlgorithm
+from unitarylab_algorithms.quantum_machine_learning.ising.algorithm import IsingAlgorithm
 
 result = IsingAlgorithm().run(
     rows=2,
@@ -247,7 +247,7 @@ Report the lattice, total time, Trotter order, step size, bond dimension, cutoff
 
 ## Minimal Manual Implementation
 
-The following implementation is self-contained except for the public UnitaryLab API. It must not import `new.ising.algorithm` or use undefined pseudocode helpers. It constructs and executes the same local quantum circuit as `IsingAlgorithm`.
+The following implementation is self-contained except for the public UnitaryLab API. It must not import `unitarylab_algorithms.quantum_machine_learning.ising.algorithm` or use undefined pseudocode helpers. It constructs and executes the same local quantum circuit as `IsingAlgorithm`.
 
 ```python
 import math

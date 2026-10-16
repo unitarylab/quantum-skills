@@ -1,4 +1,4 @@
-from unitarylab_algorithms.new.ising.algorithm import IsingAlgorithm
+from unitarylab_algorithms.quantum_machine_learning.ising.algorithm import IsingAlgorithm
 
 algorithm = IsingAlgorithm(text_mode="plain")
 result = algorithm.run(

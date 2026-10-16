@@ -111,13 +111,25 @@ def _apply_gate(qc: Circuit, gate: str, qubits: List[int], val: Optional[float] 
     elif gate == "p":
         qc.p(val, q0)
     elif gate == "rzx":
-        qc.rzx(val, q0, q1)
+        # Z on q0, X on q1: H(q1) RZZ H(q1).
+        qc.h(q1)
+        qc.rzz(val, q0, q1)
+        qc.h(q1)
     elif gate == "rzz":
         qc.rzz(val, q0, q1)
     elif gate == "ryy":
-        qc.ryy(val, q0, q1)
+        # Rx(pi/2) changes the Y basis to the Z basis.
+        qc.rx(np.pi / 2, q0)
+        qc.rx(np.pi / 2, q1)
+        qc.rzz(val, q0, q1)
+        qc.rx(-np.pi / 2, q0)
+        qc.rx(-np.pi / 2, q1)
     elif gate == "rxx":
-        qc.rxx(val, q0, q1)
+        qc.h(q0)
+        qc.h(q1)
+        qc.rzz(val, q0, q1)
+        qc.h(q0)
+        qc.h(q1)
     elif gate == "cx":
         qc.cx(q0, q1)
     elif gate == "cy":

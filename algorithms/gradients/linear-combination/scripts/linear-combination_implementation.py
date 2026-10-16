@@ -1,18 +1,18 @@
 """Manual implementation of Linear Combination of Unitaries (LCU) Gradient.
 
 Computes analytic parameter gradients from the LCU derivative decomposition.
-This manual reference constructs the exact derivative branches and evaluates
-the contraction measured by an ancilla-augmented LCU circuit,
-2 Re[⟨ψ|O|∂ᵢψ⟩], without numerical approximation.
+This manual reference executes an ancilla-augmented UnitaryLab circuit per
+selected parameter to measure 2 Re[⟨ψ|O|∂ᵢψ⟩], without finite differences
+or dense derivative-operator reconstruction.
 
-The LCU method requires gates from the supported set: rx, ry, rz, rzx, rzz, ryy,
-rxx, cx, cy, cz, ccx, swap, iswap, h, t, s, sdg, x, y, z.
+This reference supports rx, ry, rz, rzx, rzz, ryy, rxx, cx, h, x, y, z.
+Its gate_sequence interface is a subset of the Qiskit skill gate set.
 
 Components:
-    - build_lcu_derivative_states: Build exact state and derivative branches
+    - build_lcu_gradient_circuit: Build a controlled-generator interference circuit
+    - build_lcu_derivative_states: Recover state and derivative branches from circuits
     - compute_expectation: Evaluate ⟨ψ|O|ψ⟩
     - lin_comb_estimator_gradient: Core analytic gradient computation
-    - lin_comb_estimator_solve: End-to-end gradient pipeline
     - LinCombEstimatorGradientSolver: Class-based interface
 
 Reference:
@@ -87,26 +87,16 @@ def build_base_circuit(
     Returns:
         Circuit with all gates applied.
     """
+    params = _validate_parameters(gate_sequence, params)
     qc = Circuit(num_qubits, name="Base")
     param_idx = 0
     for gate, qubits in gate_sequence:
-        q0 = qubits[0]
         if gate in SUPPORTED_PARAM_GATES:
             val = float(params[param_idx])
             param_idx += 1
             _apply_param_gate(qc, gate, qubits, val)
-        elif gate == "cx":
-            qc.cx(q0, qubits[1])
-        elif gate == "h":
-            qc.h(q0)
-        elif gate == "x":
-            qc.x(q0)
-        elif gate == "y":
-            qc.y(q0)
-        elif gate == "z":
-            qc.z(q0)
         else:
-            raise ValueError(f"Unsupported gate: {gate}")
+            _apply_fixed_gate(qc, gate, qubits)
     return qc
 
 
@@ -121,13 +111,25 @@ def _apply_param_gate(qc: Circuit, gate: str, qubits: List[int], val: float) -> 
     elif gate == "rz":
         qc.rz(val, q0)
     elif gate == "rzx":
-        qc.rzx(val, q0, q1)
+        # Z on q0, X on q1: H(q1) RZZ H(q1).
+        qc.h(q1)
+        qc.rzz(val, q0, q1)
+        qc.h(q1)
     elif gate == "rzz":
         qc.rzz(val, q0, q1)
     elif gate == "ryy":
-        qc.ryy(val, q0, q1)
+        # Rx(pi/2) changes the Y basis to the Z basis.
+        qc.rx(np.pi / 2, q0)
+        qc.rx(np.pi / 2, q1)
+        qc.rzz(val, q0, q1)
+        qc.rx(-np.pi / 2, q0)
+        qc.rx(-np.pi / 2, q1)
     elif gate == "rxx":
-        qc.rxx(val, q0, q1)
+        qc.h(q0)
+        qc.h(q1)
+        qc.rzz(val, q0, q1)
+        qc.h(q0)
+        qc.h(q1)
 
 
 def compute_expectation(
@@ -140,8 +142,8 @@ def compute_expectation(
 ) -> float:
     """Compute ⟨ψ|O|ψ⟩ via statevector simulation.
 
-    If ancilla is provided, measures ⟨X_anc ⊗ O⟩ using the LCU ancilla
-    measurement protocol.
+    If ancilla is provided, measures X on that qubit and O on the remaining
+    data qubits in little-endian order, using the LCU measurement protocol.
 
     Args:
         qc: Circuit producing state |ψ⟩.
@@ -156,98 +158,77 @@ def compute_expectation(
     """
     state = qc.execute(backend=backend, device=device, dtype=dtype).state
 
+    state = np.asarray(state)
     if ancilla is not None:
-        # Ancilla is qubit 0 (least-significant bit), so X_anc ⊗ O_data is
-        # represented as O_data ⊗ X in the dense big-endian matrix ordering.
-        x_anc = np.array([[0, 1], [1, 0]], dtype=np.complex128)
-        x_measure = np.kron(observable_matrix, x_anc)
-        return float(np.real((state.conj().T @ x_measure @ state).item()))
-    else:
-        return float(np.real((state.conj().T @ observable_matrix @ state).item()))
+        n = qc.get_num_qubits()
+        if not 0 <= ancilla < n:
+            raise ValueError("Ancilla index is outside the circuit")
+        # Tensor axes are ordered from highest qubit to lowest qubit.
+        branches = np.moveaxis(state.reshape([2] * n), n - 1 - ancilla, 0).reshape(2, -1)
+        return float(2 * np.real(np.vdot(branches[0], observable_matrix @ branches[1])))
+    return float(np.real(np.vdot(state, observable_matrix @ state)))
 
 
 # ---------------------------------------------------------------------------
-# 3. Exact derivative-operator reconstruction
+# 3. Ancilla-augmented derivative circuits
 # ---------------------------------------------------------------------------
 
-def _expand_single_qubit_operator(
-    num_qubits: int, target: int, operator: np.ndarray,
-) -> np.ndarray:
-    """Expand a single-qubit operator with qubit 0 as the least-significant bit."""
-    identity = np.eye(2, dtype=np.complex128)
-    factors = [operator if q == target else identity for q in reversed(range(num_qubits))]
-    result = factors[0]
-    for factor in factors[1:]:
-        result = np.kron(result, factor)
-    return result
+_GENERATOR_AXES = {
+    "rx": "X", "ry": "Y", "rz": "Z",
+    "rxx": "XX", "ryy": "YY", "rzz": "ZZ", "rzx": "ZX",
+}
 
 
-def _expand_pauli_product(
-    num_qubits: int, assignments: Dict[int, str],
-) -> np.ndarray:
-    """Expand a Pauli product such as X(q0)X(q1) to the full Hilbert space."""
-    factors = [_PAULI_MAP[assignments.get(q, "I")] for q in reversed(range(num_qubits))]
-    result = factors[0]
-    for factor in factors[1:]:
-        result = np.kron(result, factor)
-    return result
+def _validate_parameters(gate_sequence, params):
+    params = np.asarray(params, dtype=float)
+    expected = sum(gate in SUPPORTED_PARAM_GATES for gate, _ in gate_sequence)
+    if params.ndim != 1 or len(params) != expected:
+        raise ValueError(f"Expected {expected} parameter values, received shape {params.shape}")
+    return params
 
 
-def _cx_matrix(num_qubits: int, control: int, target: int) -> np.ndarray:
-    """Build a dense CX matrix in the same little-endian qubit convention."""
-    dim = 1 << num_qubits
-    matrix = np.zeros((dim, dim), dtype=np.complex128)
-    for basis in range(dim):
-        output = basis ^ (1 << target) if ((basis >> control) & 1) else basis
-        matrix[output, basis] = 1.0
-    return matrix
-
-
-def _gate_and_derivative_matrices(
-    num_qubits: int,
-    gate: str,
-    qubits: List[int],
-    value: Optional[float] = None,
-) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-    """Return U and analytic dU/dθ for one supported gate.
-
-    For a Pauli rotation U(θ)=exp(-iθP/2), use
-    dU/dθ=(-i/2)P U. This is the derivative operator decomposed by the LCU
-    method before its real-part contraction with the observable branch.
-    """
-    if gate in SUPPORTED_PARAM_GATES:
-        if value is None:
-            raise ValueError(f"Missing parameter value for {gate}")
-        if gate == "rx":
-            generator = _expand_pauli_product(num_qubits, {qubits[0]: "X"})
-        elif gate == "ry":
-            generator = _expand_pauli_product(num_qubits, {qubits[0]: "Y"})
-        elif gate == "rz":
-            generator = _expand_pauli_product(num_qubits, {qubits[0]: "Z"})
-        elif gate == "rxx":
-            generator = _expand_pauli_product(num_qubits, {qubits[0]: "X", qubits[1]: "X"})
-        elif gate == "ryy":
-            generator = _expand_pauli_product(num_qubits, {qubits[0]: "Y", qubits[1]: "Y"})
-        elif gate == "rzz":
-            generator = _expand_pauli_product(num_qubits, {qubits[0]: "Z", qubits[1]: "Z"})
-        else:  # rzx: Z on the first qubit, X on the second
-            generator = _expand_pauli_product(num_qubits, {qubits[0]: "Z", qubits[1]: "X"})
-        identity = np.eye(1 << num_qubits, dtype=np.complex128)
-        unitary = math.cos(value / 2) * identity - 1j * math.sin(value / 2) * generator
-        derivative = (-0.5j) * generator @ unitary
-        return unitary, derivative
-
+def _apply_fixed_gate(qc: Circuit, gate: str, qubits: List[int]) -> None:
     if gate == "cx":
-        return _cx_matrix(num_qubits, qubits[0], qubits[1]), None
-    if gate in ("h", "x", "y", "z"):
-        local = {
-            "h": np.array([[1, 1], [1, -1]], dtype=np.complex128) / math.sqrt(2),
-            "x": _PAULI_MAP["X"],
-            "y": _PAULI_MAP["Y"],
-            "z": _PAULI_MAP["Z"],
-        }[gate]
-        return _expand_single_qubit_operator(num_qubits, qubits[0], local), None
-    raise ValueError(f"Unsupported gate: {gate}")
+        qc.cx(qubits[0], qubits[1])
+    elif gate in {"h", "x", "y", "z"}:
+        getattr(qc, gate)(qubits[0])
+    else:
+        raise ValueError(f"Unsupported gate: {gate}")
+
+
+def build_lcu_gradient_circuit(
+    num_qubits: int,
+    gate_sequence: List[Tuple[str, List[int]]],
+    params: np.ndarray,
+    parameter_index: int,
+) -> Circuit:
+    """Prepare (|0> |ψ> + |1> 2|∂ᵢψ>) / sqrt(2).
+
+    P_i is inserted immediately after the selected rotation, before the
+    remaining gates. The ancilla is qubit num_qubits (the highest bit).
+    Since ∂U/∂θ = -i P U/2, measuring X_ancilla times O returns the
+    expectation gradient directly; no additional factor of two is needed.
+    """
+    params = _validate_parameters(gate_sequence, params)
+    if not 0 <= parameter_index < len(params):
+        raise IndexError("Parameter index is outside the parameter vector")
+    ancilla = num_qubits
+    qc = Circuit(num_qubits + 1, name="LCUGradient")
+    qc.h(ancilla)
+    param_idx = 0
+    for gate, qubits in gate_sequence:
+        if any(q < 0 or q >= num_qubits for q in qubits):
+            raise ValueError("Data qubit index is outside the data register")
+        if gate in SUPPORTED_PARAM_GATES:
+            _apply_param_gate(qc, gate, qubits, float(params[param_idx]))
+            if param_idx == parameter_index:
+                qc.sdag(ancilla)
+                for axis, target in zip(_GENERATOR_AXES[gate], qubits):
+                    getattr(qc, "c" + axis.lower())(ancilla, target)
+            param_idx += 1
+        else:
+            _apply_fixed_gate(qc, gate, qubits)
+    return qc
 
 
 def build_lcu_derivative_states(
@@ -255,39 +236,22 @@ def build_lcu_derivative_states(
     gate_sequence: List[Tuple[str, List[int]]],
     params: np.ndarray,
 ) -> Tuple[np.ndarray, List[np.ndarray]]:
-    """Build |ψ⟩ and every exact |∂ᵢψ⟩ branch from gate derivatives."""
-    dim = 1 << num_qubits
-    initial = np.zeros(dim, dtype=np.complex128)
-    initial[0] = 1.0
+    """Recover |ψ> and |∂ᵢψ> from native ancilla circuits on NumPy CPU.
 
-    matrices: List[np.ndarray] = []
-    derivative_matrices: List[Tuple[int, np.ndarray]] = []
-    param_idx = 0
-    for gate_idx, (gate, qubits) in enumerate(gate_sequence):
-        value = float(params[param_idx]) if gate in SUPPORTED_PARAM_GATES else None
-        unitary, derivative = _gate_and_derivative_matrices(
-            num_qubits, gate, qubits, value,
-        )
-        matrices.append(unitary)
-        if derivative is not None:
-            derivative_matrices.append((gate_idx, derivative))
-            param_idx += 1
-
-    if param_idx != len(params):
-        raise ValueError(f"Expected {param_idx} parameter values, received {len(params)}")
-
-    forward_states = [initial]
-    for unitary in matrices:
-        forward_states.append(unitary @ forward_states[-1])
-    final_state = forward_states[-1]
-
-    derivative_states: List[np.ndarray] = []
-    for gate_idx, derivative in derivative_matrices:
-        branch = derivative @ forward_states[gate_idx]
-        for unitary in matrices[gate_idx + 1:]:
-            branch = unitary @ branch
-        derivative_states.append(branch)
-    return final_state, derivative_states
+    Kept as a reference helper; the gradient solver measures the circuits
+    directly using its caller-selected backend, device, and dtype.
+    """
+    params = _validate_parameters(gate_sequence, params)
+    if len(params) == 0:
+        state = build_base_circuit(num_qubits, gate_sequence, params).execute(backend="numpy").state
+        return np.asarray(state), []
+    derivatives = []
+    for index in range(len(params)):
+        qc = build_lcu_gradient_circuit(num_qubits, gate_sequence, params, index)
+        branches = np.asarray(qc.execute(backend="numpy").state).reshape(2, -1)
+        state = np.sqrt(2) * branches[0]
+        derivatives.append(branches[1] / np.sqrt(2))
+    return state, derivatives
 
 
 # ---------------------------------------------------------------------------
@@ -305,11 +269,10 @@ def lin_comb_estimator_gradient(
     dtype: type = np.complex128,
     verbose: bool = True,
 ) -> Dict[str, Any]:
-    """Compute the exact LCU estimator gradient from derivative branches.
+    """Compute the exact LCU gradient with one ancilla circuit per parameter.
 
-    Reconstruct the same contraction measured by the ancilla-augmented LCU
-    circuit: 2 Re[⟨ψ|O|∂ᵢψ⟩]. No finite differences or parameter shifts are
-    used.
+    Measure X_ancilla times O on a controlled-generator interference circuit.
+    No finite differences, parameter shifts, or dense gate derivatives are used.
 
     Args:
         pauli_list: Observable as Pauli terms.
@@ -333,16 +296,19 @@ def lin_comb_estimator_gradient(
     if any(idx < 0 or idx >= n_params for idx in effective_indices):
         raise IndexError(f"Parameter indices {effective_indices} are invalid for {n_params} parameters")
     n_target = len(effective_indices)
-    params = np.asarray(parameter_values, dtype=float)
+    params = _validate_parameters(gate_sequence, parameter_values)
 
     # --- Build observable ---
     observable_matrix = observable_to_matrix(pauli_list)
 
-    final_state, derivative_states = build_lcu_derivative_states(
-        num_qubits, gate_sequence, params,
-    )
+    if observable_matrix.shape != (1 << num_qubits, 1 << num_qubits):
+        raise ValueError("Observable width must match num_qubits")
     gradient = np.array([
-        2.0 * np.real(np.vdot(final_state, observable_matrix @ derivative_states[idx]))
+        compute_expectation(
+            build_lcu_gradient_circuit(num_qubits, gate_sequence, params, idx),
+            observable_matrix, ancilla=num_qubits, backend=backend,
+            device=device, dtype=dtype,
+        )
         for idx in effective_indices
     ], dtype=float)
 

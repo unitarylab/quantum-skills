@@ -31,14 +31,12 @@ from scipy.optimize import minimize
 try:
     from unitarylab.library.pauli_operator import pauli_string_decomposition
     from unitarylab.core import Circuit, Register
-    from unitarylab.transpiler.unroll import Unroll
-    from unitarylab.transpiler.basis import DEFAULT_BASIS
     from unitarylab_algorithms.algo_base import BaseAlgorithm
 except ImportError as exc:
     raise ImportError(
         "This VQLS implementation requires the project 'unitarylab' and "
         "'unitarylab_algorithms' packages with their circuit, Pauli, "
-        "transpiler, and BaseAlgorithm modules available."
+        "and BaseAlgorithm modules available."
     ) from exc
 
 # ============================================================================
@@ -91,13 +89,12 @@ def _ancilla_expval_z(state: np.ndarray, ancilla_idx: int) -> float:
 def _decompose_unitary(qc: Circuit) -> Circuit:
     """Decompose ``unitary`` gates into primitive gates (CX, RY, RZ, H).
 
-    Uses the available project transpiler. If it reports that a decomposition
+    Uses the public Circuit.transpile API. If it reports that a decomposition
     is unsupported, retain the unitary gate so the mathematical operation is
     unchanged.
     """
-    unroller = Unroll(gates_to_unroll="unitary", basis=DEFAULT_BASIS)
     try:
-        return unroller.run(qc)
+        return qc.transpile(gates_to_unroll="unitary", basis="default")
     except NotImplementedError:
         return qc
 
