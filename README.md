@@ -118,7 +118,7 @@ To select it explicitly, use `$quantum-skills` in Codex or `/quantum-skills` in 
 
 **Quantum Skill** 为 Agent 提供量子计算指南，帮助其解释概念、编写代码，并基于 [UnitaryLab](https://unitarylab.com)、Qiskit 或 PennyLane 运行示例。
 
-- **渐进式加载** — 根 [SKILL.md](SKILL.md) 按需路由到算claudecode法或模拟器指南。
+- **渐进式加载** — 根 [SKILL.md](SKILL.md) 按需路由到算法或模拟器指南。
 - **理论与实践** — 涵盖概念、电路构建、实现参考、调试和验证。
 - **模拟器选型** — 默认使用 UnitaryLab；Qiskit 和 PennyLane 分别支持硬件与噪声、可微分计算工作流。
 

@@ -53,6 +53,7 @@ The top-level `unitarylab` package re-exports the most commonly used symbols for
 | `GateSequencePacked` | `unitarylab.backend.gatesequence` | Native C++ packed gate store |
 | `CompileConfig` | `unitarylab.qcompiler` | Validated compiler configuration (lazy export) |
 | `CompilationResult` | `unitarylab.qcompiler` | Local compilation and mapping result (lazy export) |
+| `HardwareJob` | `unitarylab.qcompiler` | Submitted task with a single-query `result()` interface (lazy export) |
 | `HardwareResult` | `unitarylab.qcompiler` | Provider-neutral hardware result (lazy export) |
 | `QCompiler` | `unitarylab.qcompiler` | Compiler and hardware facade (lazy export) |
 
@@ -234,7 +235,10 @@ Gate methods mutate the circuit and return `None`; call them on separate lines r
 | `execute_density(initial_state=None, device="cpu", dtype=np.complex128, noise_model=None, shots=1, seed=42)` | `DensityMatrixResult` | Dense mixed-state execution with circuit measurement, final-shot state/classical snapshots, and aggregated counts |
 | `get_matrix(m=None, backend="torch", dtype=np.complex128, device="cpu")` | `ndarray` | Compute the circuit matrix. If `m=None`, use all qubits. |
 | `compile(provider="local", machine=None, token=None)` | `CompilationResult` | Compile and map without submitting a hardware task |
-| `submit(provider, machine=None, shots=1024, token=None)` | `HardwareResult` | Compile and submit to a hardware provider |
+| `submit(provider, machine=None, shots=1024, token=None)` | `HardwareJob` | Compile and submit without waiting for execution; call `job.result()` to query once |
+
+`job.result()` returns a `HardwareResult`. An unfinished result has empty distributions and a
+message; call again later to query the task. See [hardware submission](compilation-and-hardware.md#real-hardware-submission).
 
 Supported statevector backends are `torch`, `numpy`, `cpp`, and `tensornet`. `cpp` supports CPU and, with `unitarylab[cuda]`, NVIDIA GPU execution. Torch `device="gpu"` selects an available accelerator; Apple MPS requires complex64 and at most 16 qubits. `backend_options` is TensorNet-only and accepts `max_bond`, `cutoff`, and `routing` (`"auto"`, `"swap"`, or `"mpo"`). `shots` must be a positive integer; `seed` must be a non-negative integer or `None`. See the routed density and compiler references for their distinct contracts.
 
@@ -309,7 +313,7 @@ Classical register for storing measurement results.
 | `counts` | `dict[str, int]` | Aggregated measured bitstrings when circuit measurements are present. |
 | `classical_registers` | `dict[str, list[int]]` | Classical values grouped by register name. |
 | `num_qubits` | int | Number of qubits represented by the backend state. |
-| `probabilities` | dict | Full computational-basis probability distribution. |
+| `probabilities` | dict | Full computational-basis probability distribution, including zero-probability states. |
 
 **ExecutionResult methods**
 

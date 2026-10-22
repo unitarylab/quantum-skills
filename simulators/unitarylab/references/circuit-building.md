@@ -75,8 +75,9 @@ result = circuit.execute(
 | Projective measurement | `result.measure(qubits, seed=None)` |
 | Normalized expectation | `result.expectation(observable, qubits=None)` |
 
-Probability strings are little-endian. A Pauli string instead maps character-by-character to the
-explicit `qubits` sequence, or to all qubits in ascending order when omitted.
+The full `probabilities` mapping includes every computational basis state, including states with
+zero probability. Probability strings are little-endian: qubit 0 is the rightmost bit. A Pauli
+string instead maps character-by-character to the explicit `qubits` sequence, or to all qubits in ascending order when omitted.
 
 ```python
 circuit = Circuit(2)
@@ -84,6 +85,7 @@ circuit.h(0)
 circuit.cx(0, 1)
 result = circuit.execute(backend="numpy")
 
+print(result.probabilities)  # Approximately {"00": 0.5, "10": 0.0, "01": 0.0, "11": 0.5}
 assert result.probability("00") == result.probability("11")
 print(result.marginal_probabilities(qubits=[0]))
 print(result.sample(shots=8, seed=7))

@@ -9,12 +9,13 @@ from unitarylab import (
     Circuit,
     CompilationResult,
     CompileConfig,
+    HardwareJob,
     HardwareResult,
     QCompiler,
 )
 ```
 
-The four compiler types are lazy top-level exports. `unitarylab.qcompiler` additionally exports
+The five compiler types are lazy top-level exports. `unitarylab.qcompiler` additionally exports
 `RunResult`, `START_POINTS`, `STOP_POINTS`, and `run_pipeline` for advanced staged workflows.
 
 ## Circuit Facade
@@ -54,12 +55,15 @@ the removed top-level `native` and `mitigation` sections raise errors.
 ## Real Hardware Submission
 
 ```python
-hardware_result = circuit.submit(
+TOKEN = "your-provider-token"  # Replace with authorized credentials at runtime.
+
+job = circuit.submit(
     provider="guodun",
-    machine="gd_qc1",# 国盾量子 骁鸿一号
+    machine="gd_qc1",  # Guodun "Xiaohong-1" / 国盾量子“骁鸿一号”
     shots=1024,
-    token="provider-token",
+    token=TOKEN,
 )
+hardware_result = job.result()  # Query once; call again later if unfinished.
 ```
 
 Before calling `submit()`:
@@ -70,9 +74,16 @@ Before calling `submit()`:
 - Never log, embed, or invent credentials.
 - Expect provider SDK, network, authentication, queue, and remote-job failures.
 
-`HardwareResult` is the provider-neutral submission result. Provider-specific capabilities and
-result availability vary, so inspect the returned status/data contract instead of assuming a local
-`ExecutionResult` shape.
+`Circuit.submit()` and `QCompiler.submit()` return a `HardwareJob` without waiting for execution.
+Each `job.result()` call performs one provider query and returns a `HardwareResult`; it does not
+poll until completion. An unfinished result contains empty distributions and a `message`.
+Inspect `status` and `message`, then call `job.result()` again later when another query is needed.
+
+`HardwareJob` exposes `provider`, `machine`, `job_ids`, `status`, and `metadata`.
+`HardwareResult` provides `raw_counts`, `raw_probabilities`, `corrected_counts`,
+`corrected_probabilities`, and provider/stage metadata. Provider-specific capabilities and result
+availability vary; do not assume the local `ExecutionResult` shape or treat a pending empty
+distribution as a completed measurement result.
 
 Use local compilation or mocked provider tests for documentation verification; never submit a live
 job merely to validate the skill.
