@@ -35,7 +35,7 @@
 
 ### Coverage
 
-**12 categories, 51 algorithm and workflow guides.** Counts exclude routing indexes and simulator guides; the quantum error correction tutorial counts as one guide. These include classical reference methods and supporting routines, not just distinct quantum algorithms.
+**12 categories, 51 algorithm and workflow guides.**
 
 | Category | Guides | Topics |
 |----------|-------:|--------|
@@ -52,15 +52,15 @@
 | Gradients | 6 | Parameter-shift, Finite-difference, Linear-combination, SPSA, Reverse-mode, QFI |
 | Quantum Error Correction | 1 | LDPC, CSS, Hypergraph Product Codes |
 
-See [algorithm routing](algorithms/SKILL.md) for entry points.
+See [algorithm routing](SKILL.md#direct-algorithm-routing) for entry points.
 
 ### Simulators
 
 | Simulator | Typical use |
 |-----------|-------------|
-| [UnitaryLab](simulators/unitarylab/SKILL.md) *(default)* | Circuit programming, algorithm demos, PDE workflows |
-| [Qiskit](simulators/qiskit/SKILL.md) | Noise models, IBM hardware workflows |
-| [PennyLane](simulators/pennylane/SKILL.md) | Differentiable hybrid optimization |
+| [UnitaryLab](references/simulator-unitarylab.md) *(default)* | Circuit programming, algorithm demos, PDE workflows |
+| [Qiskit](references/simulator-qiskit.md) | Noise models, IBM hardware workflows |
+| [PennyLane](references/simulator-pennylane.md) | Differentiable hybrid optimization |
 
 ### Installation
 
@@ -88,27 +88,27 @@ git clone https://github.com/unitarylab/quantum-skills .agents/skills/quantum-sk
 git clone https://github.com/unitarylab/quantum-skills .claude/skills/quantum-skills
 ```
 
-For user-level installation, use the corresponding `~` path from the table. Keep the root `SKILL.md`, `algorithms/`, and `simulators/` together so relative references work. This installs a custom skill, not an officially bundled skill.
+For user-level installation, use the corresponding `~` path from the table. Keep the root `SKILL.md`, `references/`, and `scripts/` together so relative references work. This installs a custom skill, not an officially bundled skill.
 
-In Codex, you can also ask: `$skill-installer install the root skill from https://github.com/unitarylab/quantum-skills as quantum-skills, retaining its algorithms and simulators directories.` If the skill does not appear after installation, restart Codex.
+In Codex, you can also ask: `$skill-installer install the root skill from https://github.com/unitarylab/quantum-skills as quantum-skills, retaining its references and scripts directories.` If the skill does not appear after installation, restart Codex.
 
 References: [Codex documentation](https://learn.chatgpt.com/docs/build-skills), [Claude Code documentation](https://code.claude.com/docs/en/skills), [skills installer](https://github.com/vercel-labs/skills).
 
-The skill documents require no Python environment. To run examples, follow the selected [simulator guide](simulators/SKILL.md) for Python compatibility and dependencies.
+The skill documents require no Python environment. To run examples, follow the selected [simulator guide](SKILL.md#simulator-selection-and-guides) for Python compatibility and dependencies.
 
 ### Usage
 
-Ask your agent a quantum computing question. It follows the skill indexes to the relevant guide before generating code.
+Ask your agent a quantum computing question. It follows the root skill routing to the relevant reference before generating code.
 
 To select it explicitly, use `$quantum-skills` in Codex or `/quantum-skills` in Claude Code, followed by your request.
 
 | Example prompt | Guide |
 |----------------|-------|
-| `Implement Grover's algorithm using UnitaryLab` | [Grover](algorithms/primitives/grover/SKILL.md) |
-| `Explain HHL with a 2×2 example` | [HHL](algorithms/linear-systems/hhl/SKILL.md) |
-| `Simulate the 1D heat equation with Schrodingerization` | [1D Heat](algorithms/schrodingerization/heat-1d-schrodingerization/SKILL.md) |
-| `Search a graph with multiple marked vertices using a quantum walk` | [Quantum Walk Search](algorithms/search/quantum-walk-search/SKILL.md) |
-| `Explain quantum backtracking on a small binary CNF problem` | [Quantum Backtracking](algorithms/search/quantum-backtracking/SKILL.md) |
+| `Implement Grover's algorithm using UnitaryLab` | [Grover](references/algorithm-primitives-grover.md) |
+| `Explain HHL with a 2×2 example` | [HHL](references/algorithm-linear-systems-hhl.md) |
+| `Simulate the 1D heat equation with Schrodingerization` | [1D Heat](references/algorithm-schrodingerization-heat-1d-schrodingerization.md) |
+| `Search a graph with multiple marked vertices using a quantum walk` | [Quantum Walk Search](references/algorithm-search-quantum-walk-search.md) |
+| `Explain quantum backtracking on a small binary CNF problem` | [Quantum Backtracking](references/algorithm-search-quantum-backtracking.md) |
 
 ---
 
@@ -124,7 +124,7 @@ To select it explicitly, use `$quantum-skills` in Codex or `/quantum-skills` in 
 
 ### 覆盖范围
 
-**12 个分类，51 篇算法与工作流指南。** 数量不含路由索引和模拟器指南，量子纠错教程计为一篇；其中包含经典参考方法和辅助例程，并非 51 种独立量子算法。
+**12 个分类，51 篇算法与工作流指南。** 
 
 | 分类 | 指南数 | 内容 |
 |------|-------:|------|
@@ -135,21 +135,22 @@ To select it explicitly, use `$quantum-skills` in Codex or `/quantum-skills` in 
 | 哈密顿量模拟 | 5 | Trotter、QDrift、Taylor 级数、QSP、Cartan |
 | Schrodingerization | 3 | 对流、热方程（一维/二维） |
 | 量子机器学习 | 7 | VQE、VQC、QAOA、QCBM、CVQNN、Fermi-Hubbard VQE、二维 Ising 动力学 |
+
 | 态制备 | 5 | 稀疏叠加态、Möttönen、MPS、Multiplexer、Pauli 字符串态制备 |
 | 量子化学 | 1 | 分子 DMRG |
 | 本征求解器 | 3 | NumPy 本征求解器、NumPy 最小本征求解器、VQD |
 | 梯度方法 | 6 | 参数位移、有限差分、线性组合、SPSA、反向模式、QFI |
 | 量子纠错 | 1 | LDPC、CSS、超图乘积码 |
 
-入口见[算法索引](algorithms/SKILL.md)。
+入口见[算法索引](SKILL.md#direct-algorithm-routing)。
 
 ### 模拟器
 
 | 模拟器 | 适用场景 |
 |--------|----------|
-| [UnitaryLab](simulators/unitarylab/SKILL.md) *（默认）* | 电路编程、算法演示、PDE 工作流 |
-| [Qiskit](simulators/qiskit/SKILL.md) | 噪声模型、IBM 硬件工作流 |
-| [PennyLane](simulators/pennylane/SKILL.md) | 可微分混合优化 |
+| [UnitaryLab](references/simulator-unitarylab.md) *（默认）* | 电路编程、算法演示、PDE 工作流 |
+| [Qiskit](references/simulator-qiskit.md) | 噪声模型、IBM 硬件工作流 |
+| [PennyLane](references/simulator-pennylane.md) | 可微分混合优化 |
 
 ### 安装
 
@@ -177,24 +178,24 @@ git clone https://github.com/unitarylab/quantum-skills .agents/skills/quantum-sk
 git clone https://github.com/unitarylab/quantum-skills .claude/skills/quantum-skills
 ```
 
-用户级安装使用表中的 `~` 路径。请保留根 `SKILL.md`、`algorithms/` 和 `simulators/` 的相对位置，确保引用有效。安装后属于自定义技能，并非官方预装技能。
+用户级安装使用表中的 `~` 路径。请保留根 `SKILL.md`、`references/` 和 `scripts/` 的相对位置，确保引用有效。安装后属于自定义技能，并非官方预装技能。
 
-也可在 Codex 中输入：`$skill-installer 从 https://github.com/unitarylab/quantum-skills 安装仓库根技能，命名为 quantum-skills，并保留 algorithms 和 simulators 目录。` 安装后若未显示，请重启 Codex。
+也可在 Codex 中输入：`$skill-installer 从 https://github.com/unitarylab/quantum-skills 安装仓库根技能，命名为 quantum-skills，并保留 references 和 scripts 目录。` 安装后若未显示，请重启 Codex。
 
 参考：[Codex 官方文档](https://learn.chatgpt.com/docs/build-skills)、[Claude Code 官方文档](https://code.claude.com/docs/en/skills)、[skills 安装器](https://github.com/vercel-labs/skills)。
 
-技能文档本身无需 Python 环境。运行示例时，请按所选[模拟器指南](simulators/SKILL.md)配置 Python 版本和依赖。
+技能文档本身无需 Python 环境。运行示例时，请按所选[模拟器指南](SKILL.md#simulator-selection-and-guides)配置 Python 版本和依赖。
 
 ### 使用
 
-向 Agent 提出量子计算问题，它会沿技能索引读取对应指南，再生成代码。
+向 Agent 提出量子计算问题，它会按根技能的路由读取对应参考文档，再生成代码。
 
 显式调用时，在 Codex 中使用 `$quantum-skills`，在 Claude Code 中使用 `/quantum-skills`，后接具体问题。
 
 | 示例问题 | 指南 |
 |----------|------|
-| `用 UnitaryLab 实现 Grover 算法` | [Grover](algorithms/primitives/grover/SKILL.md) |
-| `解释 HHL 算法，并给出 2×2 示例` | [HHL](algorithms/linear-systems/hhl/SKILL.md) |
-| `用 Schrodingerization 模拟一维热方程` | [一维热方程](algorithms/schrodingerization/heat-1d-schrodingerization/SKILL.md) |
-| `用量子游走搜索图上的多个标记顶点` | [量子游走搜索](algorithms/search/quantum-walk-search/SKILL.md) |
-| `用一个小型二元 CNF 问题解释量子回溯` | [量子回溯](algorithms/search/quantum-backtracking/SKILL.md) |
+| `用 UnitaryLab 实现 Grover 算法` | [Grover](references/algorithm-primitives-grover.md) |
+| `解释 HHL 算法，并给出 2×2 示例` | [HHL](references/algorithm-linear-systems-hhl.md) |
+| `用 Schrodingerization 模拟一维热方程` | [一维热方程](references/algorithm-schrodingerization-heat-1d-schrodingerization.md) |
+| `用量子游走搜索图上的多个标记顶点` | [量子游走搜索](references/algorithm-search-quantum-walk-search.md) |
+| `用一个小型二元 CNF 问题解释量子回溯` | [量子回溯](references/algorithm-search-quantum-backtracking.md) |
