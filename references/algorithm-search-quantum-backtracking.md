@@ -155,12 +155,17 @@ QPE applies controlled-W 2^p-1 times. Its dense state contains 2^(N+p) complex v
 
 ## Hands-On Example
 
-Use a terminal accepted root in independently generated task code to separate deterministic predicate behavior from stochastic QPE. Construct the problem below, obtain a result from that standalone implementation, and apply the documented result checks:
+Call the installed API with a terminal accepted root to check deterministic predicate behavior separately from stochastic QPE:
 
 ```python
+import json
+from unitarylab_algorithms import QuantumBacktrackingAlgorithm
+
 problem = {"type":"prefix_constraints", "name":"accepted-root",
            "max_depth":1, "accepted_paths":[""], "rejected_prefixes":[]}
-# result is produced by your standalone implementation for this problem.
+result = QuantumBacktrackingAlgorithm(
+    text_mode="plain", algo_dir="results/backtracking-accepted-root"
+).run(problem_json=json.dumps(problem), phase_bits=3, shots=16, seed=7)
 assert result["status"] == "ok" and result["exists"] is True
 assert result["solution_path"] == [] and result["solution_assignment"] == {}
 assert result["evidence"][0]["method"] == "accept-oracle"

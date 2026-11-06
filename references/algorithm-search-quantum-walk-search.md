@@ -257,10 +257,18 @@ This all-marked four-vertex check differs from the default search example: it
 checks indexing, sample totals and the distinction between process completion
 and approximation quality. It uses nonzero explicit time to avoid zero-step edges.
 
-In independently generated task code, use four vertices with all vertices marked, `evolution_time=1.0`, `simulation_steps=8`, `shots=16`, and `seed=7`. Apply the following checks to the result produced by that code, using the documented result contract:
+Call the installed API on a complete graph with all four vertices marked, then check its returned results:
 
 ```python
-# result is produced by your standalone implementation, not a bundled script.
+from unitarylab_algorithms import QuantumWalkSearchAlgorithm
+
+result = QuantumWalkSearchAlgorithm(
+    text_mode="plain", algo_dir="results/walk-all-marked"
+).run(
+    num_vertices=4, marked="0,1,2,3", graph_type="complete",
+    evolution_time=1.0, method="trotter", simulation_steps=8,
+    shots=16, seed=7, backend="numpy",
+)
 assert result["status"] == "ok"
 assert result["num_vertices"] == 4 and result["hilbert_dimension"] == 4
 assert sum(result["counts"].values()) == 16

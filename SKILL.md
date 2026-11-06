@@ -190,6 +190,10 @@ Hamiltonian Simulation to the Hamiltonian Simulation QSP reference.
 
 - Molecular DMRG → `references/algorithm-quantum-chemistry-molecular-dmrg.md`
 
+**Quantum Transport**
+
+- NEGF / Non-Equilibrium Green Function Transport → `references/algorithm-quantum-transport-negf.md`
+
 **Quantum State Preparation**
 
 - Möttönen State Preparation → `references/algorithm-state-preparation-mottonen.md`

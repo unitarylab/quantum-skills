@@ -8,8 +8,8 @@
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/Algorithm_Guides-51-f59e0b?style=flat-square" alt="51 Algorithm Guides"/>
-  <img src="https://img.shields.io/badge/Categories-12-3b82f6?style=flat-square" alt="12 Categories"/>
+  <img src="https://img.shields.io/badge/Algorithm_Guides-52-f59e0b?style=flat-square" alt="52 Algorithm Guides"/>
+  <img src="https://img.shields.io/badge/Categories-13-3b82f6?style=flat-square" alt="13 Categories"/>
   <a href="#installation"><img src="https://img.shields.io/badge/Codex%20%7C%20Claude%20Code%20%7C%20VS%20Code%20Copilot-Install_Skill-111827?style=flat-square" alt="Install Skill for Codex, Claude Code, and VS Code Copilot"/></a>
 </p>
 
@@ -35,7 +35,7 @@
 
 ### Coverage
 
-**12 categories, 51 algorithm and workflow guides.**
+**13 categories, 52 algorithm and workflow guides.**
 
 | Category | Guides | Topics |
 |----------|-------:|--------|
@@ -48,6 +48,7 @@
 | Quantum Machine Learning | 7 | VQE, VQC, QAOA, QCBM, CVQNN, Fermi-Hubbard VQE, 2D Ising Dynamics |
 | State Preparation | 5 | Sparse Superposition, Möttönen, MPS, Multiplexer, Pauli-Word Preparation |
 | Quantum Chemistry | 1 | Molecular DMRG |
+| Quantum Transport | 1 | NEGF |
 | Eigensolvers | 3 | NumPy Eigensolver, NumPy Minimum Eigensolver, VQD |
 | Gradients | 6 | Parameter-shift, Finite-difference, Linear-combination, SPSA, Reverse-mode, QFI |
 | Quantum Error Correction | 1 | LDPC, CSS, Hypergraph Product Codes |
@@ -124,7 +125,7 @@ To select it explicitly, use `$quantum-skills` in Codex or `/quantum-skills` in 
 
 ### 覆盖范围
 
-**12 个分类，51 篇算法与工作流指南。** 
+**13 个分类，52 篇算法与工作流指南。**
 
 | 分类 | 指南数 | 内容 |
 |------|-------:|------|
@@ -135,9 +136,9 @@ To select it explicitly, use `$quantum-skills` in Codex or `/quantum-skills` in 
 | 哈密顿量模拟 | 5 | Trotter、QDrift、Taylor 级数、QSP、Cartan |
 | Schrodingerization | 3 | 对流、热方程（一维/二维） |
 | 量子机器学习 | 7 | VQE、VQC、QAOA、QCBM、CVQNN、Fermi-Hubbard VQE、二维 Ising 动力学 |
-
 | 态制备 | 5 | 稀疏叠加态、Möttönen、MPS、Multiplexer、Pauli 字符串态制备 |
 | 量子化学 | 1 | 分子 DMRG |
+| 量子输运 | 1 | NEGF（非平衡格林函数） |
 | 本征求解器 | 3 | NumPy 本征求解器、NumPy 最小本征求解器、VQD |
 | 梯度方法 | 6 | 参数位移、有限差分、线性组合、SPSA、反向模式、QFI |
 | 量子纠错 | 1 | LDPC、CSS、超图乘积码 |
